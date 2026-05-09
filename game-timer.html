@@ -1864,81 +1864,6 @@
             box-shadow: 0 0 14px color-mix(in srgb, var(--accent), transparent 26%);
         }
 
-        .placement-board {
-            display: grid;
-            gap: 6px;
-            margin-bottom: 8px;
-            padding: 8px;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .placement-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .placement-grid {
-            display: grid;
-            grid-template-columns: repeat(var(--placement-cols, 1), minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        .placement-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 74px;
-            gap: 4px;
-            align-items: center;
-            min-height: 42px;
-            padding: 5px;
-            border: 1px solid color-mix(in srgb, var(--accent), white 24%);
-            border-radius: var(--radius);
-            background:
-                linear-gradient(90deg, color-mix(in srgb, var(--accent), transparent 84%), rgba(255, 255, 255, 0.08));
-        }
-
-        .placement-player {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            min-width: 0;
-        }
-
-        .placement-name {
-            display: grid;
-            gap: 2px;
-            min-width: 0;
-            line-height: 1.05;
-        }
-
-        .placement-name strong,
-        .placement-name span {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .placement-name strong {
-            font-size: 14px;
-            font-weight: 900;
-        }
-
-        .placement-name span {
-            color: var(--muted);
-            font-size: 11px;
-            font-weight: 750;
-        }
-
-        .placement-select {
-            min-height: 34px;
-            height: 34px;
-            padding: 0 4px;
-            font-weight: 850;
-        }
-
         .kpi-row {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -2038,29 +1963,9 @@
             font-weight: 750;
         }
 
-        .placement-badge {
-            display: inline-grid;
-            place-items: center;
-            flex: 0 0 auto;
-            justify-self: start;
-            min-width: 52px;
-            height: 26px;
-            padding: 0 8px;
-            border: 1px solid var(--line-bright);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.13);
-            color: var(--ink);
-            font-size: 12px;
-            font-weight: 950;
-            line-height: 1;
-        }
-
-        .placement-badge.is-empty {
-            visibility: hidden;
-        }
-
         .summary-placement-select {
             justify-self: start;
+            width: 76px;
             min-height: 30px;
             height: 30px;
             padding: 0 4px;
@@ -3197,14 +3102,6 @@
                 content: none;
             }
 
-            .placement-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .placement-row {
-                grid-template-columns: minmax(0, 1fr) 88px;
-            }
-
             .settings-overlay {
                 align-items: stretch;
                 padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
@@ -4172,9 +4069,9 @@ The initial release established the core loop: choose a game, add players, track
         function loadTextType() {
             try {
                 const saved = window.localStorage?.getItem("gameTimerTextType");
-                return saved === "emoji" || saved === "text" ? saved : "emoji";
+                return saved === "emoji" || saved === "text" ? saved : "text";
             } catch (error) {
-                return "emoji";
+                return "text";
             }
         }
 
@@ -5337,13 +5234,6 @@ The initial release established the core loop: choose a game, add players, track
             return options.join("");
         }
 
-        function placementBadgeMarkup(player) {
-            const label = placementLabel(player?.placement);
-            return label
-                ? `<span class="placement-badge" title="Placement">${esc(label)}</span>`
-                : `<span class="placement-badge is-empty" aria-hidden="true"></span>`;
-        }
-
         function summaryPlacementMarkup(player, playerCount) {
             if (player.type !== "player") return `<span class="summary-placement-spacer" aria-hidden="true"></span>`;
             return `
@@ -5572,33 +5462,6 @@ The initial release established the core loop: choose a game, add players, track
             </div>
           </section>
         `;
-        }
-
-        function placementsMarkup(players) {
-            if (!players.length) return "";
-            return `
-        <div class="placement-board">
-          <div class="placement-grid">
-            ${players.map(player => {
-                const names = displayNameParts(player);
-                return `
-              <label class="placement-row" style="--accent:${esc(player.color)}">
-                <span class="placement-player">
-                  <span class="dot" style="--accent:${esc(player.color)}"></span>
-                  <span class="placement-name">
-                    <strong>${esc(names.primary)}</strong>
-                    ${names.secondary ? `<span>${esc(names.secondary)}</span>` : ""}
-                  </span>
-                </span>
-                <select class="placement-select" data-action="placement" data-id="${esc(player.id)}" aria-label="Placement for ${esc(displayNameText(player))}">
-                  ${placementOptionsMarkup(players.length, player.placement)}
-                </select>
-              </label>
-            `;
-            }).join("")}
-          </div>
-        </div>
-      `;
         }
 
         function setPlayerPlacement(id, placement) {
@@ -6415,7 +6278,6 @@ The initial release established the core loop: choose a game, add players, track
               <div class="section-head">
                 <h2>Players</h2>
               </div>
-              ${placementsMarkup(people)}
               ${summaryTable(people, awards)}
             </section>
             <section class="panel glass">
@@ -6439,6 +6301,7 @@ The initial release established the core loop: choose a game, add players, track
             if (!players.length) {
                 return `<div class="table-wrap"><table><tbody><tr><td>No entries</td></tr></tbody></table></div>`;
             }
+            const playerCount = state.players.filter(player => player.type === "player").length;
 
             return `
         <div class="table-wrap">
@@ -6474,7 +6337,7 @@ The initial release established the core loop: choose a game, add players, track
                           <strong>${esc(names.primary)}</strong>
                           ${names.secondary ? `<span>${esc(names.secondary)}</span>` : ""}
                         </span>
-                        ${placementBadgeMarkup(player)}
+                        ${summaryPlacementMarkup(player, playerCount)}
                         <span class="summary-awards">${placementMedalBadgeMarkup(player)}${awardBadges(player, awards)}</span>
                       </span>
                     </td>
