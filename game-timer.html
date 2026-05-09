@@ -3874,6 +3874,29 @@ Track categories such as economic, party, strategy, racing, fantasy, and civiliz
 - Categories can help randomization pick games by table mood.`
             },
             {
+                id: "W-016",
+                title: "2.0.0 source split and release build",
+                category: "Architecture",
+                priority: "P0",
+                loe: "Large",
+                notes: `
+### Goal
+Make wishlist, changelog, help, and game data easy to edit independently while still producing a single-file app for release.
+
+### Release Target
+2.0.0
+
+### Notes
+- Split editable app data into source files for games, changelog, wishlist, and help/FAQ.
+- Move HELP_FAQ content into data so it can render inside the app.
+- Keep README.md at the repo root for GitHub and developer documentation.
+- Move Changelog, Wishlist, and Help/FAQ into a Settings submenu under a Documentation heading.
+- Generate one release file named index.html in a /release folder.
+- Add a build script that assembles the single-file release output.
+- Build script should copy the release file to the iCloud location.
+- iCloud copy should be named game-timer-#-#-#.html using the app version, such as game-timer-2-0-0.html.`
+            },
+            {
                 id: "W-009",
                 title: "Create build script for deployable HTML",
                 category: "Build",
@@ -3961,6 +3984,21 @@ Keep placement and timing badge columns aligned when a player has more than two 
 - Review the Statistics player table badge layout and reserved award space.
 - Preserve the invisible placement placeholder behavior for non-medal players.`
             },
+            {
+                id: "W-015",
+                title: "Add secret hotkeys to the share menu",
+                category: "Shortcuts",
+                priority: "P3",
+                loe: "Small",
+                notes: `
+### Goal
+Expose the hidden testing/navigation shortcuts from the Share menu so they are easier to discover.
+
+### Notes
+- Include setup, session, statistics, settings, wishlist, changelog, search, and full-game simulation shortcuts.
+- Keep the shortcuts tucked away so normal table use stays uncluttered.
+- Consider sharing a compact shortcut reference as text.`
+            },
         ];
         const WISHLIST_PRIORITY_ORDER = ["P0", "P1", "P2", "P3"];
         const WISHLIST_LOE_ORDER = ["Small", "Medium", "Large"];
@@ -3978,37 +4016,41 @@ Keep placement and timing badge columns aligned when a player has more than two 
                 version: "1.5.0",
                 date: "2026.05.08",
                 notes: `
-## Final Places
-This release starts the 1.5 update by making end-game results part of the final stats flow. Placement can now be assigned after the timer ends, including ties, while leaving all timing calculations untouched.
+## Final Stats
+This release makes the end-game Statistics page a fuller recap: placements, the timeline, awards, and sharing now live together without changing the timer math.
 
-### Final Rankings
-- Added optional placement selectors to the Statistics screen for each player.
-- Supports tied placements by allowing multiple players to share the same rank.
-- Displays placement badges beside player names in the final Players table.
-- Sorts final player stats by placement whenever placements are available.
-- Separates medal emoji from the placement pill so medals sit with the other final stat badges.
-- Auto-corrects placement ranks after ties so following places skip correctly.
-- Added a lane-based Statistics timeline that visualizes setup, each player/other row, and pauses as staggered horizontal progress segments.
-- Stores turn start times for future sessions so timeline segments stay more accurate around pauses.
-- Tightened the Statistics page with shorter KPI cards, denser timeline lanes, 30-minute x-axis labels aligned to the timeline tracks, and more compact Players/Other tables.
-- Removed the visible Timeline title and suppresses the final half-hour tick when it would crowd the game-end label.
-- Tightened the placement selector grid so six player/place controls can fit across the full-width Statistics view.
-- Keeps placements separate from timer math, awards, and pause/setup totals.
-- Completed the wishlist item for assigning placement/ranks at the end.
-- Completed the wishlist item for the final stats timeline visualization.
+### Placements
+- Added placement selectors directly inside the final Players table.
+- Supports ties and auto-corrects following ranks so skipped places stay accurate.
+- Sorts final player rows by placement whenever any placement has been assigned.
+- Keeps placement separate from setup, pause, play, turn, and award calculations.
+- Shows medal badges for 1st, 2nd, and 3rd beside the timing awards.
+- Reserves medal space when placements exist so timing awards line up more consistently.
 
-### Setup Polish
-- Gave special turn-order game tags a consistent warning-accent background and border, matching the stable treatment used for faction tags.
-- Changed special turn-order game-list tags to a simple T while keeping the rule emoji in the Turn Order panel.
-- Added support for manually verified game badges as small green checks beside game names; no games are verified by default.
-- Changed faction game-list badges to blue so green is reserved for verified games.
-- Added shortcut hint tags that appear while Shift + Control + Option are held and activate tagged buttons with the shown letter.
-- Tightened Small session layout so the header no longer keeps desktop min-width columns and player cards use narrower columns on iPhone.
+### Timeline
+- Added a lane-based Statistics timeline for setup, each player or other row, and pauses.
+- Stores turn start times so future completed sessions can show more accurate timeline segments.
+- Uses denser timeline lanes and a 15-minute x-axis with no seconds in the axis labels.
+- Suppresses the final interval label when it would crowd the game-end label.
 
-### Testing
-- Added a hidden Session-page shortcut to simulate a full completed game with setup time, turns, pauses, other tracking rows, and final placements.
-- Aligned final stat placement pills and award badges, with medal badges for 1st, 2nd, and 3rd.
-- Changed Session card density to exactly three height-based modes: Detailed shows everything, Insightful keeps the 3-across stats but drops the turn list under 240px, and Essential shows only name, badge, and timer under 120px.`
+### Sharing
+- Added a blue Share button on the Statistics page beside Restart.
+- Share now offers Text and Image options.
+- Text sharing includes game totals, player rows, placements, timing awards, pause, and other rows.
+- Image sharing creates a PNG snapshot of the full Statistics page, with copy and preview fallbacks when native file sharing is unavailable.
+
+### Setup and Shortcuts
+- Gave turn-order game tags a consistent warning-accent treatment and simplified game-list turn-order badges to T.
+- Added manually verified game badges as green checks and changed faction badges to blue.
+- Added shortcut hint tags while Shift + Control + Option are held.
+- Added hidden test shortcuts for Setup, Session, Statistics, Settings, Wishlist, Changelog, search, and full-game simulation.
+
+### Layout Polish
+- Tightened KPI cards, Statistics tables, timeline lanes, and Small session layouts.
+- Moved placement selection out of the separate grid and into the Players table.
+- Gave player names more room in the Statistics time tables on narrower screens.
+- Changed Session card density to three height-based modes: Detailed, Insightful, and Essential.
+- Completed the wishlist items for final placements, the stats timeline, and the stats share button.`
             },
             {
                 version: "1.4.0",
