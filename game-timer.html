@@ -595,6 +595,7 @@
         }
 
         .turn-order-badge,
+        .other-timing-badge,
         .faction-badge,
         .verified-badge {
             --tag-accent: var(--line-bright);
@@ -619,6 +620,10 @@
 
         .faction-badge {
             --tag-accent: var(--info);
+        }
+
+        .other-timing-badge {
+            --tag-accent: var(--muted);
         }
 
         .verified-badge {
@@ -4042,6 +4047,7 @@ This release makes the end-game Statistics page a fuller recap: placements, the 
 ### Setup and Shortcuts
 - Gave turn-order game tags a consistent warning-accent treatment and simplified game-list turn-order badges to T.
 - Added manually verified game badges as green checks and changed faction badges to blue.
+- Added gray O badges for games with known default Other timing rows, such as Bidding.
 - Added shortcut hint tags while Shift + Control + Option are held.
 - Added hidden test shortcuts for Setup, Session, Statistics, Settings, Wishlist, Changelog, search, and full-game simulation.
 
@@ -4464,6 +4470,14 @@ The initial release established the core loop: choose a game, add players, track
                 rule.firstMode,
                 ...(rule.defaultOthers || [])
             ].filter(Boolean).join(" ");
+        }
+
+        function defaultOtherTimingNames(game = currentPreset()) {
+            return turnOrderRuleForGame(game)?.defaultOthers || [];
+        }
+
+        function hasDefaultOtherTiming(game = currentPreset()) {
+            return defaultOtherTimingNames(game).length > 0;
         }
 
         function usesOpenColorPool(game = currentPreset()) {
@@ -5799,7 +5813,8 @@ The initial release established the core loop: choose a game, add players, track
         function gameSearchText(game) {
             const { title, year } = gameTitleParts(game.name);
             const factionText = hasFactionColorOptions(colorsForGame(game)) ? "faction faction-based factions" : "";
-            return [game.name, title, year, game.id, factionText, turnOrderSearchText(game)].filter(Boolean).join(" ").toLowerCase();
+            const otherTimingText = hasDefaultOtherTiming(game) ? `other timing other-timing ${defaultOtherTimingNames(game).join(" ")}` : "";
+            return [game.name, title, year, game.id, factionText, otherTimingText, turnOrderSearchText(game)].filter(Boolean).join(" ").toLowerCase();
         }
 
         function gameTitleMarkup(name, className = "") {
@@ -5823,6 +5838,13 @@ The initial release established the core loop: choose a game, add players, track
         function factionBadgeMarkup(game) {
             if (!hasFactionColorOptions(colorsForGame(game))) return "";
             return `<span class="faction-badge" title="Faction based" aria-label="Faction based game">F</span>`;
+        }
+
+        function otherTimingBadgeMarkup(game) {
+            const names = defaultOtherTimingNames(game);
+            if (!names.length) return "";
+            const label = `Known other timing: ${names.join(", ")}`;
+            return `<span class="other-timing-badge" title="${esc(label)}" aria-label="${esc(label)}">O</span>`;
         }
 
         function verifiedBadgeMarkup(game) {
@@ -5914,7 +5936,7 @@ The initial release established the core loop: choose a game, add players, track
           aria-pressed="${game.id === selectedGameId}"
         >
           <span>
-            <strong class="game-option-title">${gameTitleMarkup(game.name)}${factionBadgeMarkup(game)}${turnOrderBadgeMarkup(game)}</strong>
+            <strong class="game-option-title">${gameTitleMarkup(game.name)}${factionBadgeMarkup(game)}${turnOrderBadgeMarkup(game)}${otherTimingBadgeMarkup(game)}</strong>
             <small>${esc(gameRangeText(game))}</small>
           </span>
           <span class="game-option-preview">
