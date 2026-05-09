@@ -2089,6 +2089,33 @@
             line-height: 1.35;
         }
 
+        .share-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .share-choice-btn {
+            min-height: 86px;
+            border-color: var(--line-bright);
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 18px;
+        }
+
+        .share-choice-btn.is-image {
+            background: linear-gradient(145deg, rgba(56, 189, 248, 0.3), rgba(255, 255, 255, 0.1));
+            border-color: rgba(56, 189, 248, 0.55);
+        }
+
+        .share-fallback-image {
+            width: 100%;
+            max-height: min(62svh, 520px);
+            object-fit: contain;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
         .hidden {
             display: none !important;
         }
@@ -3903,6 +3930,36 @@ Improve small-screen and portrait tablet layouts so the app feels designed for t
 - Prioritize the Statistics page, especially the timeline, tables, and placement controls.
 - Review iPhone layouts for readability, tap targets, and avoiding awkward horizontal scrolling.
 - Tune iPad portrait layouts separately from phone and landscape tablet layouts.`
+            },
+            {
+                id: "W-013",
+                title: "Add playful share options and engagement",
+                category: "Final Stats",
+                priority: "P2",
+                loe: "Medium",
+                notes: `
+### Goal
+Make shared final stats more fun and expressive after a game ends.
+
+### Notes
+- Add share variants such as celebrating the winner or calling out the slowest player.
+- Keep the tone configurable so groups can choose between friendly, dramatic, or spicy summaries.
+- Consider reusable templates for text and image shares.`
+            },
+            {
+                id: "W-014",
+                title: "Fix placement alignment with many badges",
+                category: "Bug Fix",
+                priority: "P3",
+                loe: "Small",
+                notes: `
+### Goal
+Keep placement and timing badge columns aligned when a player has more than two badges.
+
+### Notes
+- Current issue: rows with 3+ badges can push the placement area left.
+- Review the Statistics player table badge layout and reserved award space.
+- Preserve the invisible placement placeholder behavior for non-medal players.`
             },
         ];
         const WISHLIST_PRIORITY_ORDER = ["P0", "P1", "P2", "P3"];
@@ -6407,6 +6464,11 @@ The initial release established the core loop: choose a game, add players, track
             const others = [pauseSummaryRow(), ...state.players.filter(player => player.type === "other")];
             const summaryDate = formatDateStamp(ended);
             const title = `Game Timer Stats: ${gameAccessibleName(state.gameName)}`;
+            const fileSlug = gameAccessibleName(state.gameName)
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "") || "game";
+            const fileDate = new Date(ended).toISOString().slice(0, 10);
             const lines = [
                 `Final Stats for ${gameAccessibleName(state.gameName)} on ${summaryDate}`,
                 "",
@@ -6422,7 +6484,11 @@ The initial release established the core loop: choose a game, add players, track
                 "Other",
                 ...(others.length ? others.map(player => summaryShareRow(player, awards, "Times")) : ["- No other rows"])
             ];
-            return { title, text: lines.join("\n") };
+            return {
+                title,
+                text: lines.join("\n"),
+                imageName: `game-timer-${fileSlug}-${fileDate}.png`
+            };
         }
 
         function legacyCopyText(text) {
@@ -6465,7 +6531,17 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function closeShareFallback() {
-            document.querySelector(".share-fallback-overlay")?.remove();
+            const overlay = document.querySelector(".share-fallback-overlay");
+            const imageUrl = overlay?.dataset.imageUrl;
+            overlay?.remove();
+            if (imageUrl) URL.revokeObjectURL(imageUrl);
+        }
+
+        function bindShareOverlayDismiss(overlay) {
+            overlay.querySelector("[data-action='share-fallback-close']")?.addEventListener("click", closeShareFallback);
+            overlay.addEventListener("click", event => {
+                if (event.target === overlay) closeShareFallback();
+            });
         }
 
         function showShareFallback(payload) {
@@ -6485,14 +6561,63 @@ The initial release established the core loop: choose a game, add players, track
             const textarea = overlay.querySelector(".share-fallback-text");
             textarea?.focus();
             textarea?.select();
-            overlay.querySelector("[data-action='share-fallback-close']")?.addEventListener("click", closeShareFallback);
-            overlay.addEventListener("click", event => {
-                if (event.target === overlay) closeShareFallback();
+            bindShareOverlayDismiss(overlay);
+        }
+
+        function showShareImageFallback(payload, blob) {
+            closeShareFallback();
+            const imageUrl = URL.createObjectURL(blob);
+            const overlay = document.createElement("div");
+            overlay.className = "share-fallback-overlay";
+            overlay.dataset.imageUrl = imageUrl;
+            overlay.innerHTML = `
+        <div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareImageFallbackTitle">
+          <div class="share-fallback-head">
+            <strong id="shareImageFallbackTitle">Share Image</strong>
+            <button class="share-fallback-close" type="button" data-action="share-fallback-close" aria-label="Close share image">×</button>
+          </div>
+          <img class="share-fallback-image" src="${esc(imageUrl)}" alt="${esc(payload.title)}">
+        </div>
+      `;
+            document.body.appendChild(overlay);
+            bindShareOverlayDismiss(overlay);
+        }
+
+        function showShareChooser(button) {
+            closeShareFallback();
+            const overlay = document.createElement("div");
+            overlay.className = "share-fallback-overlay";
+            overlay.innerHTML = `
+        <div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareChooserTitle">
+          <div class="share-fallback-head">
+            <strong id="shareChooserTitle">Share Stats</strong>
+            <button class="share-fallback-close" type="button" data-action="share-fallback-close" aria-label="Close share options">×</button>
+          </div>
+          <div class="share-choice-grid">
+            <button class="action-btn share-choice-btn" type="button" data-action="share-text">
+              <span aria-hidden="true">T</span>
+              <span>Text</span>
+            </button>
+            <button class="action-btn share-choice-btn is-image" type="button" data-action="share-image">
+              <span aria-hidden="true">▣</span>
+              <span>Image</span>
+            </button>
+          </div>
+        </div>
+      `;
+            document.body.appendChild(overlay);
+            bindShareOverlayDismiss(overlay);
+            overlay.querySelector("[data-action='share-text']")?.addEventListener("click", () => {
+                closeShareFallback();
+                shareSummaryText(button);
+            });
+            overlay.querySelector("[data-action='share-image']")?.addEventListener("click", () => {
+                closeShareFallback();
+                shareSummaryImage(button);
             });
         }
 
-        async function shareSummary(event) {
-            const button = event?.currentTarget;
+        async function shareSummaryText(button) {
             const payload = summarySharePayload();
             try {
                 if (navigator.share) {
@@ -6512,6 +6637,105 @@ The initial release established the core loop: choose a game, add players, track
                     flashShareButton(button, "Ready");
                 }
             }
+        }
+
+        function documentCssText() {
+            return Array.from(document.styleSheets)
+                .map(sheet => {
+                    try {
+                        return Array.from(sheet.cssRules).map(rule => rule.cssText).join("\n");
+                    } catch {
+                        return "";
+                    }
+                })
+                .join("\n");
+        }
+
+        function imageFromSource(source) {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = source;
+            });
+        }
+
+        function canvasBlob(canvas, type = "image/png") {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Image export failed")), type);
+            });
+        }
+
+        async function summaryScreenshotBlob() {
+            const target = app.querySelector(".summary-shell") || app;
+            const width = Math.ceil(Math.max(target.scrollWidth, target.getBoundingClientRect().width, 1));
+            const height = Math.ceil(Math.max(target.scrollHeight, target.getBoundingClientRect().height, 1));
+            const clone = target.cloneNode(true);
+            clone.style.width = `${width}px`;
+            clone.style.margin = "0";
+
+            const wrapper = document.createElement("div");
+            wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+            wrapper.style.width = `${width}px`;
+            wrapper.style.minHeight = `${height}px`;
+            wrapper.style.background = getComputedStyle(document.body).backgroundColor || "#0f172a";
+
+            const style = document.createElement("style");
+            style.textContent = `${documentCssText()}\nbody{margin:0}.share-fallback-overlay{display:none!important}`;
+            wrapper.append(style, clone);
+
+            const markup = new XMLSerializer().serializeToString(wrapper);
+            const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+          <foreignObject width="100%" height="100%">${markup}</foreignObject>
+        </svg>
+      `;
+            const source = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+            const image = await imageFromSource(source);
+            const scale = Math.min(2, window.devicePixelRatio || 1);
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.ceil(width * scale);
+            canvas.height = Math.ceil(height * scale);
+            const context = canvas.getContext("2d");
+            context.scale(scale, scale);
+            context.fillStyle = getComputedStyle(document.body).backgroundColor || "#0f172a";
+            context.fillRect(0, 0, width, height);
+            context.drawImage(image, 0, 0, width, height);
+            return canvasBlob(canvas);
+        }
+
+        async function copyImageBlob(blob) {
+            if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") throw new Error("Image clipboard unavailable");
+            await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        }
+
+        async function shareSummaryImage(button) {
+            const payload = summarySharePayload();
+            try {
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                const blob = await summaryScreenshotBlob();
+                flashShareButton(button, "Image...");
+                const file = new File([blob], payload.imageName, { type: blob.type });
+                if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                    await navigator.share({ title: payload.title, text: payload.text, files: [file] });
+                    flashShareButton(button, "Shared");
+                    return;
+                }
+                try {
+                    await copyImageBlob(blob);
+                    flashShareButton(button, "Copied");
+                } catch {
+                    showShareImageFallback(payload, blob);
+                    flashShareButton(button, "Ready");
+                }
+            } catch (error) {
+                if (error?.name === "AbortError") return;
+                flashShareButton(button, "Failed");
+            }
+        }
+
+        function shareSummary(event) {
+            showShareChooser(event?.currentTarget);
         }
 
         function renderSummary() {
