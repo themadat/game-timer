@@ -1174,6 +1174,12 @@
             width: 100%;
         }
 
+        .share-btn {
+            width: 100%;
+            background: linear-gradient(145deg, rgba(56, 189, 248, 0.38), rgba(255, 255, 255, 0.12));
+            border-color: rgba(56, 189, 248, 0.56);
+        }
+
         .randomize-btn {
             background: linear-gradient(145deg, rgba(56, 189, 248, 0.34), rgba(255, 255, 255, 0.12));
             border-color: rgba(56, 189, 248, 0.5);
@@ -2027,6 +2033,62 @@
             gap: 10px;
         }
 
+        .share-fallback-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            display: grid;
+            place-items: center;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.48);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .share-fallback-panel {
+            display: grid;
+            gap: 12px;
+            width: min(620px, 100%);
+            max-height: min(82svh, 680px);
+            padding: 16px;
+            border: 1px solid var(--line-bright);
+            border-radius: var(--radius-lg);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+
+        .share-fallback-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .share-fallback-head strong {
+            font-size: 18px;
+            font-weight: 950;
+        }
+
+        .share-fallback-close {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            min-height: 42px;
+            padding: 0;
+            font-size: 24px;
+        }
+
+        .share-fallback-text {
+            width: 100%;
+            min-height: 340px;
+            resize: vertical;
+            white-space: pre-wrap;
+            font-family: inherit;
+            line-height: 1.35;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -2765,7 +2827,7 @@
             }
 
             .summary-shell .summary-actions {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .setup-shell .header-bar .top-actions .action-btn,
@@ -3783,20 +3845,6 @@ Track categories such as economic, party, strategy, racing, fantasy, and civiliz
 ### Notes
 - Categories should pair with mechanisms but stay separately searchable.
 - Categories can help randomization pick games by table mood.`
-            },
-            {
-                id: "W-008",
-                title: "Add share button on stats screen",
-                category: "Final Stats",
-                priority: "P1",
-                loe: "Medium",
-                notes: `
-### Goal
-Share final stats as text or an image from the stats screen.
-
-### Notes
-- Include game name, date, player stats, other stats, setup/play/pause totals, and badges.
-- Prefer native iOS share when available.`
             },
             {
                 id: "W-009",
@@ -5603,6 +5651,15 @@ The initial release established the core loop: choose a game, add players, track
             return badges.map(([symbol, label]) => `<span class="award" title="${esc(label)}" aria-label="${esc(label)}">${symbol}</span>`).join("");
         }
 
+        function awardLabels(player, awards) {
+            const labels = [];
+            if (player.type === "player" && awards.fastestAverage === player.id) labels.push("Fastest average");
+            if (player.type === "player" && awards.slowestAverage === player.id) labels.push("Slowest average");
+            if (player.type === "player" && awards.fastestTurn === player.id) labels.push("Fastest turn");
+            if (player.type === "player" && awards.slowestTurn === player.id) labels.push("Slowest turn");
+            return labels;
+        }
+
         function turnBadges(player, turn, stats) {
             if (!stats.count || stats.count < 2) return "";
             const badges = [];
@@ -6311,6 +6368,152 @@ The initial release established the core loop: choose a game, add players, track
             }
         }
 
+        function pauseSummaryRow() {
+            return {
+                id: "pause-summary",
+                name: "Pause",
+                type: "other",
+                color: NAMED_COLORS.Black,
+                factionName: "",
+                turns: state.pauses.map(pause => ({ duration: pause.duration }))
+            };
+        }
+
+        function summaryShareRow(player, awards, countLabel = "Turns") {
+            const stats = statsFor(player);
+            const parts = [
+                `${stats.count} ${countLabel.toLowerCase()}`,
+                `total ${fmt(stats.total)}`,
+                `avg ${stats.count ? fmt(stats.average) : "--"}`,
+                `long ${stats.count ? fmt(stats.longest) : "--"}`,
+                `short ${stats.count ? fmt(stats.shortest) : "--"}`
+            ];
+            const placement = placementLabel(player.placement);
+            if (placement) parts.unshift(placement);
+            const labels = awardLabels(player, awards);
+            if (labels.length) parts.push(labels.join(", "));
+            return `- ${displayNameText(player)}: ${parts.join(" | ")}`;
+        }
+
+        function summarySharePayload() {
+            const ended = state.gameEndedAt || Date.now();
+            const total = ended - state.gameStartedAt;
+            const paused = pauseTotal(ended);
+            const setup = setupTotal(ended);
+            const play = Math.max(0, total - paused - setup);
+            const turns = state.players.reduce((sum, player) => sum + player.turns.length, 0);
+            const awards = computeAwards();
+            const people = sortPlayersByPlacement(state.players.filter(player => player.type === "player"));
+            const others = [pauseSummaryRow(), ...state.players.filter(player => player.type === "other")];
+            const summaryDate = formatDateStamp(ended);
+            const title = `Game Timer Stats: ${gameAccessibleName(state.gameName)}`;
+            const lines = [
+                `Final Stats for ${gameAccessibleName(state.gameName)} on ${summaryDate}`,
+                "",
+                `Game: ${fmtWhole(total)}`,
+                `Setup: ${fmtWhole(setup)}`,
+                `Play: ${fmtWhole(play)}`,
+                `Pause: ${fmtWhole(paused)}`,
+                `Turns: ${turns}`,
+                "",
+                "Players",
+                ...(people.length ? people.map(player => summaryShareRow(player, awards)) : ["- No players"]),
+                "",
+                "Other",
+                ...(others.length ? others.map(player => summaryShareRow(player, awards, "Times")) : ["- No other rows"])
+            ];
+            return { title, text: lines.join("\n") };
+        }
+
+        function legacyCopyText(text) {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.setAttribute("readonly", "");
+            textarea.style.position = "fixed";
+            textarea.style.inset = "0 auto auto 0";
+            textarea.style.width = "1px";
+            textarea.style.height = "1px";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.select();
+            const copied = document.execCommand?.("copy");
+            textarea.remove();
+            if (!copied) throw new Error("Clipboard unavailable");
+        }
+
+        async function copySummaryText(text) {
+            if (navigator.clipboard?.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return;
+                } catch {
+                    // Fall through to the selection-based copy path for older or restricted browsers.
+                }
+            }
+            legacyCopyText(text);
+        }
+
+        function flashShareButton(button, label) {
+            if (!button) return;
+            const text = button.querySelector("[data-share-label]");
+            if (!text) return;
+            const original = text.textContent;
+            text.textContent = label;
+            window.setTimeout(() => {
+                if (text.isConnected) text.textContent = original;
+            }, 1600);
+        }
+
+        function closeShareFallback() {
+            document.querySelector(".share-fallback-overlay")?.remove();
+        }
+
+        function showShareFallback(payload) {
+            closeShareFallback();
+            const overlay = document.createElement("div");
+            overlay.className = "share-fallback-overlay";
+            overlay.innerHTML = `
+        <div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareFallbackTitle">
+          <div class="share-fallback-head">
+            <strong id="shareFallbackTitle">Share Stats</strong>
+            <button class="share-fallback-close" type="button" data-action="share-fallback-close" aria-label="Close share text">×</button>
+          </div>
+          <textarea class="share-fallback-text" readonly aria-label="${esc(payload.title)}">${esc(payload.text)}</textarea>
+        </div>
+      `;
+            document.body.appendChild(overlay);
+            const textarea = overlay.querySelector(".share-fallback-text");
+            textarea?.focus();
+            textarea?.select();
+            overlay.querySelector("[data-action='share-fallback-close']")?.addEventListener("click", closeShareFallback);
+            overlay.addEventListener("click", event => {
+                if (event.target === overlay) closeShareFallback();
+            });
+        }
+
+        async function shareSummary(event) {
+            const button = event?.currentTarget;
+            const payload = summarySharePayload();
+            try {
+                if (navigator.share) {
+                    await navigator.share(payload);
+                    flashShareButton(button, "Shared");
+                    return;
+                }
+                await copySummaryText(payload.text);
+                flashShareButton(button, "Copied");
+            } catch (error) {
+                if (error?.name === "AbortError") return;
+                try {
+                    await copySummaryText(payload.text);
+                    flashShareButton(button, "Copied");
+                } catch {
+                    showShareFallback(payload);
+                    flashShareButton(button, "Ready");
+                }
+            }
+        }
+
         function renderSummary() {
             stopTick();
             const ended = state.gameEndedAt || Date.now();
@@ -6323,15 +6526,7 @@ The initial release established the core loop: choose a game, add players, track
             const people = sortPlayersByPlacement(state.players.filter(player => player.type === "player"));
             const summaryDate = formatDateStamp(ended);
             const summaryTitle = `Final Stats for ${gameAccessibleName(state.gameName)} on ${summaryDate}`;
-            const pauseStatsRow = {
-                id: "pause-summary",
-                name: "Pause",
-                type: "other",
-                color: NAMED_COLORS.Black,
-                factionName: "",
-                turns: state.pauses.map(pause => ({ duration: pause.duration }))
-            };
-            const others = [pauseStatsRow, ...state.players.filter(player => player.type === "other")];
+            const others = [pauseSummaryRow(), ...state.players.filter(player => player.type === "other")];
 
             app.innerHTML = `
         <main class="shell summary-shell">
@@ -6348,6 +6543,10 @@ The initial release established the core loop: choose a game, add players, track
               <span class="range-note">${esc(summaryDate)}</span>
             </div>
             <div class="summary-actions">
+              <button class="action-btn share-btn" data-action="share" data-shortcut="H">
+                <span aria-hidden="true">↗</span>
+                <span data-share-label>Share</span>
+              </button>
               <button class="action-btn restart-btn" data-action="reset" data-shortcut="R">
                 <span aria-hidden="true">↺</span>
                 <span>Restart</span>
@@ -6381,6 +6580,7 @@ The initial release established the core loop: choose a game, add players, track
           </section>
         </main>
       `;
+            app.querySelector("[data-action='share']")?.addEventListener("click", shareSummary);
             app.querySelector("[data-action='reset']")?.addEventListener("click", resetToSetup);
             app.querySelectorAll("[data-action='placement']").forEach(select => {
                 select.addEventListener("change", event => {
