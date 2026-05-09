@@ -3782,6 +3782,64 @@ Share final stats as text or an image from the stats screen.
 - Include game name, date, player stats, other stats, setup/play/pause totals, and badges.
 - Prefer native iOS share when available.`
             },
+            {
+                id: "W-009",
+                title: "Create build script for deployable HTML",
+                category: "Build",
+                priority: "P1",
+                loe: "Medium",
+                notes: `
+### Goal
+Create a build script that assembles the app for local archive and online hosting.
+
+### Notes
+- Combine source files into a deployable bundle.
+- Rename and move the output to the iCloud destination.
+- Generate an index.html entry file for running the app online.`
+            },
+            {
+                id: "W-010",
+                title: "Break editable content into separate files",
+                category: "Architecture",
+                priority: "P1",
+                loe: "Large",
+                notes: `
+### Goal
+Move high-churn content out of the main app file so it is easier to edit safely.
+
+### Notes
+- Split README, changelog, wishlist, and game list data into separate files.
+- Keep the runtime output easy to package into the single-file app if needed.`
+            },
+            {
+                id: "W-011",
+                title: "Convert to native app",
+                category: "Platform",
+                priority: "P2",
+                loe: "Large",
+                notes: `
+### Goal
+Package Game Timer as a native app experience.
+
+### Notes
+- Evaluate the best native wrapper or rewrite path.
+- Preserve the current tabletop-first layout, local preferences, and offline behavior.`
+            },
+            {
+                id: "W-012",
+                title: "Optimize iPhone and iPad portrait layouts",
+                category: "Interface",
+                priority: "P1",
+                loe: "Large",
+                notes: `
+### Goal
+Improve small-screen and portrait tablet layouts so the app feels designed for those shapes, not just squeezed into them.
+
+### Notes
+- Prioritize the Statistics page, especially the timeline, tables, and placement controls.
+- Review iPhone layouts for readability, tap targets, and avoiding awkward horizontal scrolling.
+- Tune iPad portrait layouts separately from phone and landscape tablet layouts.`
+            },
         ];
         const WISHLIST_PRIORITY_ORDER = ["P0", "P1", "P2", "P3"];
         const WISHLIST_LOE_ORDER = ["Small", "Medium", "Large"];
@@ -5173,6 +5231,15 @@ The initial release established the core loop: choose a game, add players, track
             return fmt(ms);
         }
 
+        function fmtAxisTime(ms) {
+            const totalMinutes = Math.max(0, Math.round(ms / (60 * 1000)));
+            const minutes = totalMinutes % 60;
+            const hours = Math.floor(totalMinutes / 60);
+            if (!hours) return `${minutes}m`;
+            if (!minutes) return `${hours}h`;
+            return `${hours}h ${minutes}m`;
+        }
+
         function formatDateStamp(timestamp) {
             const date = new Date(timestamp || Date.now());
             const day = String(date.getDate()).padStart(2, "0");
@@ -5396,17 +5463,17 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function timelineTicks(total) {
-            const interval = 30 * 60 * 1000;
-            const endLabelGuard = 15 * 60 * 1000;
+            const interval = 15 * 60 * 1000;
+            const endLabelGuard = interval / 2;
             const safeTotal = Math.max(1, total);
-            const ticks = [{ value: 0, label: fmtWhole(0), type: "start" }];
+            const ticks = [{ value: 0, label: fmtAxisTime(0), type: "start" }];
             for (let value = interval; value < safeTotal; value += interval) {
                 if (safeTotal - value <= endLabelGuard) continue;
-                ticks.push({ value, label: fmtWhole(value), type: "" });
+                ticks.push({ value, label: fmtAxisTime(value), type: "" });
             }
             const lastTick = ticks[ticks.length - 1];
             if (!lastTick || lastTick.value !== safeTotal) {
-                ticks.push({ value: safeTotal, label: fmtWhole(safeTotal), type: "end" });
+                ticks.push({ value: safeTotal, label: fmtAxisTime(safeTotal), type: "end" });
             } else {
                 lastTick.type = "end";
             }
