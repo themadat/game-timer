@@ -1896,16 +1896,16 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 680px;
+            min-width: 760px;
             font-variant-numeric: tabular-nums;
         }
 
         .summary-name-col {
-            width: 38%;
+            width: 46%;
         }
 
         .summary-stat-col {
-            width: 12.4%;
+            width: 10.8%;
         }
 
         th,
@@ -1934,7 +1934,7 @@
 
         .name-cell {
             display: grid;
-            grid-template-columns: 18px minmax(0, 1fr) 76px minmax(132px, auto);
+            grid-template-columns: 18px minmax(120px, 1fr) 76px minmax(102px, auto);
             align-items: center;
             gap: 8px;
             min-width: 0;
@@ -1983,7 +1983,17 @@
             align-items: center;
             justify-content: flex-start;
             gap: 6px;
-            min-width: 132px;
+            min-width: 102px;
+        }
+
+        .summary-awards .award {
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+        }
+
+        .summary-awards .award.is-placeholder {
+            visibility: hidden;
         }
 
         .starter-display {
@@ -3095,7 +3105,13 @@
             }
 
             .name-cell {
-                grid-template-columns: 18px minmax(0, 1fr) 76px minmax(118px, auto);
+                grid-template-columns: 18px minmax(0, 1fr) 76px;
+                row-gap: 6px;
+            }
+
+            .name-cell .summary-awards {
+                grid-column: 2 / -1;
+                min-width: 0;
             }
 
             .table-wrap td:first-child::before {
@@ -5317,6 +5333,15 @@ The initial release established the core loop: choose a game, add players, track
             return `<span class="award placement-medal" title="${esc(label)} place" aria-label="${esc(label)} place">${medal}</span>`;
         }
 
+        function summaryAwardsMarkup(player, awards, hasPlacements) {
+            const medal = placementMedalBadgeMarkup(player);
+            const timeAwards = awardBadges(player, awards);
+            const medalSlot = medal || (hasPlacements && timeAwards
+                ? `<span class="award placement-medal is-placeholder" aria-hidden="true"></span>`
+                : "");
+            return `<span class="summary-awards">${medalSlot}${timeAwards}</span>`;
+        }
+
         function groupedPlacedPlayers(players) {
             const groups = new Map();
             players.forEach((player, index) => {
@@ -6369,6 +6394,7 @@ The initial release established the core loop: choose a game, add players, track
                 return `<div class="table-wrap"><table><tbody><tr><td>No entries</td></tr></tbody></table></div>`;
             }
             const playerCount = state.players.filter(player => player.type === "player").length;
+            const hasPlacements = players.some(player => placementNumber(player));
 
             return `
         <div class="table-wrap">
@@ -6405,7 +6431,7 @@ The initial release established the core loop: choose a game, add players, track
                           ${names.secondary ? `<span>${esc(names.secondary)}</span>` : ""}
                         </span>
                         ${summaryPlacementMarkup(player, playerCount)}
-                        <span class="summary-awards">${placementMedalBadgeMarkup(player)}${awardBadges(player, awards)}</span>
+                        ${summaryAwardsMarkup(player, awards, hasPlacements)}
                       </span>
                     </td>
                     <td data-label="${esc(countLabel)}">${stats.count}</td>
