@@ -1384,9 +1384,9 @@
 
         .session-bottom-actions .pause-btn,
         .session-bottom-actions .advance-btn {
-            height: 52px;
-            min-height: 52px;
-            max-height: 52px;
+            height: 25svh;
+            min-height: 25svh;
+            max-height: 25svh;
             padding: 0 18px;
             font-size: 24px;
         }
@@ -1473,14 +1473,20 @@
         }
 
         .player-card.is-active {
-            border-color: color-mix(in srgb, var(--accent), white 52%);
+            border-width: 8px;
+            border-color: var(--accent);
             box-shadow:
-                0 0 0 2px color-mix(in srgb, var(--accent), transparent 42%),
-                0 24px 78px color-mix(in srgb, var(--accent), transparent 78%);
+                0 0 0 6px color-mix(in srgb, var(--accent), transparent 30%),
+                0 24px 78px color-mix(in srgb, var(--accent), transparent 60%);
         }
 
         .player-card.is-paused {
             border-style: dashed;
+            border-width: 8px;
+            border-color: color-mix(in srgb, var(--accent), white 50%);
+            box-shadow:
+                0 0 0 6px rgba(0, 0, 0, 0.25);
+            opacity: 0.75;
         }
 
         .player-card.is-other {
@@ -2336,6 +2342,16 @@
             color: var(--ink);
         }
 
+        .demo-toggle {
+            min-width: 166px;
+        }
+
+        .demo-toggle[data-mode="on"] .demo-on,
+        .demo-toggle[data-mode="off"] .demo-off {
+            background: var(--control-active);
+            color: var(--ink);
+        }
+
         .format-toggle {
             min-width: 188px;
         }
@@ -2733,9 +2749,9 @@
 
             .session-bottom-actions .pause-btn,
             .session-bottom-actions .advance-btn {
-                height: 52px;
-                min-height: 52px;
-                max-height: 52px;
+                height: 25svh;
+                min-height: 25svh;
+                max-height: 25svh;
                 font-size: 20px;
             }
 
@@ -3105,9 +3121,9 @@
 
             .session-bottom-actions .pause-btn,
             .session-bottom-actions .advance-btn {
-                height: 50px;
-                min-height: 50px;
-                max-height: 50px;
+                height: 25svh;
+                min-height: 25svh;
+                max-height: 25svh;
                 padding: 0 10px;
                 font-size: 20px;
             }
@@ -3234,7 +3250,8 @@
             .format-toggle,
             .date-toggle,
             .display-toggle,
-            .text-toggle {
+            .text-toggle,
+            .demo-toggle {
                 width: 100%;
                 min-width: 0;
             }
@@ -3263,7 +3280,7 @@
             { name: "Austin", color: "Aqua" },
             { name: "Bryson", color: "Orange" },
             { name: "Johanna", color: "Yellow" },
-            { name: "Tristan", color: "Green" },
+            { name: "Tristen", color: "Green" },
             { name: "Kathleen", color: "Pink" },
             { name: "Jake", color: "Navy" },
             { name: "Kacie", color: "Purple" }
@@ -3411,9 +3428,9 @@
                 turnOrder: {
                     icon: "⚖",
                     label: "Bid order",
-                    note: "Adds Bidding. Reorder players after auctions when turn order changes.",
+                    note: "First Turn is Random; Future Turns determined by God Resolution. Bidding/Auctions has turn order changes.",
                     firstMode: "current-order",
-                    defaultOthers: ["Bidding"]
+                    defaultOthers: ["Mechanics"]
                 },
                 colors: [
                     colorDef("Red"),
@@ -3827,6 +3844,25 @@
                     colorDef("Black", "#323133"),
                     colorDef("Pink", "#D27A9F")
                 ], verified: true
+            },
+            {
+                id: "ticket-to-ride",
+                name: "Ticket to Ride",
+                minPlayers: 2,
+                maxPlayers: 5,
+                minMinutes: 30,
+                maxMinutes: 60,
+                complexityWeight: 1.8,
+                recommendedPlayers: "2-5",
+                bestPlayers: "4",
+                avoidPlayers: "--",
+                colors: [
+                    colorDef("Red"),
+                    colorDef("Blue"),
+                    colorDef("Green"),
+                    colorDef("Yellow"),
+                    colorDef("Black")
+                ], verified: true
             }
         ];
         /* cspell:enable */
@@ -3988,22 +4024,7 @@ Keep placement and timing badge columns aligned when a player has more than two 
 - Current issue: rows with 3+ badges can push the placement area left.
 - Review the Statistics player table badge layout and reserved award space.
 - Preserve the invisible placement placeholder behavior for non-medal players.`
-            },
-            {
-                id: "W-015",
-                title: "Add secret hotkeys to the share menu",
-                category: "Shortcuts",
-                priority: "P3",
-                loe: "Small",
-                notes: `
-### Goal
-Expose the hidden testing/navigation shortcuts from the Share menu so they are easier to discover.
-
-### Notes
-- Include setup, session, statistics, settings, wishlist, changelog, search, and full-game simulation shortcuts.
-- Keep the shortcuts tucked away so normal table use stays uncluttered.
-- Consider sharing a compact shortcut reference as text.`
-            },
+            }
         ];
         const WISHLIST_PRIORITY_ORDER = ["P0", "P1", "P2", "P3"];
         const WISHLIST_LOE_ORDER = ["Small", "Medium", "Large"];
@@ -4017,6 +4038,40 @@ Expose the hidden testing/navigation shortcuts from the Share menu so they are e
         const WISHLIST_DEFAULT_SORT_DIRECTION = "asc";
         const WISHLIST_DEFAULT_FILTER = "all";
         const CHANGELOG = [
+            {
+                version: "1.7.0",
+                date: "2026.05.13",
+                notes: `
+## Session Polish
+This release focuses on table ergonomics during a live game.
+
+### Session UI
+- Made the Pause and Auto buttons on the active Session screen much larger, scaling dynamically to 25% of the screen height for easier tapping.
+- Made the active player's turn and the paused game state much more obvious by adding bigger, bolder borders and glows to the player cards using their pure selected colors.
+
+### Game Library
+- Added Ticket to Ride to the game library.`
+            },
+            {
+                version: "1.6.0",
+                date: "2026.05.13",
+                notes: `
+## Developer Tools & Shortcuts
+This release introduces new developer utilities and expands the hidden shortcuts system.
+
+### Developer Tools Menu
+- Added a dedicated "Developer Tools" drill-in menu inside Settings.
+- Moved testing and debug features into this new section to keep the main settings clean.
+
+### Demo Mode
+- Added a Demo Mode toggle inside Developer Tools.
+- When enabled, starting a game immediately generates a simulated, completed game session. This allows you to explore the Statistics page, timeline, and share features without having to click through a manual session.
+
+### Shortcut Mode
+- Added a Shortcut Mode toggle inside Developer Tools.
+- When enabled, visual shortcut hints are permanently shown on supported buttons without needing to hold the \`Shift + Control + Option\` chord.
+- Added documentation for hidden navigation and testing hotkeys directly inside the Developer Tools menu.`
+            },
             {
                 version: "1.5.0",
                 date: "2026.05.08",
@@ -4227,9 +4282,12 @@ The initial release established the core loop: choose a game, add players, track
         let dateFormat = loadDateFormat();
         let displayNameMode = loadDisplayNameMode();
         let textType = loadTextType();
+        let demoMode = false;
+        let devShortcutMode = false;
         let isSettingsOpen = false;
         let isChangelogOpen = false;
         let isWishlistOpen = false;
+        let isDevToolsOpen = false;
         let wishlistSortMode = WISHLIST_DEFAULT_SORT_MODE;
         let wishlistSortDirection = WISHLIST_DEFAULT_SORT_DIRECTION;
         let wishlistCategoryFilter = WISHLIST_DEFAULT_FILTER;
@@ -4361,6 +4419,17 @@ The initial release established the core loop: choose a game, add players, track
             } catch (error) {
                 // Text type persistence is optional.
             }
+            render();
+        }
+
+        function setDemoMode(mode) {
+            demoMode = mode;
+            render();
+        }
+
+        function setDevShortcutMode(mode) {
+            devShortcutMode = mode;
+            setShortcutHintsActive(mode);
             render();
         }
 
@@ -4914,7 +4983,12 @@ The initial release established the core loop: choose a game, add players, track
                 setupElapsed: 0,
                 gameEndedAt: null
             };
-            render();
+
+            if (demoMode) {
+                simulateFullGame(false);
+            } else {
+                render();
+            }
         }
 
         function getPlayer(id) {
@@ -5091,6 +5165,8 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function shortcutScope() {
+            const shareOverlay = document.querySelector(".share-fallback-overlay");
+            if (shareOverlay) return shareOverlay;
             return isSettingsOpen ? app.querySelector(".settings-overlay") || app : app;
         }
 
@@ -5111,18 +5187,19 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function handleShortcutHintHotkeys(event) {
-            const chordActive = isShortcutHintChord(event);
-            setShortcutHintsActive(chordActive);
+            const chordActive = isShortcutHintChord(event) || devShortcutMode;
+            if (!devShortcutMode) setShortcutHintsActive(chordActive);
             if (!chordActive) return false;
+            if (isEditableTarget(event.target)) return false; // Prevent typing from triggering buttons
             const key = event.key.toLowerCase();
-            if (["shift", "control", "alt", "option"].includes(key)) return false;
+            if (["shift", "control", "alt", "option", "meta"].includes(key)) return false;
             if (!activateShortcutTarget(key)) return false;
             event.preventDefault();
             return true;
         }
 
         function handleShortcutHintKeyup(event) {
-            setShortcutHintsActive(isShortcutHintChord(event));
+            if (!devShortcutMode) setShortcutHintsActive(isShortcutHintChord(event));
         }
 
         function ensureTestingSetupPlayers() {
@@ -5176,7 +5253,7 @@ The initial release established the core loop: choose a game, add players, track
             endGame();
         }
 
-        function simulateFullGameForTesting() {
+        function simulateFullGame(toSummary = true) {
             if (state.view !== "game") return;
             const people = sortPlayersByPlacement(state.players.filter(player => player.type === "player"));
             if (!people.length) return;
@@ -5258,9 +5335,18 @@ The initial release established the core loop: choose a game, add players, track
                 }
             });
 
-            state.gameEndedAt = endedAt;
-            state.view = "summary";
+            if (toSummary) {
+                state.gameEndedAt = endedAt;
+                state.view = "summary";
+            } else {
+                state.gameEndedAt = null;
+                state.view = "game";
+            }
             render();
+        }
+
+        function simulateFullGameForTesting() {
+            simulateFullGame(true);
         }
 
         function openSettingsForTesting() {
@@ -5274,13 +5360,15 @@ The initial release established the core loop: choose a game, add players, track
             isSettingsOpen = false;
             isChangelogOpen = false;
             isWishlistOpen = false;
+            isDevToolsOpen = false;
             render();
         }
 
         function backToSettingsModule() {
-            if (!isSettingsOpen || (!isChangelogOpen && !isWishlistOpen)) return false;
+            if (!isSettingsOpen || (!isChangelogOpen && !isWishlistOpen && !isDevToolsOpen)) return false;
             isChangelogOpen = false;
             isWishlistOpen = false;
+            isDevToolsOpen = false;
             render();
             return true;
         }
@@ -5295,10 +5383,17 @@ The initial release established the core loop: choose a game, add players, track
             const key = event.key.toLowerCase();
             const isEditable = isEditableTarget(event.target);
 
-            if (isSettingsOpen && key === "escape") {
-                event.preventDefault();
-                closeSettings();
-                return true;
+            if (key === "escape") {
+                if (document.querySelector(".share-fallback-overlay")) {
+                    event.preventDefault();
+                    closeShareFallback();
+                    return true;
+                }
+                if (isSettingsOpen) {
+                    event.preventDefault();
+                    closeSettings();
+                    return true;
+                }
             }
 
             if (isSettingsOpen && (key === "backspace" || key === "browserback" || key === "back") && !isEditable) {
@@ -5310,13 +5405,15 @@ The initial release established the core loop: choose a game, add players, track
 
             if (isEditable || (isSettingsOpen && (isChangelogOpen || isWishlistOpen))) return false;
 
-            if (!["a", "n", "e", "d", "t"].includes(key)) return false;
+            if (!["a", "n", "e", "y", "t", "m", "k"].includes(key)) return false;
             event.preventDefault();
             if (key === "a") setThemeMode(themeMode === "dark" ? "light" : "dark");
             if (key === "n") setDisplayNameMode(displayNameMode === "player" ? "faction" : "player");
             if (key === "e") setTextType(textType === "text" ? "emoji" : "text");
-            if (key === "d") toggleDateFormat();
+            if (key === "y") toggleDateFormat();
             if (key === "t") setTimeFormat(timeFormat === "clock" ? "units" : "clock");
+            if (key === "m") setDemoMode(!demoMode);
+            if (key === "k") setDevShortcutMode(!devShortcutMode);
             return true;
         }
 
@@ -5331,6 +5428,14 @@ The initial release established the core loop: choose a game, add players, track
             isSettingsOpen = true;
             isChangelogOpen = false;
             isWishlistOpen = true;
+            render();
+        }
+
+        function openDevToolsShortcut() {
+            isSettingsOpen = true;
+            isDevToolsOpen = true;
+            isChangelogOpen = false;
+            isWishlistOpen = false;
             render();
         }
 
@@ -5354,7 +5459,7 @@ The initial release established the core loop: choose a game, add players, track
             if (event.altKey || event.ctrlKey || event.metaKey || isEditableTarget(event.target)) return;
             const key = event.key.toLowerCase();
             const isSecretFullGame = state.view === "game" && event.shiftKey && key === "g";
-            if (!isSecretFullGame && !["1", "2", "3", "s", "w", "c", "/"].includes(key)) return;
+            if (!isSecretFullGame && !["1", "2", "3", "s", "w", "c", "d", "/"].includes(key)) return;
             event.preventDefault();
             if (isSecretFullGame) simulateFullGameForTesting();
             if (key === "1") showSetupScreenForTesting();
@@ -5363,6 +5468,7 @@ The initial release established the core loop: choose a game, add players, track
             if (key === "s") openSettingsForTesting();
             if (key === "w") openWishlistShortcut();
             if (key === "c") openChangelogShortcut();
+            if (key === "d") openDevToolsShortcut();
             if (key === "/") focusGameSearchShortcut();
         }
 
@@ -6376,7 +6482,7 @@ The initial release established the core loop: choose a game, add players, track
 
           <section class="${gridClasses}" style="--player-cols:${layout.columns};--player-rows:${layout.rows};--player-cols-small:${layout.smallColumns};--player-rows-small:${layout.smallRows}">
             ${state.players.map(player => playerCard(player, awards, now)).join("")}
-          </section>
+            </section>
 
           <section class="session-bottom-actions glass" aria-label="Session controls">
             <button class="action-btn pause-btn" data-action="pause" data-shortcut="P" aria-pressed="${state.isPaused}">
@@ -6613,10 +6719,10 @@ The initial release established the core loop: choose a game, add players, track
             const overlay = document.createElement("div");
             overlay.className = "share-fallback-overlay";
             overlay.innerHTML = `
-        <div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareFallbackTitle">
+<div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareFallbackTitle">
           <div class="share-fallback-head">
             <strong id="shareFallbackTitle">Share Stats</strong>
-            <button class="share-fallback-close" type="button" data-action="share-fallback-close" aria-label="Close share text">×</button>
+            <button class="share-fallback-close" type="button" data-action="share-fallback-close" data-shortcut="X" aria-label="Close share text">×</button>
           </div>
           <textarea class="share-fallback-text" readonly aria-label="${esc(payload.title)}">${esc(payload.text)}</textarea>
         </div>
@@ -6638,7 +6744,7 @@ The initial release established the core loop: choose a game, add players, track
         <div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareImageFallbackTitle">
           <div class="share-fallback-head">
             <strong id="shareImageFallbackTitle">Share Image</strong>
-            <button class="share-fallback-close" type="button" data-action="share-fallback-close" aria-label="Close share image">×</button>
+            <button class="share-fallback-close" type="button" data-action="share-fallback-close" data-shortcut="X" aria-label="Close share image">×</button>
           </div>
           <img class="share-fallback-image" src="${esc(imageUrl)}" alt="${esc(payload.title)}">
         </div>
@@ -6655,14 +6761,14 @@ The initial release established the core loop: choose a game, add players, track
         <div class="share-fallback-panel glass" role="dialog" aria-modal="true" aria-labelledby="shareChooserTitle">
           <div class="share-fallback-head">
             <strong id="shareChooserTitle">Share Stats</strong>
-            <button class="share-fallback-close" type="button" data-action="share-fallback-close" aria-label="Close share options">×</button>
+            <button class="share-fallback-close" type="button" data-action="share-fallback-close" data-shortcut="X" aria-label="Close share options">×</button>
           </div>
           <div class="share-choice-grid">
-            <button class="action-btn share-choice-btn" type="button" data-action="share-text">
+            <button class="action-btn share-choice-btn" type="button" data-action="share-text" data-shortcut="T">
               <span aria-hidden="true">T</span>
               <span>Text</span>
             </button>
-            <button class="action-btn share-choice-btn is-image" type="button" data-action="share-image">
+            <button class="action-btn share-choice-btn is-image" type="button" data-action="share-image" data-shortcut="I">
               <span aria-hidden="true">▣</span>
               <span>Image</span>
             </button>
@@ -7109,6 +7215,68 @@ The initial release established the core loop: choose a game, add players, track
                   ${wishlistItems}
                 </div>
               </section>
+              ` : isDevToolsOpen ? `
+              <section class="changelog-screen glass" role="dialog" aria-modal="true" aria-labelledby="devToolsTitle">
+                <div class="settings-head">
+                  <div class="brand">
+                    <span>Game Timer</span>
+                    <h2 id="devToolsTitle">Developer Tools</h2>
+                  </div>
+                  <div class="settings-module-actions">
+                    <button class="action-btn settings-back-btn" data-action="dev-tools-back" data-shortcut="B" title="Backspace">
+                      <span aria-hidden="true">‹</span>
+                      <span>Settings</span>
+                    </button>
+                    <button class="settings-close" data-action="settings-close" data-shortcut="X" aria-label="Close tools" title="Esc">×</button>
+                  </div>
+                </div>
+
+                <div class="changelog-screen-body changelog-panel" style="padding: 0; background: transparent; border: none;">
+                  <div class="settings-row" style="margin-top: 0;">
+                    <span class="settings-title">
+                      <strong>Demo Mode</strong>
+                      <span>${demoMode ? "Enabled" : "Disabled"}</span>
+                      <span class="shortcut-hint"><kbd class="shortcut-key">M</kbd> Toggle Demo Mode</span>
+                    </span>
+                    <button class="theme-toggle demo-toggle" data-action="demo-toggle" data-shortcut="M" data-mode="${demoMode ? "on" : "off"}" aria-label="Toggle demo mode">
+                      <span class="demo-on">On</span>
+                      <span class="demo-off">Off</span>
+                    </button>
+                  </div>
+
+                  <div class="settings-row">
+                    <span class="settings-title">
+                      <strong>Shortcut Mode</strong>
+                      <span>${devShortcutMode ? "Hints shown, single keys active" : "Hold Shift+Ctrl+Option"}</span>
+                      <span class="shortcut-hint"><kbd class="shortcut-key">K</kbd> Toggle Shortcut Mode</span>
+                    </span>
+                    <button class="theme-toggle demo-toggle" data-action="dev-shortcut-toggle" data-shortcut="K" data-mode="${devShortcutMode ? "on" : "off"}" aria-label="Toggle shortcut mode">
+                      <span class="demo-on">On</span>
+                      <span class="demo-off">Off</span>
+                    </button>
+                  </div>
+
+                  <div class="changelog-panel" style="margin-top: 10px; margin-bottom: 16px;">
+                    <div class="changelog-markdown">
+                      <h4>Hidden Navigation Shortcuts</h4>
+                      <ul>
+                        <li><code>1</code> Setup View</li>
+                        <li><code>2</code> Session View</li>
+                        <li><code>3</code> Statistics View</li>
+                        <li><code>S</code> Open Settings</li>
+                        <li><code>W</code> Open Wishlist</li>
+                        <li><code>C</code> Open Changelog</li>
+                        <li><code>D</code> Open Developer Tools</li>
+                        <li><code>/</code> Focus Game Search</li>
+                      </ul>
+                      <h4 style="margin-top: 10px;">Hidden Testing Shortcuts</h4>
+                      <ul>
+                        <li><code>Shift + G</code> Simulate Full Game (from Session view)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </section>
             ` : `
               <section class="settings-modal glass" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
                 <div class="settings-head">
@@ -7159,9 +7327,9 @@ The initial release established the core loop: choose a game, add players, track
                   <span class="settings-title">
                     <strong>Date Format</strong>
                     <span>${dateFormat === "dmy" ? "06 May 2026" : dateFormat === "ymd" ? "2026-05-06" : "May 6, 2026"}</span>
-                    <span class="shortcut-hint"><kbd class="shortcut-key">D</kbd> Cycle date format</span>
+                    <span class="shortcut-hint"><kbd class="shortcut-key">Y</kbd> Cycle date format</span>
                   </span>
-                  <button class="theme-toggle date-toggle" data-action="date-toggle" data-shortcut="D" data-mode="${esc(dateFormat)}" aria-label="Toggle date format">
+                  <button class="theme-toggle date-toggle" data-action="date-toggle" data-shortcut="Y" data-mode="${esc(dateFormat)}" aria-label="Toggle date format">
                     <span class="date-mdy">MDY</span>
                     <span class="date-dmy">DMY</span>
                     <span class="date-ymd">YMD</span>
@@ -7195,6 +7363,14 @@ The initial release established the core loop: choose a game, add players, track
                   </span>
                   <span class="settings-chevron" aria-hidden="true">›</span>
                 </button>
+
+                <button class="settings-cell" data-action="dev-tools-toggle" data-shortcut="D" aria-expanded="false">
+                  <span class="settings-title">
+                    <strong>Developer Tools</strong>
+                    <span>Demo mode, shortcut toggles</span>
+                  </span>
+                  <span class="settings-chevron" aria-hidden="true">›</span>
+                </button>
               </section>
             `}
           </div>
@@ -7222,6 +7398,10 @@ The initial release established the core loop: choose a game, add players, track
                 setThemeMode(themeMode === "dark" ? "light" : "dark");
             });
 
+            app.querySelector("[data-action='demo-toggle']")?.addEventListener("click", () => {
+                setDemoMode(!demoMode);
+            });
+
             app.querySelector("[data-action='format-toggle']")?.addEventListener("click", () => {
                 setTimeFormat(timeFormat === "clock" ? "units" : "clock");
             });
@@ -7236,6 +7416,10 @@ The initial release established the core loop: choose a game, add players, track
 
             app.querySelector("[data-action='text-toggle']")?.addEventListener("click", () => {
                 setTextType(textType === "text" ? "emoji" : "text");
+            });
+
+            app.querySelector("[data-action='dev-shortcut-toggle']")?.addEventListener("click", () => {
+                setDevShortcutMode(!devShortcutMode);
             });
 
             app.querySelector("[data-action='changelog-toggle']")?.addEventListener("click", () => {
@@ -7279,6 +7463,17 @@ The initial release established the core loop: choose a game, add players, track
                     render();
                 });
             });
+
+            app.querySelector("[data-action='dev-tools-toggle']")?.addEventListener("click", () => {
+                isDevToolsOpen = true;
+                isChangelogOpen = false;
+                isWishlistOpen = false;
+                render();
+            });
+
+            app.querySelector("[data-action='dev-tools-back']")?.addEventListener("click", () => {
+                backToSettingsModule();
+            });
         }
 
         function render() {
@@ -7300,6 +7495,9 @@ The initial release established the core loop: choose a game, add players, track
         window.addEventListener("blur", () => setShortcutHintsActive(false));
         window.addEventListener("resize", scheduleSessionDensityCheck);
         window.visualViewport?.addEventListener("resize", scheduleSessionDensityCheck);
+        window.addEventListener("blur", () => {
+            if (!devShortcutMode) setShortcutHintsActive(false);
+        });
         render();
     </script>
 </body>

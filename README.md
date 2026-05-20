@@ -150,3 +150,7 @@ The in-app wishlist tracks active planning items. Notable development items incl
 ## Release Notes
 
 Release notes are maintained in the in-app `CHANGELOG` array. The current `1.5.0` release focuses on final statistics: placements, timeline, sharing, layout polish, and shortcuts.
+
+start version 1.6.0
+
+Create a demo mode option checkbox in settings. when enabled hitting start goes to sessions but shows the game at its end and then you can go to stats to see everything
