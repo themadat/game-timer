@@ -360,7 +360,39 @@
             font-weight: 900;
             line-height: 1;
             text-transform: none;
+            white-space: nowrap;
             flex: 0 0 auto;
+        }
+
+        .brand .version-badge.is-demo-mode {
+            padding: 2px 10px;
+            border-color: #fbbf24;
+            background: linear-gradient(145deg, rgba(251, 191, 36, 0.9), rgba(180, 83, 9, 0.9));
+            color: #1f1300;
+            font-size: 10.5px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-overflow: clip;
+            overflow: visible;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
+            animation: demo-mode-pill-pulse 1.8s ease-in-out infinite;
+        }
+
+        .brand .app-label:has(.version-badge.is-demo-mode) {
+            overflow: visible;
+        }
+
+        @keyframes demo-mode-pill-pulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(251, 191, 36, 0.45); }
+            50% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.85); }
+        }
+
+        .brand .app-name {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .setup-shell .setup-bar.header-bar,
@@ -457,6 +489,109 @@
             grid-template-columns: minmax(150px, 1.0fr) minmax(300px, 2.0fr) minmax(150px, 1.0fr);
             gap: 16px;
             align-items: start;
+        }
+
+        .header-bar .brand.has-last-result {
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-bar .brand.has-last-result .app-label {
+            grid-column: 1;
+        }
+
+        .header-bar .brand.has-last-result .last-result-chip {
+            grid-column: 2;
+            justify-self: stretch;
+            width: 100%;
+        }
+
+        .header-bar .brand.has-last-result .settings-fab {
+            grid-column: 3;
+        }
+
+        .last-result-chip {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            height: 44px;
+            padding: 4px 6px 4px 10px;
+            border: 1px solid color-mix(in srgb, #38bdf8, white 30%);
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(56, 189, 248, 0.12));
+            color: var(--ink);
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+            overflow: hidden;
+        }
+
+        .last-result-chip:hover,
+        .last-result-chip:focus-visible {
+            transform: translateY(-1px);
+            border-color: #7dd3fc;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+            outline: none;
+        }
+
+        .last-result-text {
+            display: grid;
+            gap: 0;
+            min-width: 0;
+            line-height: 1.05;
+        }
+
+        .last-result-game {
+            font-size: 12px;
+            font-weight: 900;
+            line-height: 1.1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .last-result-meta {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 800;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .last-result-dismiss {
+            display: inline-grid;
+            place-items: center;
+            box-sizing: border-box;
+            flex: none;
+            align-self: center;
+            justify-self: center;
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            min-height: 22px;
+            max-width: 22px;
+            max-height: 22px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .last-result-dismiss:hover,
+        .last-result-dismiss:focus-visible {
+            background: rgba(255, 92, 122, 0.5);
+            border-color: rgba(255, 92, 122, 0.75);
+            outline: none;
         }
 
         .setup-stack {
@@ -1102,6 +1237,83 @@
         .roster-row.is-dragging {
             opacity: 0.62;
             border-color: white;
+        }
+
+        .player-list.is-random-animating .roster-row {
+            transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+        }
+
+        .player-list.is-random-animating .roster-row.is-pending {
+            opacity: 0.55;
+            filter: blur(0.3px) saturate(0.8);
+        }
+
+        .player-list.is-random-animating .roster-row.is-pending .roster-name-cell input {
+            color: rgba(255, 255, 255, 0.55);
+            font-style: italic;
+        }
+
+        .player-list.is-random-animating .roster-row.is-spinning {
+            opacity: 1;
+            filter: none;
+            border-color: #fde68a;
+            box-shadow:
+                0 0 0 2px rgba(253, 224, 71, 0.55),
+                0 0 24px rgba(253, 224, 71, 0.55);
+            animation: roster-spin-pulse 0.42s ease-in-out infinite alternate;
+        }
+
+        .player-list.is-random-animating .roster-row.is-spinning .drag-handle {
+            animation: roster-spin-dice 0.5s linear infinite;
+        }
+
+        @keyframes roster-spin-pulse {
+            from {
+                transform: scale(1);
+            }
+            to {
+                transform: scale(1.018);
+            }
+        }
+
+        @keyframes roster-spin-dice {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .player-list.is-random-animating .roster-row.is-just-locked {
+            animation: roster-lock-flash 0.55s ease-out;
+        }
+
+        @keyframes roster-lock-flash {
+            0% {
+                transform: scale(1.07);
+                box-shadow:
+                    0 0 0 3px rgba(74, 214, 164, 0.85),
+                    0 0 34px rgba(74, 214, 164, 0.85);
+                border-color: rgba(74, 214, 164, 0.9);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 transparent;
+            }
+        }
+
+        .player-list.is-random-animating .roster-row.is-revealed:not(.is-just-locked) {
+            border-color: color-mix(in srgb, var(--accent), white 36%);
+        }
+
+        .first-btn[disabled] {
+            opacity: 0.92;
+        }
+
+        .first-btn:disabled span[aria-hidden="true"] {
+            animation: first-btn-sparkle 0.7s ease-in-out infinite alternate;
+        }
+
+        @keyframes first-btn-sparkle {
+            from { transform: scale(0.95) rotate(-6deg); }
+            to { transform: scale(1.18) rotate(8deg); }
         }
 
         .drag-handle {
@@ -1815,6 +2027,22 @@
                 rgba(0, 0, 0, 0.18);
         }
 
+        .timeline-lane.is-combined {
+            min-height: 26px;
+            margin-bottom: 4px;
+        }
+
+        .timeline-lane.is-combined .timeline-lane-track {
+            height: 24px;
+        }
+
+        .timeline-lane.is-combined .timeline-lane-label {
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text);
+        }
+
         .timeline-segment {
             position: absolute;
             left: var(--start);
@@ -1834,6 +2062,32 @@
         .timeline-segment.is-setup {
             background:
                 linear-gradient(160deg, rgba(148, 163, 184, 0.78), rgba(71, 85, 105, 0.8));
+        }
+
+        .timeline-segment.is-player-longest {
+            z-index: 3;
+            min-width: 6px;
+            border: 2px solid #7f1d1d;
+            box-shadow:
+                0 0 0 2px #b91c1c,
+                0 0 14px rgba(185, 28, 28, 0.9),
+                0 0 4px rgba(127, 29, 29, 0.85) inset;
+            animation: longest-turn-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes longest-turn-pulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 0 2px #b91c1c,
+                    0 0 12px rgba(185, 28, 28, 0.85),
+                    0 0 4px rgba(127, 29, 29, 0.75) inset;
+            }
+            50% {
+                box-shadow:
+                    0 0 0 3px #991b1b,
+                    0 0 22px rgba(220, 38, 38, 1),
+                    0 0 6px rgba(127, 29, 29, 0.95) inset;
+            }
         }
 
         .timeline-segment.is-pause {
@@ -1947,6 +2201,14 @@
         td {
             font-size: 15px;
             font-weight: 750;
+        }
+
+        td.summary-longest-cell {
+            color: #b91c1c;
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(127, 29, 29, 0.55);
+            box-shadow: inset 0 0 0 2px #7f1d1d;
+            border-radius: 6px;
         }
 
         .name-cell {
@@ -3428,8 +3690,8 @@
                 turnOrder: {
                     icon: "⚖",
                     label: "Bid order",
-                    note: "First Turn is Random; Future Turns determined by God Resolution. Bidding/Auctions has turn order changes.",
-                    firstMode: "current-order",
+                    note: "Full Turn order is random to start; Future Turns determined by God Resolution. Bidding/Auctions has turn order changes.",
+                    firstMode: "random-all",
                     defaultOthers: ["Mechanics"]
                 },
                 colors: [
@@ -4039,6 +4301,40 @@ Keep placement and timing badge columns aligned when a player has more than two 
         const WISHLIST_DEFAULT_FILTER = "all";
         const CHANGELOG = [
             {
+                version: "1.8.0",
+                date: "2026.05.19",
+                notes: `
+## Random Starts & Stats Polish
+This release adds full random turn-order setup for the games that need it, condenses the Statistics timeline into a single readable bar, and makes each player's longest turn easy to spot.
+
+### Random Turn Order
+- Added a data-driven random-all turn-order mode for games whose first turn order is fully randomized (e.g. Cyclades).
+- For these games the Turn Order action becomes Set and randomly shuffles every eligible player into a fresh order.
+- Set now plays a suspenseful reveal: each slot spins through candidate names with a 🎲 spinner before locking in with a green flash, one position at a time.
+- Pending slots dim and italicize while the current slot pulses and flickers so the screen always feels alive.
+- Updated Cyclades: Legendary Edition's note to reflect the full random start.
+
+### First Player Drama
+- The classic single First pick now plays the same dramatic flicker on the chosen row before settling, lasting roughly twice as long per spin as the random-all per-slot reveal.
+
+### Combined Timeline
+- Added a Combined bar across the top of the Statistics timeline that condenses setup, every player or other lane, and pauses onto a single line.
+- The Combined bar renders at 1.5x the height of the other lanes for emphasis.
+
+### Longest Turn Highlight
+- Highlighted each player's longest turn segment in the Statistics timeline with a deep red outline and pulsing crimson glow, keeping the player's own color as the fill.
+- Highlighted the Long column in the final Players and Other tables with deep red text and a deep red outline.
+
+### Demo Mode Tag
+- When Demo Mode is enabled the version pill itself swaps to a glowing amber v1.8.0-DEMO-MODE chip (no text clipping); it reverts to the normal style when Demo Mode is off.
+- Added a triple-tap gesture on the Game Timer title that toggles Demo Mode from any header, perfect for iPad use without keyboard.
+
+### Auto-Save
+- Continuously snapshots the active session to localStorage so a crash, battery loss, or accidental reload silently restores Setup, Session, or Statistics state right where you left off — including running and paused timers, which keep counting from their stored timestamps.
+- On End, also writes a frozen Last Results snapshot that survives Restart so the final stats and timeline are never lost if you forget to Share.
+- Adds a compact saved-results chip between the Game Timer title and the Settings button on the Setup header when an end-of-game snapshot exists; tap it to re-open the full Statistics view (Share still works), or dismiss it with the × button.`
+            },
+            {
                 version: "1.7.0",
                 date: "2026.05.13",
                 notes: `
@@ -4298,6 +4594,8 @@ The initial release established the core loop: choose a game, add players, track
         let turnOrderManuallyAdjusted = false;
         let sessionDensityFrame = null;
         let shortcutHintsActive = false;
+        let randomSelectAnimation = null;
+        let randomSelectTimer = null;
         let state = {
             view: "setup",
             gameName: TEST_DEFAULT_GAME_NAME,
@@ -4424,6 +4722,101 @@ The initial release established the core loop: choose a game, add players, track
 
         function setDemoMode(mode) {
             demoMode = mode;
+            render();
+        }
+
+        const SESSION_KEY = "gameTimer.session.v1";
+        const LAST_RESULT_KEY = "gameTimer.lastResult.v1";
+
+        function buildSessionSnapshot() {
+            return {
+                v: 1,
+                savedAt: Date.now(),
+                state,
+                setupEntries,
+                selectedGameId,
+                selectedStarterId,
+                turnOrderManuallyAdjusted
+            };
+        }
+
+        function saveSession() {
+            try {
+                window.localStorage?.setItem(SESSION_KEY, JSON.stringify(buildSessionSnapshot()));
+            } catch (error) {
+                // Session persistence is best-effort.
+            }
+        }
+
+        function loadSession() {
+            try {
+                const raw = window.localStorage?.getItem(SESSION_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                return parsed && parsed.v === 1 && parsed.state ? parsed : null;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function saveLastResult() {
+            try {
+                window.localStorage?.setItem(LAST_RESULT_KEY, JSON.stringify(buildSessionSnapshot()));
+            } catch (error) {
+                // Last-result persistence is best-effort.
+            }
+        }
+
+        function loadLastResult() {
+            try {
+                const raw = window.localStorage?.getItem(LAST_RESULT_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || parsed.v !== 1 || !parsed.state) return null;
+                if (parsed.state.view !== "summary") return null;
+                return parsed;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function clearLastResult() {
+            try {
+                window.localStorage?.removeItem(LAST_RESULT_KEY);
+            } catch (error) {
+                // ignore
+            }
+        }
+
+        function hydrateFromSnapshot(snapshot) {
+            if (!snapshot || !snapshot.state) return false;
+            state = snapshot.state;
+            setupEntries = Array.isArray(snapshot.setupEntries) ? snapshot.setupEntries : [];
+            selectedGameId = snapshot.selectedGameId || selectedGameId;
+            selectedStarterId = snapshot.selectedStarterId || null;
+            turnOrderManuallyAdjusted = Boolean(snapshot.turnOrderManuallyAdjusted);
+            if (randomSelectTimer) {
+                clearInterval(randomSelectTimer);
+                randomSelectTimer = null;
+            }
+            randomSelectAnimation = null;
+            dragState = null;
+            return true;
+        }
+
+        function restoreSessionOnInit() {
+            return hydrateFromSnapshot(loadSession());
+        }
+
+        function openLastResult() {
+            const snapshot = loadLastResult();
+            if (!snapshot) return;
+            hydrateFromSnapshot(snapshot);
+            render();
+        }
+
+        function dismissLastResult() {
+            clearLastResult();
             render();
         }
 
@@ -4749,6 +5142,10 @@ The initial release established the core loop: choose a game, add players, track
             return null;
         }
 
+        function usesRandomAllTurnOrder(game = currentPreset()) {
+            return turnOrderRuleForGame(game)?.firstMode === "random-all";
+        }
+
         function ensureRuleLookup() {
             const existing = setupEntries.find(isRuleLookupEntry);
             const playerCount = realSetupPlayerCount();
@@ -4836,6 +5233,7 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function randomizePlayersForGame(game) {
+            clearRandomSelectAnimation();
             const colors = shuffled(randomizeColorsForGame(game));
             const playerCount = randomPlayerCountForGame(game, colors);
             if (!playerCount) return;
@@ -4873,6 +5271,7 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function applyGamePreset(gameId) {
+            clearRandomSelectAnimation();
             const isSwitchingGames = gameId !== selectedGameId;
             selectedGameId = gameId;
             state.gameName = currentPreset().name;
@@ -4889,6 +5288,7 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function clearTurnOrder() {
+            clearRandomSelectAnimation();
             setupEntries = setupEntries.filter(entry => entry.type !== "player");
             turnOrderManuallyAdjusted = false;
             selectedStarterId = null;
@@ -4898,6 +5298,7 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function resetStartPage() {
+            clearRandomSelectAnimation();
             selectedGameId = TEST_DEFAULT_GAME_ID;
             state.gameName = currentPreset().name;
             gameSearch = "";
@@ -4931,19 +5332,101 @@ The initial release established the core loop: choose a game, add players, track
             Object.assign(entry, patch);
         }
 
+        function clearRandomSelectAnimation() {
+            if (randomSelectTimer) {
+                clearInterval(randomSelectTimer);
+                randomSelectTimer = null;
+            }
+            randomSelectAnimation = null;
+        }
+
+        function startRandomSelectAnimation({ finalIds, candidatePool, ticksPerLock }) {
+            randomSelectAnimation = {
+                finalIds,
+                candidatePool,
+                lockedCount: 0,
+                tickInSlot: 0,
+                flickerSeed: 0,
+                justLocked: false,
+                singleMode: finalIds.length === 1
+            };
+            const TICK_MS = 70;
+            randomSelectTimer = setInterval(() => {
+                const anim = randomSelectAnimation;
+                if (!anim) {
+                    if (randomSelectTimer) {
+                        clearInterval(randomSelectTimer);
+                        randomSelectTimer = null;
+                    }
+                    return;
+                }
+                anim.flickerSeed += 1;
+                anim.tickInSlot += 1;
+                anim.justLocked = false;
+                if (anim.tickInSlot >= ticksPerLock) {
+                    anim.tickInSlot = 0;
+                    anim.lockedCount += 1;
+                    anim.justLocked = true;
+                    if (anim.lockedCount >= anim.finalIds.length) {
+                        const starterId = anim.finalIds[0];
+                        clearRandomSelectAnimation();
+                        selectedStarterId = starterId;
+                        render();
+                        return;
+                    }
+                }
+                render();
+            }, TICK_MS);
+            render();
+        }
+
         function pickFirstPlayer() {
             const realPlayers = setupEntries.filter(entry => entry.type === "player" && entry.name.trim());
             if (!realPlayers.length) return;
+            clearRandomSelectAnimation();
+            if (usesRandomAllTurnOrder()) {
+                const shuffledPlayers = shuffled(realPlayers);
+                const others = setupEntries.filter(entry => !(entry.type === "player" && entry.name.trim()));
+                setupEntries = [...shuffledPlayers, ...others];
+                turnOrderManuallyAdjusted = true;
+                selectedStarterId = null;
+
+                if (shuffledPlayers.length <= 1) {
+                    selectedStarterId = shuffledPlayers[0]?.id || null;
+                    render();
+                    return;
+                }
+
+                const finalIds = shuffledPlayers.map(player => player.id);
+                startRandomSelectAnimation({
+                    finalIds,
+                    candidatePool: finalIds.slice(),
+                    ticksPerLock: 8
+                });
+                return;
+            }
             const picked = firstPlayerByTurnRule(realPlayers) || realPlayers[Math.floor(Math.random() * realPlayers.length)];
             const index = setupEntries.findIndex(entry => entry.id === picked.id);
             if (index > 0) {
                 setupEntries = setupEntries.slice(index).concat(setupEntries.slice(0, index));
             }
-            selectedStarterId = picked.id;
-            render();
+            selectedStarterId = null;
+
+            if (realPlayers.length <= 1) {
+                selectedStarterId = picked.id;
+                render();
+                return;
+            }
+
+            startRandomSelectAnimation({
+                finalIds: [picked.id],
+                candidatePool: realPlayers.map(player => player.id),
+                ticksPerLock: 16
+            });
         }
 
         function startGame() {
+            clearRandomSelectAnimation();
             applyGameTurnOrderDefaults({ syncOthers: false });
             ensureRuleLookup();
             const realPlayers = setupEntries.filter(entry => entry.type === "player" && entry.name.trim());
@@ -5111,6 +5594,7 @@ The initial release established the core loop: choose a game, add players, track
             if (state.activeId) finishCurrentTurn(now);
             state.gameEndedAt = now;
             state.view = "summary";
+            saveLastResult();
             render();
         }
 
@@ -5682,10 +6166,13 @@ The initial release established the core loop: choose a game, add players, track
             }
 
             state.players.forEach(player => {
+                const longestDuration = player.turns.reduce((max, turn) => Math.max(max, turn.duration || 0), 0);
+                const hasMultipleTurns = player.turns.length > 1;
                 player.turns.forEach((turn, index) => {
                     const end = turn.endedAt || timelineStart;
                     const duration = Math.max(0, turn.duration || 0);
                     const start = turn.startedAt || Math.max(timelineStart, end - duration);
+                    const isLongest = hasMultipleTurns && duration > 0 && duration === longestDuration;
                     segments.push({
                         laneKey: `player:${player.id}`,
                         type: "turn",
@@ -5694,7 +6181,8 @@ The initial release established the core loop: choose a game, add players, track
                         start,
                         end,
                         duration,
-                        detail: `Turn ${index + 1}`
+                        detail: isLongest ? `Longest · Turn ${index + 1}` : `Turn ${index + 1}`,
+                        isPlayerLongestTurn: isLongest
                     });
                 });
             });
@@ -5780,9 +6268,39 @@ The initial release established the core loop: choose a game, add players, track
             const lanes = timelineLanes(segments);
             const ticks = timelineTicks(total);
 
+            const combinedSegments = segments.slice().sort((a, b) => {
+                const typeRank = type => type === "pause" ? 2 : type === "setup" ? 0 : 1;
+                return a.start - b.start || typeRank(a.type) - typeRank(b.type);
+            });
+            const combinedLaneMarkup = `
+                <div class="timeline-lane is-combined" style="--accent:#94a3b8">
+                  <div class="timeline-lane-label">
+                    <span class="timeline-dot" style="--accent:#94a3b8"></span>
+                    <span>Combined</span>
+                  </div>
+                  <div class="timeline-lane-track">
+                    ${combinedSegments.map(segment => {
+                    const left = ((segment.start - timelineStart) / total) * 100;
+                    const width = (segment.wallDuration / total) * 100;
+                    const label = `${segment.label} · ${fmt(segment.duration || segment.wallDuration)}`;
+                    const detail = segment.detail ? `${segment.detail}: ${label}` : label;
+                    return `
+                    <span
+                      class="timeline-segment is-${esc(segment.type)} ${segment.isPlayerLongestTurn ? "is-player-longest" : ""}"
+                      style="--start:${left.toFixed(3)}%; --width:${width.toFixed(3)}%; --accent:${esc(segment.color)}"
+                      title="${esc(detail)}"
+                      aria-label="${esc(detail)}"
+                    ></span>
+                  `;
+                }).join("")}
+                  </div>
+                </div>
+              `;
+
             return `
           <section class="panel glass timeline-panel" aria-label="Game timeline">
             <div class="timeline-lanes">
+              ${combinedLaneMarkup}
               ${lanes.map(lane => {
                 const laneSegments = segments.filter(segment => segment.laneKey === lane.key);
                 return `
@@ -5799,7 +6317,7 @@ The initial release established the core loop: choose a game, add players, track
                     const detail = segment.detail ? `${segment.detail}: ${label}` : label;
                     return `
                     <span
-                      class="timeline-segment is-${esc(segment.type)}"
+                      class="timeline-segment is-${esc(segment.type)} ${segment.isPlayerLongestTurn ? "is-player-longest" : ""}"
                       style="--start:${left.toFixed(3)}%; --width:${width.toFixed(3)}%; --accent:${esc(segment.color)}"
                       title="${esc(detail)}"
                       aria-label="${esc(detail)}"
@@ -6073,15 +6591,27 @@ The initial release established the core loop: choose a game, add players, track
             const canStart = canStartSetup();
             const playerCount = playerEntries.filter(entry => entry.name.trim()).length;
             const turnOrderRule = turnOrderRuleForGame(preset);
+            const lastResult = loadLastResult();
+            const lastResultGameName = lastResult ? gameAccessibleName(lastResult.state.gameName || "") : "";
+            const lastResultDate = lastResult ? formatDateStamp(lastResult.state.gameEndedAt || lastResult.savedAt || Date.now()) : "";
 
             app.innerHTML = `
         <main class="shell setup-shell ${isGameListCollapsed ? "game-list-collapsed" : ""}">
           <header class="setup-bar header-bar glass">
-            <div class="brand">
+            <div class="brand ${lastResult ? "has-last-result" : ""}">
               <span class="app-label">
-                <span class="app-name">Game Timer</span>
-                <span class="version-badge">v${esc(appVersion())}</span>
+                <span class="app-name" data-action="app-name-tap" role="button" tabindex="0" title="Triple-tap to toggle Demo Mode">Game Timer</span>
+                <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
               </span>
+              ${lastResult ? `
+                <div class="last-result-chip" data-action="last-result-open" role="button" tabindex="0" title="Open saved Statistics · ${esc(lastResultGameName)} · ${esc(lastResultDate)}" aria-label="Open saved Statistics for ${esc(lastResultGameName)}">
+                  <span class="last-result-text">
+                    <span class="last-result-game">${esc(lastResultGameName)}</span>
+                    <span class="last-result-meta">${esc(lastResultDate)}</span>
+                  </span>
+                  <button class="last-result-dismiss" data-action="last-result-dismiss" aria-label="Dismiss saved results" title="Dismiss">×</button>
+                </div>
+              ` : ""}
               <button class="settings-fab" data-action="settings-open" data-shortcut="S" aria-label="Open settings" title="Settings">⚙</button>
             </div>
             <div class="nav-status setup-game-toggle" data-action="toggle-game-list" role="button" tabindex="0" aria-expanded="${isGameListCollapsed ? "false" : "true"}">
@@ -6205,9 +6735,9 @@ The initial release established the core loop: choose a game, add players, track
                     <span aria-hidden="true">×</span>
                     <span>Clear</span>
                   </button>
-                  <button class="action-btn first-btn" data-action="first" data-shortcut="F" ${playerEntries.length ? "" : "disabled"}>
-                    <span aria-hidden="true">🎲</span>
-                    <span>First</span>
+                  <button class="action-btn first-btn" data-action="first" data-shortcut="F" ${playerEntries.length && !randomSelectAnimation ? "" : "disabled"}>
+                    <span aria-hidden="true">${randomSelectAnimation ? "✨" : "🎲"}</span>
+                    <span>${randomSelectAnimation ? "Rolling…" : (usesRandomAllTurnOrder(preset) ? "Set" : "First")}</span>
                   </button>
                 </div>
               </div>
@@ -6227,7 +6757,7 @@ The initial release established the core loop: choose a game, add players, track
                 </div>
               ` : ""}
 
-              <div class="roster-list player-list" id="rosterList">
+              <div class="roster-list player-list ${randomSelectAnimation ? "is-random-animating" : ""}" id="rosterList">
                 ${playerEntries.length ? playerEntries.map((entry, index) => rosterRow(entry, index)).join("") : `
                   <div class="empty-panel">
                     Pick a color, then tap a name to add players.
@@ -6243,23 +6773,64 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function rosterRow(entry, index) {
-            const hasFaction = Boolean(entry.factionName);
+            const anim = randomSelectAnimation;
+            const isAnimating = Boolean(anim);
+            const isRandomEntry = isAnimating && entry.type === "player" && anim.finalIds.includes(entry.id);
+            const finalIndex = isRandomEntry ? anim.finalIds.indexOf(entry.id) : -1;
+            const isUnlocked = isRandomEntry && finalIndex >= anim.lockedCount;
+            const isSpinning = isRandomEntry && finalIndex === anim.lockedCount;
+            const justLocked = isRandomEntry && anim.justLocked && finalIndex === anim.lockedCount - 1;
+
+            let displayEntry = entry;
+            if (isUnlocked) {
+                const pool = anim.singleMode
+                    ? (anim.candidatePool || anim.finalIds)
+                    : anim.finalIds.slice(anim.lockedCount);
+                const candidateEntries = pool
+                    .map(id => setupEntries.find(item => item.id === id))
+                    .filter(Boolean);
+                if (candidateEntries.length) {
+                    const offset = isSpinning ? anim.flickerSeed : (anim.flickerSeed + finalIndex * 3 + 1);
+                    displayEntry = candidateEntries[offset % candidateEntries.length];
+                }
+            }
+
+            const hasFaction = Boolean(displayEntry.factionName);
             const factionFirst = hasFaction && displayNameMode === "faction";
             const primaryClass = `${hasFaction ? "has-faction" : "no-faction"} ${factionFirst ? "is-faction-primary" : "is-player-primary"}`;
-            const inputMarkup = `<input data-field="name" data-id="${esc(entry.id)}" value="${esc(entry.name)}" placeholder="${entry.type === "other" ? "Other name" : "Player name"}" autocomplete="off" autocapitalize="words" ${entry.locked ? "disabled" : ""}>`;
+            const inputDisabled = entry.locked || isAnimating;
+            const showName = isUnlocked ? displayEntry.name : entry.name;
+            const showColor = isUnlocked ? displayEntry.color : entry.color;
+            const showFaction = isUnlocked ? displayEntry.factionName : entry.factionName;
+            const inputMarkup = `<input data-field="name" data-id="${esc(entry.id)}" value="${esc(showName)}" placeholder="${entry.type === "other" ? "Other name" : "Player name"}" autocomplete="off" autocapitalize="words" ${inputDisabled ? "disabled" : ""}>`;
+            const handleIcon = isSpinning ? "🎲" : (isUnlocked ? "?" : "↕");
+            const handleAttrs = isAnimating
+                ? `disabled aria-label="Random pick in progress"`
+                : `data-action="drag" data-id="${esc(entry.id)}" aria-label="Drag ${esc(entry.name || "player")}"`;
+            const removeAttrs = entry.locked || isAnimating
+                ? `disabled`
+                : `data-action="remove" data-id="${esc(entry.id)}"`;
+            const rowClasses = [
+                primaryClass,
+                dragState && dragState.id === entry.id ? "is-dragging" : "",
+                isSpinning ? "is-spinning" : "",
+                justLocked ? "is-just-locked" : "",
+                isRandomEntry && !isUnlocked ? "is-revealed" : "",
+                isUnlocked && !isSpinning ? "is-pending" : ""
+            ].filter(Boolean).join(" ");
             return `
-        <div class="roster-row ${primaryClass} ${dragState && dragState.id === entry.id ? "is-dragging" : ""}" data-id="${esc(entry.id)}" data-entry-type="${esc(entry.type)}" style="--accent:${esc(entry.color)}">
-          <button class="icon-btn drag-handle" data-action="drag" data-id="${esc(entry.id)}" aria-label="Drag ${esc(entry.name || "player")}">↕</button>
+        <div class="roster-row ${rowClasses}" data-id="${esc(entry.id)}" data-entry-type="${esc(entry.type)}" style="--accent:${esc(showColor)}">
+          <button class="icon-btn drag-handle" ${handleAttrs}>${handleIcon}</button>
           <div class="roster-name-cell">
-            ${factionFirst ? `<span class="roster-faction is-primary">${esc(entry.factionName)}</span>` : ""}
+            ${factionFirst ? `<span class="roster-faction is-primary">${esc(showFaction)}</span>` : ""}
             ${inputMarkup}
-            ${hasFaction && !factionFirst ? `<span class="roster-faction">${esc(entry.factionName)}</span>` : ""}
+            ${hasFaction && !factionFirst ? `<span class="roster-faction">${esc(showFaction)}</span>` : ""}
           </div>
           <label class="roster-color" aria-label="Color for ${esc(entry.name || "entry")}" title="Color">
             <span class="roster-color-swatch" aria-hidden="true"></span>
-            <input data-field="color" data-id="${esc(entry.id)}" type="color" value="${esc(entry.color)}">
+            <input data-field="color" data-id="${esc(entry.id)}" type="color" value="${esc(showColor)}" ${isAnimating ? "disabled" : ""}>
           </label>
-          <button class="remove-btn" ${entry.locked ? "disabled" : `data-action="remove" data-id="${esc(entry.id)}"`} aria-label="Remove ${esc(entry.name || "entry")}">×</button>
+          <button class="remove-btn" ${removeAttrs} aria-label="Remove ${esc(entry.name || "entry")}">×</button>
         </div>
       `;
         }
@@ -6308,6 +6879,11 @@ The initial release established the core loop: choose a game, add players, track
                     if (action === "setup-reset") resetStartPage();
                     if (action === "remove") removeEntry(event.currentTarget.dataset.id);
                     if (action === "start") startGame();
+                    if (action === "last-result-open") openLastResult();
+                    if (action === "last-result-dismiss") {
+                        event.stopPropagation();
+                        dismissLastResult();
+                    }
                 });
             });
 
@@ -6443,8 +7019,8 @@ The initial release established the core loop: choose a game, add players, track
           <header class="session-bar header-bar glass">
             <div class="brand">
               <span class="app-label">
-                <span class="app-name">Game Timer</span>
-                <span class="version-badge">v${esc(appVersion())}</span>
+                <span class="app-name" data-action="app-name-tap" role="button" tabindex="0" title="Triple-tap to toggle Demo Mode">Game Timer</span>
+                <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
               </span>
               <button class="settings-fab" data-action="settings-open" data-shortcut="S" aria-label="Open settings" title="Settings">⚙</button>
             </div>
@@ -6927,8 +7503,8 @@ The initial release established the core loop: choose a game, add players, track
           <header class="statistics-bar header-bar glass" aria-label="${esc(summaryTitle)}">
             <div class="brand">
               <span class="app-label">
-                <span class="app-name">Game Timer</span>
-                <span class="version-badge">v${esc(appVersion())}</span>
+                <span class="app-name" data-action="app-name-tap" role="button" tabindex="0" title="Triple-tap to toggle Demo Mode">Game Timer</span>
+                <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
               </span>
               <button class="settings-fab" data-action="settings-open" data-shortcut="S" aria-label="Open settings" title="Settings">⚙</button>
             </div>
@@ -7031,7 +7607,7 @@ The initial release established the core loop: choose a game, add players, track
                     <td data-label="${esc(countLabel)}">${stats.count}</td>
                     <td data-label="Total">${fmt(stats.total)}</td>
                     <td data-label="Avg">${stats.count ? fmt(stats.average) : "--"}</td>
-                    <td data-label="Long">${stats.count ? fmt(stats.longest) : "--"}</td>
+                    <td data-label="Long" class="${stats.count && stats.count > 1 ? "summary-longest-cell" : ""}">${stats.count ? fmt(stats.longest) : "--"}</td>
                     <td data-label="Short">${stats.count ? fmt(stats.shortest) : "--"}</td>
                   </tr>
                 `;
@@ -7477,6 +8053,7 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function render() {
+            saveSession();
             applyTheme();
             if (state.view === "setup") renderSetup();
             if (state.view === "game") renderGame();
@@ -7489,6 +8066,26 @@ The initial release established the core loop: choose a game, add players, track
             bindSettingsEvents();
         }
 
+        const appNameTapState = { lastTapAt: 0, count: 0 };
+        function handleAppNameTap(event) {
+            const target = event.target.closest('[data-action="app-name-tap"]');
+            if (!target) return;
+            event.preventDefault();
+            const now = Date.now();
+            if (now - appNameTapState.lastTapAt > 600) {
+                appNameTapState.count = 0;
+            }
+            appNameTapState.lastTapAt = now;
+            appNameTapState.count += 1;
+            if (appNameTapState.count >= 3) {
+                appNameTapState.count = 0;
+                appNameTapState.lastTapAt = 0;
+                setDemoMode(!demoMode);
+            }
+        }
+        document.addEventListener("click", handleAppNameTap);
+
+        restoreSessionOnInit();
         ensureRuleLookup();
         document.addEventListener("keydown", handleTestingHotkeys);
         document.addEventListener("keyup", handleShortcutHintKeyup);
