@@ -395,6 +395,47 @@
             touch-action: manipulation;
         }
 
+        .brand .app-label-pills {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .brand .storage-badge {
+            display: inline-grid;
+            place-items: center;
+            min-height: 18px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            flex: 0 0 auto;
+            cursor: help;
+        }
+
+        .brand .storage-badge.is-ok {
+            border: 1px solid rgba(74, 214, 164, 0.65);
+            background: linear-gradient(145deg, rgba(74, 214, 164, 0.28), rgba(34, 197, 94, 0.18));
+            color: #d1fae5;
+        }
+
+        .brand .storage-badge.is-first {
+            border: 1px solid rgba(251, 191, 36, 0.7);
+            background: linear-gradient(145deg, rgba(251, 191, 36, 0.28), rgba(180, 83, 9, 0.18));
+            color: #fef3c7;
+        }
+
+        .brand .storage-badge.is-bad {
+            border: 1px solid rgba(255, 92, 122, 0.7);
+            background: linear-gradient(145deg, rgba(255, 92, 122, 0.28), rgba(190, 18, 60, 0.18));
+            color: #fecdd3;
+        }
+
         .setup-shell .setup-bar.header-bar,
         .summary-shell .statistics-bar.header-bar {
             grid-template-columns: minmax(150px, 1.0fr) minmax(300px, 2.0fr) minmax(150px, 1.0fr);
@@ -1395,6 +1436,23 @@
             width: 100%;
             background: linear-gradient(145deg, rgba(56, 189, 248, 0.38), rgba(255, 255, 255, 0.12));
             border-color: rgba(56, 189, 248, 0.56);
+        }
+
+        .copy-btn {
+            width: 100%;
+            background: linear-gradient(145deg, rgba(251, 191, 36, 0.42), rgba(180, 83, 9, 0.32));
+            border-color: rgba(251, 191, 36, 0.7);
+            color: #ffffff;
+        }
+
+        .copy-btn .copy-icon {
+            stroke: #ffffff;
+        }
+
+        .copy-btn .copy-icon {
+            display: inline-block;
+            vertical-align: -3px;
+            margin-right: 4px;
         }
 
         .randomize-btn {
@@ -2557,6 +2615,101 @@
             font-weight: 750;
         }
 
+        .backup-actions {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            flex: 0 0 auto;
+        }
+
+        .backup-btn {
+            min-height: 40px;
+            height: 40px;
+            padding: 0 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .backup-paste-row {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .backup-paste-area {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .backup-paste-area textarea {
+            min-height: 60px;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--ink);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.35;
+            resize: vertical;
+            outline: none;
+        }
+
+        .backup-paste-area textarea:focus {
+            border-color: rgba(56, 189, 248, 0.7);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+        }
+
+        .backup-restore-btn {
+            align-self: stretch;
+            min-height: 60px;
+            height: auto;
+        }
+
+        .header-bar .brand.has-clipboard-toast {
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-bar .brand.has-clipboard-toast .app-label {
+            grid-column: 1;
+        }
+
+        .header-bar .brand.has-clipboard-toast .clipboard-copy-toast {
+            grid-column: 2;
+            justify-self: center;
+        }
+
+        .header-bar .brand.has-clipboard-toast .settings-fab {
+            grid-column: 3;
+        }
+
+        .clipboard-copy-toast {
+            display: inline-grid;
+            place-items: center;
+            max-width: 100%;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(74, 214, 164, 0.55);
+            background: linear-gradient(145deg, rgba(74, 214, 164, 0.32), rgba(34, 197, 94, 0.18));
+            color: #d1fae5;
+            font-size: 10px;
+            font-weight: 900;
+            line-height: 1.15;
+            text-align: center;
+            white-space: pre-line;
+            letter-spacing: 0.02em;
+            animation: clipboard-toast-pop 320ms ease-out both;
+        }
+
+        @keyframes clipboard-toast-pop {
+            from { opacity: 0; transform: translateY(-4px) scale(0.92); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         .shortcut-hint {
             display: inline-flex;
             align-items: center;
@@ -3137,7 +3290,7 @@
             }
 
             .summary-shell .summary-actions {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(3, minmax(0, 1fr));
             }
 
             .setup-shell .header-bar .top-actions .action-btn,
@@ -4301,6 +4454,33 @@ Keep placement and timing badge columns aligned when a player has more than two 
         const WISHLIST_DEFAULT_FILTER = "all";
         const CHANGELOG = [
             {
+                version: "1.8.1",
+                date: "2026.05.21",
+                notes: `
+## Auto-Save & Mobile Clipboard
+This release wraps the 1.8 line with everything needed to make game state survive crashes, reloads, and even iOS HTML viewers that don't persist localStorage.
+
+### Auto-Save
+- Continuously snapshots the active session (state, setup, selected game, starter, turn-order flag) into localStorage on every render so a crash, battery loss, or accidental reload silently restores Setup, Session, or Statistics state right where you left off — including running and paused timers, which keep counting from their stored timestamps.
+- On End, freezes a separate Last Results snapshot that survives Restart so the final stats and timeline are never lost if you forget to Share.
+- Added a compact Last Results chip in the Setup header (between the Game Timer title and the ⚙ button) when a saved end-of-game snapshot exists. Tap to re-open the Statistics view, × to dismiss.
+
+### Session Backup
+- Added Export / Import buttons in Settings that save and restore the current session as a JSON file via the iOS Share Sheet or file picker.
+- Export bundles the live session AND the Last Results snapshot so a single file restores everything.
+- Added a Paste Session textarea + Restore button for iOS HTML viewers that block programmatic clipboard reads — long-press inside the box, tap Paste, then tap Restore.
+
+### Clipboard Workflow
+- End now auto-copies the full session JSON to the clipboard via the modern Clipboard API with a legacy execCommand fallback for restricted WKWebViews.
+- Added a yellow Copy button on the Statistics header with an inline two-overlapping-squares SVG (no emoji) for manually re-copying at any time.
+- Two-line confirmation toast slots into the Statistics header between the title pills and the ⚙ button: "Copied to / clipboard" on success, "Clipboard blocked / Use Export" if the viewer rejects.
+- Import button now checks the clipboard first (where allowed) before opening the file picker, so on desktop it round-trips with one tap.
+
+### Storage Diagnostic
+- Added a hidden Storage Diagnostic toggle in Settings → Developer Tools.
+- When enabled, a small 💾 pill appears beside the version pill on every header showing 💾 #N (persisted across N loads, green), 💾 1st (first load, amber), or 💾 ✗ (localStorage unavailable, red). Useful for confirming whether a given iOS viewer wipes storage on every launch.`
+            },
+            {
                 version: "1.8.0",
                 date: "2026.05.19",
                 notes: `
@@ -4580,6 +4760,8 @@ The initial release established the core loop: choose a game, add players, track
         let textType = loadTextType();
         let demoMode = false;
         let devShortcutMode = false;
+        let storageDiagnosticEnabled = loadStorageDiagnosticEnabled();
+        let storageStatus = { state: "unknown", loadCount: 0, firstSeenAt: null, lastSeenAt: null };
         let isSettingsOpen = false;
         let isChangelogOpen = false;
         let isWishlistOpen = false;
@@ -4725,6 +4907,80 @@ The initial release established the core loop: choose a game, add players, track
             render();
         }
 
+        function loadStorageDiagnosticEnabled() {
+            try {
+                return window.localStorage?.getItem("gameTimerStorageDiagnostic") === "on";
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function setStorageDiagnosticEnabled(value) {
+            storageDiagnosticEnabled = Boolean(value);
+            try {
+                window.localStorage?.setItem("gameTimerStorageDiagnostic", storageDiagnosticEnabled ? "on" : "off");
+            } catch (error) {
+                // best-effort
+            }
+            render();
+        }
+
+        const STORAGE_PROBE_KEY = "gameTimer.persistenceProbe.v1";
+
+        function detectStorageStatus() {
+            try {
+                if (!window.localStorage) {
+                    storageStatus = { state: "unavailable", loadCount: 0, firstSeenAt: null, lastSeenAt: null };
+                    return;
+                }
+                const now = Date.now();
+                let prior = null;
+                try {
+                    const raw = window.localStorage.getItem(STORAGE_PROBE_KEY);
+                    prior = raw ? JSON.parse(raw) : null;
+                } catch (error) {
+                    prior = null;
+                }
+                const next = {
+                    loadCount: ((prior && prior.loadCount) || 0) + 1,
+                    firstSeenAt: (prior && prior.firstSeenAt) || now,
+                    lastSeenAt: now
+                };
+                window.localStorage.setItem(STORAGE_PROBE_KEY, JSON.stringify(next));
+                const verify = window.localStorage.getItem(STORAGE_PROBE_KEY);
+                if (!verify) {
+                    storageStatus = { state: "unavailable", loadCount: 0, firstSeenAt: null, lastSeenAt: null };
+                    return;
+                }
+                storageStatus = {
+                    state: prior ? "ok" : "first",
+                    loadCount: next.loadCount,
+                    firstSeenAt: next.firstSeenAt,
+                    lastSeenAt: next.lastSeenAt
+                };
+            } catch (error) {
+                storageStatus = { state: "unavailable", loadCount: 0, firstSeenAt: null, lastSeenAt: null };
+            }
+        }
+
+        function storageStatusBadge() {
+            if (!storageDiagnosticEnabled) return "";
+            const s = storageStatus;
+            if (s.state === "ok") {
+                const tooltip = `Storage persisted across ${s.loadCount} loads · first seen ${formatDateStamp(s.firstSeenAt)}`;
+                return `<span class="storage-badge is-ok" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">💾 #${s.loadCount}</span>`;
+            }
+            if (s.state === "first") {
+                const tooltip = "First load detected — reload to confirm persistence. If the count stays at #1 across reloads, your viewer is wiping storage.";
+                return `<span class="storage-badge is-first" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">💾 1st</span>`;
+            }
+            if (s.state === "unavailable") {
+                const tooltip = "localStorage unavailable — autosave will not survive reloads.";
+                return `<span class="storage-badge is-bad" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">💾 ✗</span>`;
+            }
+            return "";
+        }
+
         const SESSION_KEY = "gameTimer.session.v1";
         const LAST_RESULT_KEY = "gameTimer.lastResult.v1";
 
@@ -4809,15 +5065,285 @@ The initial release established the core loop: choose a game, add players, track
         }
 
         function openLastResult() {
-            const snapshot = loadLastResult();
+            const snapshot = loadLastResult() || clipboardLastResult;
             if (!snapshot) return;
             hydrateFromSnapshot(snapshot);
             render();
         }
 
         function dismissLastResult() {
+            clipboardLastResult = null;
             clearLastResult();
             render();
+        }
+
+        function exportSessionFilename() {
+            const stamp = new Date().toISOString().replace(/[:T]/g, "-").replace(/\..+$/, "");
+            const slug = gameAccessibleName(state.gameName || "session").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "session";
+            return `game-timer-${slug}-${stamp}.json`;
+        }
+
+        function exportSessionPayload() {
+            return {
+                format: "gameTimer.export.v1",
+                appVersion: appVersion(),
+                exportedAt: Date.now(),
+                session: buildSessionSnapshot(),
+                lastResult: loadLastResult()
+            };
+        }
+
+        async function exportSession() {
+            const payload = exportSessionPayload();
+            const json = JSON.stringify(payload, null, 2);
+            const blob = new Blob([json], { type: "application/json" });
+            const fileName = exportSessionFilename();
+
+            if (typeof File !== "undefined" && navigator.canShare && navigator.share) {
+                try {
+                    const file = new File([blob], fileName, { type: "application/json" });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: "Game Timer session" });
+                        return;
+                    }
+                } catch (error) {
+                    // Share cancelled or unsupported — fall through to download.
+                }
+            }
+
+            try {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = fileName;
+                link.rel = "noopener";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
+            } catch (error) {
+                try {
+                    const dataUrl = "data:application/json;charset=utf-8," + encodeURIComponent(json);
+                    window.open(dataUrl, "_blank");
+                } catch (innerError) {
+                    window.alert("Export failed: " + (error?.message || error));
+                }
+            }
+        }
+
+        function importSessionFromFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = event => {
+                try {
+                    const parsed = JSON.parse(String(event.target.result || ""));
+                    if (!parsed || parsed.format !== "gameTimer.export.v1") {
+                        window.alert("That doesn't look like a Game Timer export file.");
+                        return;
+                    }
+                    const session = parsed.session;
+                    if (!session || !session.state) {
+                        window.alert("Export file is missing session data.");
+                        return;
+                    }
+                    hydrateFromSnapshot(session);
+                    if (parsed.lastResult && parsed.lastResult.state) {
+                        try {
+                            window.localStorage?.setItem(LAST_RESULT_KEY, JSON.stringify(parsed.lastResult));
+                        } catch (error) {
+                            // best-effort
+                        }
+                    }
+                    isSettingsOpen = false;
+                    render();
+                } catch (error) {
+                    window.alert("Could not read session file: " + (error?.message || error));
+                }
+            };
+            reader.onerror = () => window.alert("Failed to read the file.");
+            reader.readAsText(file);
+        }
+
+        let clipboardLastResult = null;
+        let clipboardCheckAttempted = false;
+        let clipboardCopyFlash = false;
+
+        function isValidExportPayload(parsed) {
+            return Boolean(parsed && parsed.format === "gameTimer.export.v1" && parsed.session && parsed.session.state);
+        }
+
+        function extractLastResultFromExport(parsed) {
+            if (parsed.lastResult && parsed.lastResult.state && parsed.lastResult.state.view === "summary") {
+                return parsed.lastResult;
+            }
+            if (parsed.session && parsed.session.state && parsed.session.state.view === "summary") {
+                return parsed.session;
+            }
+            return null;
+        }
+
+        function showClipboardCopyFlash(message) {
+            clipboardCopyFlash = message || "Copied to clipboard";
+            if (state.view === "summary") render();
+            window.setTimeout(() => {
+                clipboardCopyFlash = false;
+                if (state.view === "summary") render();
+            }, 2400);
+        }
+
+        function legacyClipboardWrite(text) {
+            try {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.setAttribute("readonly", "");
+                ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;";
+                document.body.appendChild(ta);
+                const selection = document.getSelection();
+                const previousRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+                ta.focus();
+                ta.select();
+                if (typeof ta.setSelectionRange === "function") {
+                    ta.setSelectionRange(0, ta.value.length);
+                }
+                const ok = document.execCommand && document.execCommand("copy");
+                document.body.removeChild(ta);
+                if (previousRange && selection) {
+                    selection.removeAllRanges();
+                    selection.addRange(previousRange);
+                }
+                return Boolean(ok);
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function copyTextToClipboard(text, onResult) {
+            const done = result => { try { onResult && onResult(result); } catch (e) {} };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    const promise = navigator.clipboard.writeText(text);
+                    if (promise && typeof promise.then === "function") {
+                        promise.then(() => done({ ok: true, via: "async" }))
+                            .catch(() => {
+                                const ok = legacyClipboardWrite(text);
+                                done({ ok, via: ok ? "legacy" : "none" });
+                            });
+                        return;
+                    }
+                } catch (error) {
+                    // fall through
+                }
+            }
+            const ok = legacyClipboardWrite(text);
+            done({ ok, via: ok ? "legacy" : "none" });
+        }
+
+        function copyExportToClipboard() {
+            const json = JSON.stringify(exportSessionPayload(), null, 2);
+            copyTextToClipboard(json, result => {
+                if (result.ok) {
+                    showClipboardCopyFlash("Copied to<br>clipboard");
+                } else {
+                    showClipboardCopyFlash("Clipboard blocked<br>Use Export");
+                }
+            });
+        }
+
+        async function checkClipboardForLastResultSilent() {
+            if (clipboardCheckAttempted) return false;
+            clipboardCheckAttempted = true;
+            if (!navigator.clipboard || !navigator.clipboard.readText) return false;
+            if (loadLastResult() || clipboardLastResult) return false;
+            try {
+                const text = await navigator.clipboard.readText();
+                if (!text) return false;
+                let parsed;
+                try {
+                    parsed = JSON.parse(text);
+                } catch (error) {
+                    return false;
+                }
+                if (!isValidExportPayload(parsed)) return false;
+                const candidate = extractLastResultFromExport(parsed);
+                if (!candidate) return false;
+                clipboardLastResult = candidate;
+                try {
+                    window.localStorage?.setItem(LAST_RESULT_KEY, JSON.stringify(candidate));
+                } catch (error) {
+                    // best-effort
+                }
+                render();
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        async function importFromClipboardOrFile(fileInput) {
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        let parsed;
+                        try {
+                            parsed = JSON.parse(text);
+                        } catch (error) {
+                            parsed = null;
+                        }
+                        if (parsed && isValidExportPayload(parsed)) {
+                            applyImportedPayload(parsed);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    // fall through to file picker
+                }
+            }
+            fileInput?.click();
+        }
+
+        function applyImportedPayload(parsed) {
+            if (!isValidExportPayload(parsed)) {
+                window.alert("That doesn't look like a Game Timer export.");
+                return false;
+            }
+            hydrateFromSnapshot(parsed.session);
+            if (parsed.lastResult && parsed.lastResult.state) {
+                try {
+                    window.localStorage?.setItem(LAST_RESULT_KEY, JSON.stringify(parsed.lastResult));
+                } catch (error) {
+                    // best-effort
+                }
+                clipboardLastResult = parsed.lastResult;
+            } else {
+                clipboardLastResult = extractLastResultFromExport(parsed);
+            }
+            isSettingsOpen = false;
+            render();
+            return true;
+        }
+
+        function restoreFromPasteTextarea() {
+            const ta = document.querySelector("textarea[data-field='session-paste']");
+            if (!ta) return;
+            const raw = String(ta.value || "").trim();
+            if (!raw) {
+                window.alert("Long-press the text box, tap Paste, then tap Restore.");
+                ta.focus();
+                return;
+            }
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch (error) {
+                window.alert("That doesn't look like valid JSON.");
+                return;
+            }
+            applyImportedPayload(parsed);
+        }
+
+        function currentLastResult() {
+            return loadLastResult() || clipboardLastResult;
         }
 
         function setDevShortcutMode(mode) {
@@ -5595,6 +6121,7 @@ The initial release established the core loop: choose a game, add players, track
             state.gameEndedAt = now;
             state.view = "summary";
             saveLastResult();
+            copyExportToClipboard();
             render();
         }
 
@@ -6591,7 +7118,10 @@ The initial release established the core loop: choose a game, add players, track
             const canStart = canStartSetup();
             const playerCount = playerEntries.filter(entry => entry.name.trim()).length;
             const turnOrderRule = turnOrderRuleForGame(preset);
-            const lastResult = loadLastResult();
+            if (!clipboardCheckAttempted) {
+                checkClipboardForLastResultSilent();
+            }
+            const lastResult = currentLastResult();
             const lastResultGameName = lastResult ? gameAccessibleName(lastResult.state.gameName || "") : "";
             const lastResultDate = lastResult ? formatDateStamp(lastResult.state.gameEndedAt || lastResult.savedAt || Date.now()) : "";
 
@@ -6601,7 +7131,10 @@ The initial release established the core loop: choose a game, add players, track
             <div class="brand ${lastResult ? "has-last-result" : ""}">
               <span class="app-label">
                 <span class="app-name" data-action="app-name-tap" role="button" tabindex="0" title="Triple-tap to toggle Demo Mode">Game Timer</span>
-                <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
+                <span class="app-label-pills">
+                  <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
+                  ${storageStatusBadge()}
+                </span>
               </span>
               ${lastResult ? `
                 <div class="last-result-chip" data-action="last-result-open" role="button" tabindex="0" title="Open saved Statistics · ${esc(lastResultGameName)} · ${esc(lastResultDate)}" aria-label="Open saved Statistics for ${esc(lastResultGameName)}">
@@ -7020,7 +7553,10 @@ The initial release established the core loop: choose a game, add players, track
             <div class="brand">
               <span class="app-label">
                 <span class="app-name" data-action="app-name-tap" role="button" tabindex="0" title="Triple-tap to toggle Demo Mode">Game Timer</span>
-                <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
+                <span class="app-label-pills">
+                  <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
+                  ${storageStatusBadge()}
+                </span>
               </span>
               <button class="settings-fab" data-action="settings-open" data-shortcut="S" aria-label="Open settings" title="Settings">⚙</button>
             </div>
@@ -7501,11 +8037,15 @@ The initial release established the core loop: choose a game, add players, track
             app.innerHTML = `
         <main class="shell summary-shell">
           <header class="statistics-bar header-bar glass" aria-label="${esc(summaryTitle)}">
-            <div class="brand">
+            <div class="brand ${clipboardCopyFlash ? "has-clipboard-toast" : ""}">
               <span class="app-label">
                 <span class="app-name" data-action="app-name-tap" role="button" tabindex="0" title="Triple-tap to toggle Demo Mode">Game Timer</span>
-                <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
+                <span class="app-label-pills">
+                  <span class="version-badge ${demoMode ? "is-demo-mode" : ""}" ${demoMode ? `title="Demo Mode is active" aria-label="Version ${esc(appVersion())} Demo Mode"` : ""}>v${esc(appVersion())}${demoMode ? "-DEMO-MODE" : ""}</span>
+                  ${storageStatusBadge()}
+                </span>
               </span>
+              ${clipboardCopyFlash ? `<span class="clipboard-copy-toast" role="status" aria-live="polite">${clipboardCopyFlash}</span>` : ""}
               <button class="settings-fab" data-action="settings-open" data-shortcut="S" aria-label="Open settings" title="Settings">⚙</button>
             </div>
             <div class="nav-status">
@@ -7513,6 +8053,13 @@ The initial release established the core loop: choose a game, add players, track
               <span class="range-note">${esc(summaryDate)}</span>
             </div>
             <div class="summary-actions">
+              <button class="action-btn copy-btn" data-action="copy-clipboard" title="Copy session JSON to clipboard">
+                <svg class="copy-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+                </svg>
+                <span>Copy</span>
+              </button>
               <button class="action-btn share-btn" data-action="share" data-shortcut="H">
                 <span aria-hidden="true">↗</span>
                 <span data-share-label>Share</span>
@@ -7552,6 +8099,7 @@ The initial release established the core loop: choose a game, add players, track
       `;
             app.querySelector("[data-action='share']")?.addEventListener("click", shareSummary);
             app.querySelector("[data-action='reset']")?.addEventListener("click", resetToSetup);
+            app.querySelector("[data-action='copy-clipboard']")?.addEventListener("click", copyExportToClipboard);
             app.querySelectorAll("[data-action='placement']").forEach(select => {
                 select.addEventListener("change", event => {
                     setPlayerPlacement(event.currentTarget.dataset.id, event.currentTarget.value);
@@ -7832,6 +8380,18 @@ The initial release established the core loop: choose a game, add players, track
                     </button>
                   </div>
 
+                  <div class="settings-row">
+                    <span class="settings-title">
+                      <strong>Storage Diagnostic</strong>
+                      <span>${storageDiagnosticEnabled ? (storageStatus.state === "ok" ? `Visible · persisted #${storageStatus.loadCount}` : storageStatus.state === "first" ? "Visible · first load" : storageStatus.state === "unavailable" ? "Visible · unavailable" : "Visible") : "Hidden"}</span>
+                      <span class="shortcut-hint">Shows a 💾 pill beside the version</span>
+                    </span>
+                    <button class="theme-toggle demo-toggle" data-action="storage-diagnostic-toggle" data-mode="${storageDiagnosticEnabled ? "on" : "off"}" aria-label="Toggle storage diagnostic">
+                      <span class="demo-on">On</span>
+                      <span class="demo-off">Off</span>
+                    </button>
+                  </div>
+
                   <div class="changelog-panel" style="margin-top: 10px; margin-bottom: 16px;">
                     <div class="changelog-markdown">
                       <h4>Hidden Navigation Shortcuts</h4>
@@ -7924,6 +8484,38 @@ The initial release established the core loop: choose a game, add players, track
                   </button>
                 </div>
 
+                <div class="settings-row backup-row">
+                  <span class="settings-title">
+                    <strong>Session Backup</strong>
+                    <span>End auto-copies stats JSON to your clipboard. Import grabs the clipboard on desktop or opens a file picker.</span>
+                  </span>
+                  <span class="backup-actions">
+                    <button class="action-btn backup-btn" data-action="session-export" title="Export current session to a JSON file">
+                      <span aria-hidden="true">↗</span>
+                      <span>Export</span>
+                    </button>
+                    <button class="action-btn backup-btn" data-action="session-import" title="Import a previously exported session JSON file">
+                      <span aria-hidden="true">↙</span>
+                      <span>Import</span>
+                    </button>
+                    <input type="file" data-action="session-import-file" accept="application/json,.json" hidden>
+                  </span>
+                </div>
+
+                <div class="settings-row backup-paste-row">
+                  <span class="settings-title">
+                    <strong>Paste Session (Mobile)</strong>
+                    <span>Long-press the box, tap Paste, then tap Restore. Use this if Import can't read your clipboard.</span>
+                  </span>
+                  <div class="backup-paste-area">
+                    <textarea data-field="session-paste" placeholder="Paste session JSON here…" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+                    <button class="action-btn backup-btn backup-restore-btn" data-action="session-paste-restore" title="Restore from pasted JSON">
+                      <span aria-hidden="true">⇩</span>
+                      <span>Restore</span>
+                    </button>
+                  </div>
+                </div>
+
                 <button class="settings-cell" data-action="changelog-toggle" data-shortcut="C" aria-expanded="false">
                   <span class="settings-title">
                     <strong>Changelog</strong>
@@ -7996,6 +8588,28 @@ The initial release established the core loop: choose a game, add players, track
 
             app.querySelector("[data-action='dev-shortcut-toggle']")?.addEventListener("click", () => {
                 setDevShortcutMode(!devShortcutMode);
+            });
+
+            app.querySelector("[data-action='storage-diagnostic-toggle']")?.addEventListener("click", () => {
+                setStorageDiagnosticEnabled(!storageDiagnosticEnabled);
+            });
+
+            app.querySelector("[data-action='session-export']")?.addEventListener("click", () => {
+                exportSession();
+            });
+
+            const importInput = app.querySelector("[data-action='session-import-file']");
+            app.querySelector("[data-action='session-import']")?.addEventListener("click", () => {
+                importFromClipboardOrFile(importInput);
+            });
+            importInput?.addEventListener("change", event => {
+                const file = event.currentTarget.files && event.currentTarget.files[0];
+                importSessionFromFile(file);
+                event.currentTarget.value = "";
+            });
+
+            app.querySelector("[data-action='session-paste-restore']")?.addEventListener("click", () => {
+                restoreFromPasteTextarea();
             });
 
             app.querySelector("[data-action='changelog-toggle']")?.addEventListener("click", () => {
@@ -8085,6 +8699,7 @@ The initial release established the core loop: choose a game, add players, track
         }
         document.addEventListener("click", handleAppNameTap);
 
+        detectStorageStatus();
         restoreSessionOnInit();
         ensureRuleLookup();
         document.addEventListener("keydown", handleTestingHotkeys);
