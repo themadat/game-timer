@@ -3689,7 +3689,7 @@
     <div id="app"></div>
     <script>
         /* cspell:disable */
-        const PRESET_NAMES = ["Adam", "Austin", "Bryson", "Johanna", "Tristan", "Kathleen", "Jake", "Kacie"];
+        const PRESET_NAMES = ["Adam", "Austin", "Bryson", "Johanna", "Tristen", "Kathleen", "Jake", "Kacie"];
         const QUICK_PLAYERS = [
             { name: "Adam", color: "Red" },
             { name: "Austin", color: "Aqua" },
@@ -4454,6 +4454,24 @@ Keep placement and timing badge columns aligned when a player has more than two 
         const WISHLIST_DEFAULT_FILTER = "all";
         const CHANGELOG = [
             {
+                version: "1.9.0",
+                date: "2026.05.21",
+                notes: `
+## Periodic Auto-Save
+On a stable HTTPS origin (e.g. GitHub Pages) localStorage is reliable, so 1.9 leans into it: the active session now writes itself out automatically every 10 seconds during play — independent of UI interactions — so if your tab crashes, the browser sleeps, the battery dies, or you accidentally reload, you can pick right back up.
+
+### Continuous Snapshot
+- A 10-second \`setInterval\` calls \`saveSession()\` regardless of whether the UI is being touched, so a long quiet turn (where no buttons get tapped) still gets flushed to disk on a fixed cadence.
+- The existing render-driven save still fires on every state change, so quick interactions hit storage immediately; the 10s timer is the idle safety net.
+
+### Visibility & Unload Safety
+- Saves the session on \`visibilitychange\` (tab hidden), \`pagehide\`, and \`beforeunload\` so the very last in-memory delta lands before the browser tears the page down or backgrounds the tab.
+- Wall-clock-based duration math (\`turn.startedAt\`, \`state.currentStartedAt\`, \`state.pauseStartedAt\`) continues to count correctly across the resume, so a 7-minute interrupted turn still reads as 7 minutes when you come back.
+
+### Diagnostic Tooltip
+- The Storage Diagnostic 💾 pill now shows "Auto-saving every 10s · Last save Ns ago" in its tooltip, making it easy to confirm the cadence is alive.`
+            },
+            {
                 version: "1.8.1",
                 date: "2026.05.21",
                 notes: `
@@ -4772,6 +4790,9 @@ The initial release established the core loop: choose a game, add players, track
         let wishlistPriorityFilter = WISHLIST_DEFAULT_FILTER;
         let wishlistLoeFilter = WISHLIST_DEFAULT_FILTER;
         let tickTimer = null;
+        let autosaveTimer = null;
+        let lastAutosaveAt = null;
+        const AUTOSAVE_INTERVAL_MS = 10000;
         let dragState = null;
         let turnOrderManuallyAdjusted = false;
         let sessionDensityFrame = null;
@@ -4963,19 +4984,31 @@ The initial release established the core loop: choose a game, add players, track
             }
         }
 
+        function autosaveTooltipSuffix() {
+            const lines = [`Auto-saving every ${Math.round(AUTOSAVE_INTERVAL_MS / 1000)}s`];
+            if (lastAutosaveAt) {
+                const secondsAgo = Math.max(0, Math.round((Date.now() - lastAutosaveAt) / 1000));
+                lines.push(`Last save ${secondsAgo}s ago`);
+            } else {
+                lines.push("No save yet this session");
+            }
+            return lines.join(" · ");
+        }
+
         function storageStatusBadge() {
             if (!storageDiagnosticEnabled) return "";
             const s = storageStatus;
+            const autosaveLine = autosaveTooltipSuffix();
             if (s.state === "ok") {
-                const tooltip = `Storage persisted across ${s.loadCount} loads · first seen ${formatDateStamp(s.firstSeenAt)}`;
+                const tooltip = `Storage persisted across ${s.loadCount} loads · first seen ${formatDateStamp(s.firstSeenAt)} · ${autosaveLine}`;
                 return `<span class="storage-badge is-ok" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">💾 #${s.loadCount}</span>`;
             }
             if (s.state === "first") {
-                const tooltip = "First load detected — reload to confirm persistence. If the count stays at #1 across reloads, your viewer is wiping storage.";
+                const tooltip = `First load detected — reload to confirm persistence. If the count stays at #1 across reloads, your viewer is wiping storage. · ${autosaveLine}`;
                 return `<span class="storage-badge is-first" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">💾 1st</span>`;
             }
             if (s.state === "unavailable") {
-                const tooltip = "localStorage unavailable — autosave will not survive reloads.";
+                const tooltip = `localStorage unavailable — autosave will not survive reloads.`;
                 return `<span class="storage-badge is-bad" title="${esc(tooltip)}" aria-label="${esc(tooltip)}">💾 ✗</span>`;
             }
             return "";
@@ -4999,8 +5032,21 @@ The initial release established the core loop: choose a game, add players, track
         function saveSession() {
             try {
                 window.localStorage?.setItem(SESSION_KEY, JSON.stringify(buildSessionSnapshot()));
+                lastAutosaveAt = Date.now();
             } catch (error) {
                 // Session persistence is best-effort.
+            }
+        }
+
+        function startAutosave() {
+            if (autosaveTimer) return;
+            autosaveTimer = window.setInterval(saveSession, AUTOSAVE_INTERVAL_MS);
+        }
+
+        function stopAutosave() {
+            if (autosaveTimer) {
+                window.clearInterval(autosaveTimer);
+                autosaveTimer = null;
             }
         }
 
@@ -8710,6 +8756,14 @@ The initial release established the core loop: choose a game, add players, track
         window.addEventListener("blur", () => {
             if (!devShortcutMode) setShortcutHintsActive(false);
         });
+        window.addEventListener("beforeunload", saveSession);
+        window.addEventListener("pagehide", saveSession);
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") {
+                saveSession();
+            }
+        });
+        startAutosave();
         render();
     </script>
 </body>
