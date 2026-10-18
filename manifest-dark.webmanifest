@@ -1,0 +1,68 @@
+{
+  "name": "Game Timer",
+  "short_name": "Game Timer",
+  "description": "A tabletop session timer and game library for tracking turns, pauses, placements, and who owns what.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#121616",
+  "theme_color": "#121616",
+  "orientation": "any",
+  "categories": [
+    "games",
+    "utilities",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "assets/icons/icon-192-dark.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512-dark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512-maskable-dark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Library",
+      "short_name": "Library",
+      "url": "./index.html#library",
+      "icons": [
+        {
+          "src": "assets/icons/icon-192-dark.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "short_name": "History",
+      "url": "./index.html#history",
+      "icons": [
+        {
+          "src": "assets/icons/icon-192-dark.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

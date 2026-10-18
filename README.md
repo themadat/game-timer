@@ -1,156 +1,61 @@
 # Game Timer
 
-Game Timer is a single-file tabletop session timer for tracking player turns, pauses, setup time, final placements, and end-game statistics. It is built as a standalone HTML app in `game-timer.html` with embedded CSS, JavaScript, game data, changelog, and wishlist data.
+A tabletop session timer and game library. Track turns, pauses, setup time, placements, and end-of-game statistics — and keep a library of the games you own (and who owns them), with play counts and records from every saved game.
 
-Current app version: `1.5.0`.
+Static, local-first HTML/CSS/JavaScript built on the [app-template](https://github.com/themadat/app-template) shell. No build step, runtime packages, backend, or sign-in. Installable and offline-capable.
 
-## Project Structure
+```sh
+python3 -m http.server 8000
+```
+
+Then open <http://127.0.0.1:8000/>.
+
+## Features
+
+- **Play** — choose a game, seat players with colors or factions, apply turn-order rules, roll for first player, then time every turn with pause, auto-advance, and Other timing rows (Ruling, Bidding, …).
+- **Statistics** — totals, a combined and per-lane timeline, per-player stats, placements with ties, awards, and text or image sharing.
+- **Library** — every built-in and added game with ownership, owners, wishlist, rating, notes, play counts, wins, average length, and last played. Pick who is at the table to see what is available and sort by best fit for that player count.
+- **History** — every finished game is saved automatically; reopen its statistics, fix placements, share, play again, or delete.
+- **People** — the names offered in Setup and as owners, with games, wins, win rate, podiums, and average turn.
+- **Table aids** — keep the screen awake during a session, optional turn chime and vibration, and a long-turn warning.
+- **Shell** — Help Center, What’s New, Roadmap, Notes, keyboard shortcuts with hint badges, light/dark/system theme, text size, JSON backup/restore with recovery, and one-tap Update.
+
+Version 1.9 data is picked up automatically: an in-progress session resumes, the saved “Last Results” game is imported into History, and display preferences carry over.
+
+## Project structure
 
 ```text
-game-timer.html   # Complete application: markup shell, styles, state, data, and behavior
-README.md         # Developer-oriented project notes
-HELP_FAQ.md       # User-facing help and FAQ
+index.html                    Shell markup, dialogs, ordered script list
+assets/js/config.js           VERSION, identity, features, Help, Roadmap, release notes
+assets/js/data/games.js       Built-in games, colors, factions, turn-order rules, default people
+assets/js/features/play.js    Setup, session timer, statistics, sharing
+assets/js/features/library.js Library, people, history, and their dialogs
+assets/js/features/session-aids.js  Wake lock, chimes, vibration, long-turn warning
+assets/js/app.js              Shell: views, search, settings, shortcuts
+assets/js/core/               State model, storage, dialogs, backup, PWA, (dormant) sync
+assets/css/app.css            Shell styles and theme tokens
+assets/css/game.css           Play, Library, and History styles
+sw.js, manifest*.webmanifest  Offline cache and install metadata
 ```
 
-The app currently has no build step and no external runtime dependencies. Opening `game-timer.html` directly in a browser works, and serving it through a local static server works too.
+## Develop and release
 
-## Running Locally
+Edit `assets/js/config.js` for identity, Help, Roadmap, and release notes. For a release, change its single `VERSION` value (`major.minor.patch.build`) and add release notes at the front of `releases`; asset URLs, cache names, and visible labels follow automatically. Add or edit built-in games in `assets/js/data/games.js`.
 
-Open the file directly:
-
-```text
-game-timer.html
+```sh
+node --test tests/*.test.mjs
+git diff --check
 ```
 
-Or serve the repo root with a static server:
+## Deploy
 
-```bash
-python3 -m http.server 8765
-```
+GitHub Pages deploys from the checked-in workflow (`.github/workflows/deploy-pages.yml`) on every push to `main`. In the repository, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions** (and turn off any branch-based deployment).
 
-Then open:
+## Documentation
 
-```text
-http://127.0.0.1:8765/game-timer.html
-```
-
-## App Model
-
-The app is organized around three main views:
-
-- Setup: choose a game, add players and other tracked rows, configure colors/factions, and adjust turn order.
-- Session: run the timer, start/stop player turns, pause the game, auto-advance turns, and end the game.
-- Statistics: review totals, turn stats, placements, timeline, awards, other rows, and share results.
-
-State is held in module-level JavaScript variables inside `game-timer.html`. The app re-renders by replacing `app.innerHTML` for the active view and then binding event listeners for the new DOM.
-
-Persistent user preferences are stored in `localStorage`:
-
-- Theme mode
-- Time format
-- Date format
-- Primary display name mode
-- Text/emoji label mode
-
-Game/session data is not persisted across reloads.
-
-## Important Data Blocks
-
-Inside `game-timer.html`:
-
-- `GAME_PRESETS`: game library, player counts, game metadata, colors, factions, and turn-order rules.
-- `WISHLIST_ITEMS`: in-app wishlist shown from Settings.
-- `CHANGELOG`: in-app changelog shown from Settings. `appVersion()` uses the first changelog entry.
-- Named color constants and setup helper lists live near the top of the JavaScript section.
-
-## Key Features
-
-- Game library with recommended/best/avoid player counts.
-- Faction-aware setup for games with named faction colors.
-- Turn-order guidance for games with special start/order rules.
-- Player and other-row tracking.
-- Setup, play, pause, and total game timers.
-- Per-player turn counts, totals, averages, longest turns, and shortest turns.
-- Fastest/slowest average and fastest/slowest turn awards.
-- Final placements with ties and rank auto-correction.
-- Statistics timeline with setup, player/other, and pause lanes.
-- Text and image sharing from the Statistics page.
-- Settings, changelog, and wishlist modules.
-- Responsive layouts for desktop, tablet, and phone sizes.
-
-## Keyboard Shortcuts
-
-Visible shortcut hints appear while holding `Shift + Control + Option` on supported keyboards.
-
-Hidden testing/navigation shortcuts:
-
-- `1`: Setup view
-- `2`: Session view
-- `3`: Statistics view
-- `S`: Settings
-- `W`: Wishlist
-- `C`: Changelog
-- `/`: Focus game search on Setup
-- `Shift + G`: Simulate a completed game from the Session view
-
-Common visible actions also have shortcut tags in the UI, including setup actions, session controls, settings controls, wishlist controls, Share, and Restart.
-
-## Statistics and Sharing Notes
-
-The Statistics page is the most complex area of the app. It combines:
-
-- KPI totals
-- Timeline lanes
-- Player and Other stat tables
-- Placement selectors
-- Medal and timing award badges
-- Text and image share flows
-
-The image share path creates a PNG from the current Statistics page by cloning the DOM into an SVG `foreignObject`, drawing that image to a canvas, and exporting a PNG blob. This is intentionally dependency-free but may be browser-sensitive, especially on mobile Safari. The current fallback behavior previews the generated image or falls back to text sharing paths.
-
-## Development Guidelines
-
-Because the app is currently a single file, keep changes small and local:
-
-- Prefer adding small helper functions over broad rewrites.
-- Keep render functions and event binding in sync.
-- When adding a setting or data list, update the corresponding settings UI and any search/filter helpers.
-- When changing `CHANGELOG`, keep newest release first because `appVersion()` reads the first entry.
-- When completing a wishlist item, remove it from `WISHLIST_ITEMS` and mention it in `CHANGELOG`.
-- Avoid changing unrelated game data while working on UI behavior.
-
-## Manual Test Checklist
-
-Before considering a change done:
-
-- Setup loads with default game data.
-- Add at least two players and start a session.
-- Start a player turn, pause/resume, auto-advance, and end the game.
-- Statistics page renders KPI cards, timeline, Players table, and Other table.
-- Placement selectors update ranks and preserve ties.
-- Share opens the Text/Image chooser.
-- Text share works or opens the text fallback.
-- Image share works or opens the image preview fallback.
-- Settings opens and closes.
-- Changelog and Wishlist open from Settings.
-- Browser console has no new errors.
-
-## Known Technical Debt
-
-The in-app wishlist tracks active planning items. Notable development items include:
-
-- Create a build script for deployable output.
-- Split README, changelog, wishlist, and game list data into separate files.
-- Convert to a native app.
-- Improve iPhone and iPad portrait layouts, especially Statistics.
-- Add more playful share options.
-- Fix placement alignment when rows have many badges.
-- Add secret hotkeys to the share menu.
-
-## Release Notes
-
-Release notes are maintained in the in-app `CHANGELOG` array. The current `1.5.0` release focuses on final statistics: placements, timeline, sharing, layout polish, and shortcuts.
-
-start version 1.6.0
-
-Create a demo mode option checkbox in settings. when enabled hitting start goes to sessions but shows the game at its end and then you can go to stats to see everything
+- [Architecture](docs/ARCHITECTURE.md): runtime, persistence, offline updates.
+- [Customization](docs/CUSTOMIZATION.md): games, people, identity, releases.
+- [Components](docs/COMPONENTS.md): shared UI and keyboard conventions.
+- [Testing](docs/TESTING.md): automated checks and manual coverage.
+- [Git setup](docs/GIT-SETUP.md): personal/work laptop SSH.
+- [Agent instructions](AGENTS.md): workflows and commit handoff.

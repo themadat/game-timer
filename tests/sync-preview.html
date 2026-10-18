@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloud Sync state previews</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/icons.js"></script>
+  <script src="../assets/js/core/sync.js"></script>
+  <style>
+    body { padding: 1.5rem; }
+    main { max-width: 900px; margin: auto; }
+    h1 { font-size: 1.35rem; }
+    .preview-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin: 1rem 0; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .75rem; }
+    .preview-item { display: grid; justify-items: start; gap: .5rem; padding: .75rem; border: 1px solid var(--line); border-radius: var(--radius-small); }
+    .preview-item > small { color: var(--muted); }
+    .floating-button { box-shadow: none; }
+    #preview-result { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Cloud Sync state previews</h1>
+    <p>Uses the production state mapping, SF Symbols, and styles. These examples do not connect to GitHub or change saved application data.</p>
+    <div class="preview-controls">
+      <label>Theme <select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label><input id="reduce" type="checkbox"> Reduce Motion</label>
+    </div>
+    <div id="previews" class="preview-grid"></div>
+    <h2>Actions</h2>
+    <div id="actions" class="preview-controls"></div>
+    <p id="preview-result" role="status">Select an example to inspect its help text.</p>
+  </main>
+  <script>
+    const { sync, icons } = window.LocalApp;
+    const root = document.documentElement;
+    document.querySelector('#theme').addEventListener('change', event => { root.dataset.theme = event.target.value; });
+    document.querySelector('#reduce').addEventListener('change', event => { root.dataset.motion = event.target.checked ? 'reduce' : 'full'; });
+    const result = document.querySelector('#preview-result');
+    for (const state of Object.values(sync.CloudSyncState)) {
+      const info = sync.presentation(state);
+      const card = document.createElement('div');
+      card.className = 'preview-item';
+      const caption = document.createElement('small');
+      caption.textContent = state;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'floating-button status-button';
+      button.dataset.cloudSync = '';
+      button.dataset.syncState = state;
+      button.dataset.kind = info.kind;
+      button.dataset.animation = info.animation;
+      button.title = info.help;
+      button.setAttribute('aria-label', info.accessibilityLabel);
+      button.innerHTML = '<span class="floating-status-icon" data-sync-icon aria-hidden="true"></span><span class="floating-status-copy"><strong>Saved locally</strong><small></small></span>';
+      icons.set(button.querySelector('[data-sync-icon]'), info.symbol);
+      button.querySelector('small').textContent = info.title;
+      button.addEventListener('click', () => { result.textContent = info.help; });
+      card.append(caption, button);
+      document.querySelector('#previews').append(card);
+    }
+    for (const name of ['syncNow', 'restore']) {
+      const action = sync.actions[name];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button';
+      button.title = action.help;
+      button.setAttribute('aria-label', action.title);
+      const icon = document.createElement('span');
+      icon.setAttribute('aria-hidden', 'true');
+      icons.set(icon, action.symbol);
+      button.append(icon, document.createTextNode(action.title));
+      button.addEventListener('click', () => { result.textContent = action.help; });
+      document.querySelector('#actions').append(button);
+    }
+  </script>
+</body>
+</html>

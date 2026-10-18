@@ -1,0 +1,24 @@
+# Lean defaults for this static-app repository. Re-enable individual plugins when needed.
+model_reasoning_effort = "medium"
+tool_output_token_limit = 2000
+
+[plugins."build-ios-apps@openai-curated"]
+enabled = false
+
+[plugins."documents@openai-primary-runtime"]
+enabled = false
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = false
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = false
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = false
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = false
+
+[plugins."visualize@openai-bundled"]
+enabled = false
