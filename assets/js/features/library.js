@@ -23,7 +23,7 @@
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
-  const PASTE_LABELS = { name: "Name", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", category: "Tags", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
+  const PASTE_LABELS = { name: "Name", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", category: "Categories", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
 
   // Plain clipboard text only: never interpret pasted HTML or execute markup.
   function parseBggPaste(value) {
@@ -83,18 +83,20 @@
         else if (ids.length > 1) warnings.push("Multiple linked games found; no BGG game ID was selected.");
       }
     }
-    const tags = [];
-    let tagSection = false;
+    const tagSections = { category: [], mechanisms: [], expansions: [] };
+    let tagSection = "";
     for (const line of lines) {
-      if (/^(?:Category|Mechanism)(?:\s+more information)?\s*$/i.test(line)) { tagSection = true; continue; }
-      if (/^Add (?:Category|Mechanism)\b/i.test(line)) { tagSection = false; continue; }
+      const heading = line.match(/^(Category|Mechanism|Expansion)(?:\s+more information)?\s*$/i);
+      if (heading) { tagSection = ({ category: "category", mechanism: "mechanisms", expansion: "expansions" })[heading[1].toLowerCase()]; continue; }
+      if (/^Add (?:Category|Mechanism|Expansion)\b/i.test(line)) { tagSection = ""; continue; }
       if (tagSection) {
         const tag = line.match(/^Remove\s+(.+)$/i);
-        if (tag) tags.push(tag[1].trim());
-        else if (line && !/^Remove\s*$/i.test(line)) tagSection = false;
+        if (tag) tagSections[tagSection].push(tag[1].trim());
+        else if (line && !/^Remove\s*$/i.test(line)) tagSection = "";
       }
     }
-    if (tags.length) fields.category = [...new Set(tags)].join(", ").slice(0, 1000);
+    if (tagSections.category.length) fields.category = [...new Set(tagSections.category)].join(", ").slice(0, 1000);
+    ["mechanisms", "expansions"].forEach(key => { if (tagSections[key].length) fields[key] = [...new Set(tagSections[key])].slice(0, 100); });
     const votes = { bestPlayers: [], recommendedPlayers: [], avoidPlayers: [] };
     let pollRows = 0, openEnded = false;
     const hasPoll = /Not Recommended/i.test(text) && /Best/i.test(text);
@@ -172,7 +174,7 @@
     const current = key => {
       if (pasteContext === "custom") {
         const form = document.querySelector("#customGameForm");
-        const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", bggId: "bggLink" })[key] || key;
+        const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
         return form.elements[inputName]?.value || "—";
       }
       if (!game) return "—";
@@ -180,7 +182,7 @@
       if (key === "complexityWeight") return game.complexityWeight ?? "—";
       return sheetValue(game, key) ?? "—";
     };
-    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">Pasted</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${mismatch && key === "name" ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(current(key))}</td><td>${esc(fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
+    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">Pasted</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${mismatch && key === "name" ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(current(key))}</td><td>${esc(Array.isArray(fields[key]) ? fields[key].join("; ") : fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
     const status = keys.length ? keys.length + " fields found. Only checked fields will be filled." : document.querySelector("#gamePasteText").value.trim() ? "No supported fields found. Paste the correction form, game overview, or player recommendation table." : "Paste a BGG correction form, game overview, or player recommendation table.";
     document.querySelector("#gamePasteStatus").textContent = [status, ...pasteParsed.warnings, mismatch ? "The pasted name differs from this game; Name is unchecked. Review the other fields before applying." : ""].filter(Boolean).join(" ");
     const target = document.querySelector("#gamePasteTarget").value.trim();
@@ -203,8 +205,8 @@
   function fillCustomGameFromPaste(fields) {
     const form = document.querySelector("#customGameForm");
     Object.entries(fields).forEach(([key, value]) => {
-      const name = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", bggId: "bggLink" })[key] || key;
-      if (form.elements[name]) form.elements[name].value = value;
+      const name = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
+      if (form.elements[name]) form.elements[name].value = Array.isArray(value) ? value.join("; ") : value;
     });
     const query = form.querySelector("[data-bgg-query]");
     query.value = form.elements.name.value;
@@ -251,9 +253,10 @@
 
   function playerCountBadges(game) {
     const badges = [];
-    for (let count = game.minPlayers; count <= game.maxPlayers; count += 1) {
+    for (let count = 1; count <= game.maxPlayers; count += 1) {
+      if (count < game.minPlayers) { badges.push('<span class="player-count-square is-placeholder" aria-hidden="true"></span>'); continue; }
       const fit = play.playerCountFit(game, count);
-      const label = fit.key === "plays" ? `Neutral at ${count}` : fit.label;
+      const label = fit.key === "plays" ? `Neutral at ${count}` : fit.label || `${count} players`;
       badges.push(`<span class="player-count-square is-${fit.key}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${icons.markup(`number${count}SquareFill`)}</span>`);
     }
     return `<span class="player-count-badges">${badges.join("")}</span>`;
@@ -282,12 +285,23 @@
       popup.className = "sheet-info-popover";
       popup.setAttribute("popover", "auto");
       document.body.appendChild(popup);
+      popup.addEventListener("click", event => {
+        const tag = event.target.closest("[data-main-tag]");
+        if (!tag) return;
+        const game = play.gameById(tag.dataset.tagGame);
+        if (!game || !gameTags(game).includes(tag.dataset.mainTag)) return;
+        mutateLibrary(game.id, entry => { entry.metadata = Object.assign({}, entry.metadata, { mainTag: tag.dataset.mainTag }); });
+        hideSheetInfo();
+        refreshSheetPosition(`[data-info-kind="tags"][data-info-game="${CSS.escape(game.id)}"]`);
+      });
+      popup.addEventListener("mouseleave", () => { if (!infoPinned) hideSheetInfo(); });
       popup.addEventListener("toggle", event => { if (event.newState === "closed") { infoAnchor?.setAttribute("aria-expanded", "false"); infoAnchor = null; infoPinned = false; } });
     }
     infoAnchor?.setAttribute("aria-expanded", "false");
     const game = button.dataset.infoGame ? play.gameById(button.dataset.infoGame) : null;
     const factions = game && button.dataset.infoKind === "factions" ? factionColors(game) : [];
     popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong>${factions.length ? `<ul class="faction-color-list">${factions.map(color => `<li><span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" aria-hidden="true"></span><span>${esc(color.name)}</span></li>`).join("")}</ul>` : `<p>${esc(button.dataset.sheetInfo)}</p>`}`;
+    if (game && button.dataset.infoKind === "tags") popup.innerHTML = tagSectionsMarkup(game);
     popup.showPopover();
     infoAnchor = button;
     infoPinned = Boolean(pin);
@@ -308,6 +322,7 @@
     if (key === "rating") return entry.rating || null;
     if (key === "owners") return entry.owned ? (entry.owners.join(", ") || "Shared") : entry.wishlist ? "Wishlist" : "Not owned";
     if (key === "note") return entry.note;
+    if (["mechanisms", "expansions"].includes(key)) return (metadata[key] || []).join("; ");
     if (["bggRating", "category", "bggId"].includes(key)) return metadata[key] || null;
     if (key === "weight") return game.complexityWeight;
     if (key === "length") return averageMinutes(game);
@@ -321,8 +336,57 @@
     return play.colorsForGame(game).filter(color => !Object.keys(App.gameData.NAMED_COLORS).some(name => name.toLowerCase() === color.name.toLowerCase()));
   }
 
+  function gameTagGroups(game) {
+    const metadata = libraryEntry(game.id).metadata || {};
+    return {
+      Category: [...new Set(String(metadata.category || "").split(/[,;]/).map(tag => tag.trim()).filter(Boolean))],
+      Mechanism: metadata.mechanisms || [],
+      Expansions: metadata.expansions || []
+    };
+  }
   function gameTags(game) {
-    return [...new Set(String(sheetValue(game, "category") || "").split(/[,;]/).map(tag => tag.trim()).filter(Boolean))];
+    return [...new Set(Object.values(gameTagGroups(game)).flat())];
+  }
+  function mainGameTag(game) {
+    const tags = gameTags(game);
+    const main = libraryEntry(game.id).metadata?.mainTag;
+    return tags.includes(main) ? main : tags[0] || "Tags";
+  }
+  function tagSectionsMarkup(game) {
+    return `<strong>Tags</strong><p class="setting-note">Choose the main tag shown in the table.</p>${Object.entries(gameTagGroups(game)).map(([label, tags]) => `<section class="tag-group"><h3>${label}</h3><div class="game-tags">${tags.length ? tags.map(tag => `<button type="button" class="game-tag" data-main-tag="${esc(tag)}" data-tag-game="${esc(game.id)}" aria-pressed="${mainGameTag(game) === tag}">${esc(tag)}</button>`).join("") : '<span class="setting-note">None added</span>'}</div></section>`).join("")}`;
+  }
+
+  function refreshSheetPosition(focusSelector) {
+    const sheet = libraryRoot.querySelector(".library-sheet");
+    const left = sheet?.scrollLeft || 0, top = sheet?.scrollTop || 0;
+    renderLibrary();
+    const updated = libraryRoot.querySelector(".library-sheet");
+    if (updated) { updated.scrollLeft = left; updated.scrollTop = top; }
+    if (focusSelector) libraryRoot.querySelector(focusSelector)?.focus({ preventScroll: true });
+  }
+  let ratingGameId = "";
+  function openRatingPicker(button) {
+    ratingGameId = button.dataset.sheetRating;
+    const game = play.gameById(ratingGameId);
+    if (!game) return;
+    const rating = libraryEntry(game.id).rating;
+    document.querySelector("#gameRatingTitle").textContent = "Rate " + sheetValue(game, "name");
+    document.querySelector("#gameRatingChoices").innerHTML = Array.from({ length: 10 }, (_, index) => (index + 1) / 2).map(value => `<button type="button" class="rating-choice rating-band-${Math.ceil(value)}" data-rating-pick="${value}" aria-pressed="${rating === value}" aria-label="${value.toFixed(1)} out of 5">${value.toFixed(1)}</button>`).join("");
+    components.openDialog("#gameRatingDialog", { trigger: button, focus: rating ? '[aria-pressed="true"]' : '[data-rating-pick="0.5"]' });
+  }
+  function pickRating(event) {
+    const button = event.target.closest("[data-rating-pick]");
+    if (!button || !ratingGameId) return;
+    mutateLibrary(ratingGameId, entry => { entry.rating = Number(button.dataset.ratingPick); });
+    components.closeDialog("#gameRatingDialog", "saved");
+    refreshSheetPosition(`[data-sheet-rating="${CSS.escape(ratingGameId)}"]`);
+  }
+
+  function fitLibrarySheet() {
+    const sheet = libraryRoot?.querySelector(".library-sheet");
+    if (!sheet || libraryRoot.hidden) return;
+    const top = sheet.getBoundingClientRect().top + window.scrollY;
+    sheet.style.maxHeight = Math.max(160, window.innerHeight - top - 8) + "px";
   }
 
   function ownerPillsMarkup(game) {
@@ -353,7 +417,7 @@
       const value = sheetValue(game, key);
       if (key === "name") return `<th scope="row" class="sheet-name-cell"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span>${gameColorsMarkup(game)}</span></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
-      if (key === "rating") content = `<input class="sheet-rate-input rating-band-${value ? Math.ceil(value) : 0}" type="number" min="0" max="5" step="0.5" inputmode="decimal" data-sheet-rating="${id}" value="${value ? Number(value).toFixed(1) : ''}" placeholder="—" aria-label="Rate ${esc(game.name)} out of 5" title="Rate from 0 to 5 in half-star steps; clear to remove">`;
+      if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="dialog" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
       if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${Number(value).toFixed(1)} / 5">${Number(value).toFixed(1)}</span>`;
       if (key === "length") {
@@ -362,7 +426,7 @@
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "owners") content = ownerPillsMarkup(game);
-      if (key === "category" && value) content = `<span class="game-tags">${gameTags(game).map(tag => `<span class="game-tag">${esc(tag)}</span>`).join("")}</span>`;
+      if (key === "category") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="${esc(gameTags(game).join(', '))}" data-info-game="${id}" data-info-kind="tags" data-info-label="Tags" aria-expanded="false">${esc(mainGameTag(game))}${symbol("chevronDown")}</button>`;
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
       if (key === "factions") content = sheetInfoButton(game, key, "libraryFactions", "Factions");
       if (["minMinutes", "maxMinutes"].includes(key) && value) content = `${esc(value)} min`;
@@ -377,7 +441,7 @@
 
   function gameSheet(games) {
     const ui = moduleState();
-    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr><th scope="col" class="sheet-play-cell"><span class="visually-hidden">Play</span></th>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" class="${key === 'name' ? 'sheet-name-cell' : ''}" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "bggRating", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", bggRating: "libraryBggRating", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}</tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
+    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr><th scope="col" class="sheet-play-cell"><span class="visually-hidden">Play</span></th>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" class="${key === 'name' ? 'sheet-name-cell' : 'sheet-' + key}" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "bggRating", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", bggRating: "libraryBggRating", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}</tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
   }
 
   let libraryRoot = null;
@@ -570,7 +634,7 @@
       else if (ui.sortBy === "length") compared = averageMinutes(a) - averageMinutes(b);
       else if (ui.sortBy === "weight") compared = (Number(a.complexityWeight) || 0) - (Number(b.complexityWeight) || 0);
       else if (ui.sortBy !== "name") {
-        const av = sheetValue(a, ui.sortBy), bv = sheetValue(b, ui.sortBy);
+        const av = ui.sortBy === "category" ? mainGameTag(a) : sheetValue(a, ui.sortBy), bv = ui.sortBy === "category" ? mainGameTag(b) : sheetValue(b, ui.sortBy);
         if (av === null || av === "" || av === "--") return bv === null || bv === "" || bv === "--" ? byName(a, b) : 1;
         if (bv === null || bv === "" || bv === "--") return -1;
         compared = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
@@ -770,6 +834,7 @@
       input?.focus();
       input?.setSelectionRange(input.value.length, input.value.length);
     }
+    requestAnimationFrame(fitLibrarySheet);
     emit("app:viewrendered");
   }
 
@@ -801,7 +866,7 @@
         <p class="game-detail-range">${esc(play.gameRangeText(game)).replace("\n", "<br>")}</p>
         <button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>
         ${bggLookupMarkup(game, false)}
-        <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Tags (comma-separated)", "text", "maxlength=\"1000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
+        <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Categories (comma-separated)", "text", "maxlength=\"1000\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
         <div class="fit-strip" aria-label="Player count fit">${playerCountBadges(game)}<span class="player-fit-legend"><span class="is-best">Best</span><span class="is-good">Good</span><span class="is-avoid">Bad</span><span class="is-plays">Neutral</span></span></div>
         <section class="detail-section">
           <h3>Ownership</h3>
@@ -924,7 +989,7 @@
     });
     let extra = form.querySelector("[data-custom-paste-fields]");
     if (extra) extra.remove();
-    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Tags (comma-separated)", "category", "text", 'maxlength="1000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
+    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
     let lookup = form.querySelector("[data-bgg-lookup]");
     if (lookup) lookup.remove();
     form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", bggLookupMarkup(game, true));
@@ -978,7 +1043,7 @@
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
-      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, category: values.pasteTags || "" });
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
@@ -1273,6 +1338,8 @@
       libraryRoot.querySelector(`[data-player-count="${stepper.dataset.playerCount}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const rate = event.target.closest("[data-sheet-rating]");
+    if (rate) { openRatingPicker(rate); return; }
     const info = event.target.closest("[data-sheet-info]");
     if (info) { showSheetInfo(info, true); return; }
     const heading = event.target.closest("[data-sheet-sort]");
@@ -1317,19 +1384,6 @@
   }
 
   function handleLibraryChange(event) {
-    if (event.target.matches("[data-sheet-rating]")) {
-      const input = event.target;
-      if (!input.reportValidity()) return;
-      const id = input.dataset.sheetRating;
-      const sheet = libraryRoot.querySelector(".library-sheet");
-      const left = sheet.scrollLeft, top = sheet.scrollTop;
-      mutateLibrary(id, entry => { entry.rating = Number(input.value) || 0; });
-      renderLibrary();
-      const updatedSheet = libraryRoot.querySelector(".library-sheet");
-      updatedSheet.scrollLeft = left; updatedSheet.scrollTop = top;
-      libraryRoot.querySelector(`[data-sheet-rating="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
-      return;
-    }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-category], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
@@ -1363,6 +1417,12 @@
   }
 
   function init() {
+    document.querySelector("#gameRatingDialog").addEventListener("click", pickRating);
+    window.addEventListener("resize", fitLibrarySheet);
+    if (typeof ResizeObserver === "function") {
+      const observer = new ResizeObserver(() => requestAnimationFrame(fitLibrarySheet));
+      [".app-header", "#whatsNewBanner", "#contextHint"].forEach(selector => { const node = document.querySelector(selector); if (node) observer.observe(node); });
+    }
     document.querySelector("#gamePasteForm").addEventListener("submit", applyGamePaste);
     document.querySelector("#gamePasteText").addEventListener("input", updateGamePaste);
     document.querySelector("#gamePasteTarget").addEventListener("input", updateGamePaste);
@@ -1373,9 +1433,9 @@
     libraryRoot = document.querySelector("#libraryView");
     historyRoot = document.querySelector("#historyView");
     libraryRoot.addEventListener("click", handleLibraryClick);
-    libraryRoot.addEventListener("mouseover", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget)) showSheetInfo(button, false); });
-    libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !infoPinned) hideSheetInfo(); });
-    libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button) showSheetInfo(button, false); });
+    libraryRoot.addEventListener("mouseover", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags" && !button.contains(event.relatedTarget)) showSheetInfo(button, false); });
+    libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !document.querySelector("#libraryInfoPopover")?.contains(event.relatedTarget) && !infoPinned) hideSheetInfo(); });
+    libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags") showSheetInfo(button, false); });
     libraryRoot.addEventListener("focusout", () => { if (!infoPinned) hideSheetInfo(); });
     window.addEventListener("scroll", event => {
       if (!document.querySelector("#libraryInfoPopover")?.contains(event.target)) hideSheetInfo();
@@ -1385,15 +1445,6 @@
       if (options && !event.target.closest(".library-table-options")) options.open = false;
     });
     libraryRoot.addEventListener("keydown", event => {
-      if (event.target.matches("[data-sheet-rating]") && !event.isComposing) {
-        if (event.key === "Enter") { event.preventDefault(); event.target.blur(); }
-        if (event.key === "Escape") {
-          event.preventDefault();
-          const value = libraryEntry(event.target.dataset.sheetRating).rating;
-          event.target.value = value ? Number(value).toFixed(1) : "";
-          event.target.blur();
-        }
-      }
       if (event.key !== "Escape") return;
       const options = libraryRoot.querySelector(".library-table-options[open]");
       if (options) { options.open = false; options.querySelector("summary").focus(); event.preventDefault(); }

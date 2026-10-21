@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.8";
+  const VERSION = "2.1.0.9";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T23:55:00.000Z",
+        title: "Compact columns and grouped tags",
+        summary: "The library fills the available space, ratings open from pills, and one main tag expands into organized sections.",
+        features: ["Choose a main tag from Category, Mechanism, and Expansions sections", "Click a rating pill to choose a half-star score"],
+        improvements: ["Narrow utility columns and right-aligned play times", "Player counts line up by number with blank unsupported positions", "BGG pastes preserve separate category, mechanism, and expansion lists"],
+        fixes: ["Remove unused space beneath the Library table"], knownIssues: []
+      },
+      {
+        version: "2.1.0.8",
         date: "2026-10-21T23:50:00.000Z",
         title: "Paste game information",
         summary: "Paste BGG correction forms, game overviews, or player polls to fill game information locally.",

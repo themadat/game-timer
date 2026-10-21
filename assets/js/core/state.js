@@ -153,6 +153,15 @@
           bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
         }
       };
+      ["mechanisms", "expansions"].forEach(function (key) {
+        const raw = entry.metadata?.[key];
+        const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[;\n]/) : [];
+        const tags = Array.from(new Set(list.map(function (tag) { return u.cleanLine(tag, 150); }).filter(Boolean))).slice(0, 100);
+        if (tags.length) normalized.metadata[key] = tags;
+      });
+      const mainTag = u.cleanLine(entry.metadata?.mainTag, 150);
+      const allTags = normalized.metadata.category.split(/[,;]/).map(function (tag) { return tag.trim(); }).concat(normalized.metadata.mechanisms || [], normalized.metadata.expansions || []);
+      if (mainTag && allTags.includes(mainTag)) normalized.metadata.mainTag = mainTag;
       const catalog = normalizeCatalogOverrides(entry.metadata?.catalog);
       if (Object.keys(catalog).length) normalized.metadata.catalog = catalog;
       if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;

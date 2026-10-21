@@ -679,3 +679,21 @@
 .paste-preview-table tbody th { font-weight: 650; }
 .paste-preview-table input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; margin: 0; padding: 0; accent-color: var(--accent); }
 @media (max-width: 600px) { .paste-preview-table th, .paste-preview-table td { padding: .35rem; } }
+
+/* Use the available viewport and let utility columns size to their contents. */
+.library-view { padding-bottom: 0; }
+.library-sheet { height: auto; max-height: calc(100dvh - var(--gt-header-offset) - 100px); }
+.library-sheet table { width: 100%; min-width: 100%; table-layout: auto; }
+.library-sheet :is(th, td):is(.sheet-bggId, .sheet-turnStart, .sheet-factions, .sheet-rating, .sheet-bggRating, .sheet-weight, .sheet-minPlayers, .sheet-length) { width: 1%; min-width: 0; max-width: none; white-space: nowrap; padding-inline: .3rem; }
+.library-sheet :is(th, td).sheet-length { text-align: right; }
+.player-count-square.is-placeholder { visibility: hidden; }
+.sheet-rate-pill { display: inline-flex; justify-content: center; align-items: center; min-width: 42px; min-height: 26px; padding: .15rem .45rem; border: 1px solid color-mix(in srgb, currentColor 40%, var(--line)); border-radius: 999px; background: color-mix(in srgb, currentColor 10%, var(--surface)); font-size: .8rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.rating-choice-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .45rem; margin-top: .75rem; }
+.rating-choice { min-height: 40px; padding: .4rem; border: 1px solid color-mix(in srgb, currentColor 40%, var(--line)); border-radius: 8px; background: color-mix(in srgb, currentColor 10%, var(--surface)); font-weight: 750; }
+.rating-choice[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 1px; }
+.main-game-tag { display: inline-flex; align-items: center; gap: .3rem; max-width: 200px; text-align: left; }
+.main-game-tag .glyph { flex-shrink: 0; }
+.tag-group { margin-top: .8rem; }
+.tag-group h3 { margin: 0 0 .35rem; font-size: .78rem; }
+.tag-group .game-tag { text-align: left; }
+.tag-group .game-tag[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }

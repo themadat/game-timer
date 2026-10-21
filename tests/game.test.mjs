@@ -199,7 +199,8 @@ test('BGG correction paste reads primary identity, ranges and full tags without 
   assert.equal(parsed.fields.minMinutes, 120);
   assert.equal(parsed.fields.maxMinutes, 180);
   assert.match(parsed.fields.category, /Science Fiction/);
-  assert.match(parsed.fields.category, /Variable Player Powers/);
+  assert.ok(parsed.fields.mechanisms.includes('Variable Player Powers'));
+  assert.deepEqual(plain(parsed.fields.expansions), ['Dune: CHOAM & Richese']);
   assert.equal(parsed.fields.category.split(', ').filter(tag => tag === 'Negotiation').length, 1);
   assert.doesNotMatch(parsed.fields.category, /Bill Eberle|CHOAM|Animals: Worms|Remove/);
   assert.equal(parsed.fields.bggRating, undefined);
@@ -238,7 +239,7 @@ test('BGG parser combines all three formats and refuses unsupported or reversed 
   const combined = App.library.parseBggPaste(['bgg-correction.txt', 'bgg-overview.md', 'bgg-poll.md'].map(pasteFixture).join('\n'));
   assert.equal(combined.fields.bggId, '283355');
   assert.equal(combined.fields.bestPlayers, '6');
-  assert.match(combined.fields.category, /Variable Player Powers/);
+  assert.ok(combined.fields.mechanisms.includes('Variable Player Powers'));
   assert.deepEqual(plain(App.library.parseBggPaste('Submit Correction\nNotes to Admin\nDesigner\nRemove John').fields), {});
   const bad = App.library.parseBggPaste('Edit Minimum Players 6\nEdit Maximum Players 2\nWeight: 12 / 5\n9999–10000 Min');
   assert.equal(bad.fields.minPlayers, undefined);
@@ -253,7 +254,7 @@ test('pasted catalog overrides survive sync, update Play and preserve user data 
   const state = model.createDefaultState({ demo: false });
   const parsed = App.library.parseBggPaste(['bgg-correction.txt', 'bgg-overview.md', 'bgg-poll.md'].map(pasteFixture).join('\n')).fields;
   state.workspace.library.games.root = { owned: true, owners: ['Adam'], rating: 4.5, note: 'Keep my note', metadata: {
-    year: parsed.year, bggId: parsed.bggId, bggRating: parsed.bggRating, category: parsed.category,
+    year: parsed.year, bggId: parsed.bggId, bggRating: parsed.bggRating, category: parsed.category, mechanisms: parsed.mechanisms, expansions: parsed.expansions, mainTag: "Science Fiction",
     catalog: { minMinutes: 120, maxMinutes: 180, complexityWeight: 3.98, bestPlayers: '6', recommendedPlayers: '5', avoidPlayers: '1, 2, 3, 4', colors: ['malicious'], unknown: true }
   } };
   const normalized = model.normalize(state);
@@ -261,7 +262,8 @@ test('pasted catalog overrides survive sync, update Play and preserve user data 
   assert.equal(entry.metadata.catalog.complexityWeight, 3.98);
   assert.equal(entry.metadata.catalog.colors, undefined);
   assert.equal(entry.metadata.catalog.unknown, undefined);
-  assert.match(entry.metadata.category, /Variable Player Powers/);
+  assert.ok(entry.metadata.mechanisms.includes('Variable Player Powers'));
+  assert.equal(entry.metadata.mainTag, 'Science Fiction');
   const restored = model.prepareSync(model.syncPayload(normalized)).state;
   App.storage.mutate(next => { next.workspace.library = restored.workspace.library; });
   assert.equal(App.play.gameById('root').minMinutes, 120);
@@ -284,4 +286,22 @@ test('catalog normalization drops unsupported fields and invalid-only overrides'
   assert.equal(catalog.maxPlayers, 6);
   assert.equal(catalog.maxMinutes, 60);
   assert.equal(catalog.bestPlayers, '6');
+});
+
+test('tag sections and a valid main tag survive normalization and sync with legacy categories', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.normalize({ workspace: { library: { games: {
+    dune: { metadata: { category: 'Science Fiction, Negotiation', mechanisms: 'Alliances; Area Movement; Alliances', expansions: ['Dune: CHOAM & Richese'], mainTag: 'Area Movement' } },
+    root: { metadata: { category: 'Legacy tag', mechanisms: [], mainTag: 'Unknown' } }
+  } } } });
+  const dune = state.workspace.library.games.dune.metadata;
+  assert.deepEqual([...dune.mechanisms], ['Alliances', 'Area Movement']);
+  assert.deepEqual([...dune.expansions], ['Dune: CHOAM & Richese']);
+  assert.equal(dune.mainTag, 'Area Movement');
+  assert.equal(state.workspace.library.games.root.metadata.category, 'Legacy tag');
+  assert.equal(state.workspace.library.games.root.metadata.mainTag, undefined);
+  const restored = model.prepareSync(model.syncPayload(state)).state;
+  assert.equal(restored.workspace.library.games.dune.metadata.mainTag, 'Area Movement');
+  assert.deepEqual([...restored.workspace.library.games.dune.metadata.mechanisms], ['Alliances', 'Area Movement']);
 });
