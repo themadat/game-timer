@@ -23,12 +23,61 @@
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const SHEET_COLUMNS = [
-    ["name", "Name"], ["year", "Published year"], ["rating", "My rating"], ["bggRating", "BGG rating"], ["weight", "Weight"],
-    ["minPlayers", "Players · min"], ["maxPlayers", "Players · max"], ["bestPlayers", "Players · best"], ["recommendedPlayers", "Players · good"], ["avoidPlayers", "Players · bad"],
-    ["minMinutes", "Time · short"], ["maxMinutes", "Time · long"], ["length", "Time · average"], ["category", "Category"], ["note", "Notes"],
-    ["bggId", "BGG link"], ["turnStart", "Turn start"], ["factions", "Factions"], ["verified", "Verified colors"], ["colors", "Colors"]
+    ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
+    ["rating", "My rating"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
+    ["length", "Time"], ["category", "Category"], ["note", "Notes"], ["verified", "Verified colors"], ["colors", "Colors"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
+  Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time" });
+
+  function playerCountBadges(game) {
+    const badges = [];
+    for (let count = game.minPlayers; count <= game.maxPlayers; count += 1) {
+      const fit = play.playerCountFit(game, count);
+      const label = fit.key === "plays" ? `Neutral at ${count}` : fit.label;
+      badges.push(`<span class="player-count-square is-${fit.key}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${icons.markup(`number${count}SquareFill`)}</span>`);
+    }
+    return `<span class="player-count-badges">${badges.join("")}</span>`;
+  }
+
+  function sheetInfoButton(game, key, icon, label) {
+    const info = sheetValue(game, key);
+    return `<button class="sheet-info-button ${info ? "has-info" : ""}" type="button" data-sheet-info="${esc(info || `No ${label.toLowerCase()} recorded.`)}" data-info-label="${label}" aria-label="${esc(label + ': ' + (info || 'Not recorded'))}" aria-expanded="false">${symbol(icon)}</button>`;
+  }
+
+  let infoAnchor = null;
+  let infoPinned = false;
+  function hideSheetInfo() {
+    document.querySelector("#libraryInfoPopover")?.hidePopover();
+    infoAnchor?.setAttribute("aria-expanded", "false");
+    infoAnchor = null;
+    infoPinned = false;
+  }
+  function showSheetInfo(button, pin) {
+    if (pin && infoAnchor === button && infoPinned) { hideSheetInfo(); return; }
+    if (!pin && infoPinned) return;
+    let popup = document.querySelector("#libraryInfoPopover");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.id = "libraryInfoPopover";
+      popup.className = "sheet-info-popover";
+      popup.setAttribute("popover", "auto");
+      document.body.appendChild(popup);
+      popup.addEventListener("toggle", event => { if (event.newState === "closed") { infoAnchor?.setAttribute("aria-expanded", "false"); infoAnchor = null; infoPinned = false; } });
+    }
+    infoAnchor?.setAttribute("aria-expanded", "false");
+    popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong><p>${esc(button.dataset.sheetInfo)}</p>`;
+    popup.showPopover();
+    infoAnchor = button;
+    infoPinned = Boolean(pin);
+    button.setAttribute("aria-expanded", "true");
+    button.setAttribute("aria-controls", popup.id);
+    const rect = button.getBoundingClientRect();
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8));
+    const top = rect.bottom + popup.offsetHeight + 8 <= window.innerHeight ? rect.bottom + 6 : Math.max(8, rect.top - popup.offsetHeight - 6);
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+  }
 
   function sheetValue(game, key) {
     const entry = libraryEntry(game.id);
@@ -51,16 +100,22 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}">${esc(value)}</button><span class="sheet-pills">${ownershipPill(game)}${fitPill(game)}</span></th>`;
+      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-pills">${ownershipPill(game)}${fitPill(game)}</span></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating" && value) content = `${esc(value)} / 5`;
       if (key === "bggRating" && value) content = `${esc(value)} / 10`;
-      if (key === "length" && value) content = `${Math.round(value)} min`;
+      if (key === "length") {
+        const band = Math.min(6, Math.max(1, Math.ceil(game.maxMinutes / 30)));
+        content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average">${symbol("libraryTime")}<span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
+      }
+      if (key === "minPlayers") content = playerCountBadges(game);
+      if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
+      if (key === "factions") content = sheetInfoButton(game, key, "libraryFactions", "Factions");
       if (["minMinutes", "maxMinutes"].includes(key) && value) content = `${esc(value)} min`;
-      if (key === "verified") content = game.verified ? "Yes" : "Unchecked";
-      if (key === "bggId") content = `<a href="${value ? 'https://boardgamegeek.com/boardgame/' + encodeURIComponent(value) : 'https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=' + encodeURIComponent(sheetValue(game, 'name'))}" target="_blank" rel="noopener noreferrer">${value ? 'View BGG' : 'Find on BGG'} ↗</a>`;
+      if (key === "verified") content = `<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" aria-label="${game.verified ? "Verified colors" : "Colors unchecked"}">${symbol("libraryVerified")}</span>`;
+      if (key === "bggId") content = `<a class="sheet-web ${value ? 'is-linked' : 'is-unlinked'}" aria-label="${esc((value ? 'View BGG: ' : 'Find on BGG (not linked): ') + game.name)}" title="${value ? 'Linked to BGG' : 'Not linked · search BGG'}" href="${value ? 'https://boardgamegeek.com/boardgame/' + encodeURIComponent(value) : 'https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=' + encodeURIComponent(sheetValue(game, 'name'))}" target="_blank" rel="noopener noreferrer">${symbol("libraryWeb")}</a>`;
       if (key === "colors") content = `<span class="sheet-colors">${play.colorsForGame(game).map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
-      if (["note", "turnStart", "factions"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
+      if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
     return `<tr>${cells}<td><div class="sheet-actions"><button class="button small own-toggle" type="button" data-toggle-owned="${id}" aria-pressed="${entry.owned}" aria-label="Owned: ${esc(game.name)}">Owned</button><button class="button small" type="button" data-play-game="${id}">Play</button></div></td></tr>`;
@@ -68,7 +123,7 @@
 
   function gameSheet(games) {
     const ui = moduleState();
-    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Times are in minutes. Average uses saved plays when available, otherwise the midpoint of short and long.</caption><thead><tr>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}<th scope="col">Actions</th></tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
+    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}<th scope="col">Actions</th></tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
   }
 
   let libraryRoot = null;
@@ -320,15 +375,14 @@
     const ui = moduleState();
     return `
       <div class="present-picker">
-        <span class="eyebrow">Who’s playing?</span>
-        <div class="chip-grid">
-          ${people().map(person => `<button class="chip-btn" type="button" data-present="${esc(person.name)}" aria-pressed="${ui.present.includes(person.name)}" style="--accent:${esc(person.color)}"><span class="dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`).join("")}
-        </div>
-        <div class="count-stepper" ${ui.present.length ? "hidden" : ""}>
+        <div class="present-heading"><span class="eyebrow">Who’s playing?</span><div class="count-stepper" ${ui.present.length ? "hidden" : ""}>
           <span class="eyebrow">or player count</span>
           <button class="icon-button" type="button" data-player-count="-1" aria-label="Fewer players">−</button>
           <output aria-live="polite">${ui.playerCount ? ui.playerCount + " players" : "Any"}</output>
           <button class="icon-button" type="button" data-player-count="1" aria-label="More players">+</button>
+        </div></div>
+        <div class="chip-grid">
+          ${people().map(person => `<button class="chip-btn" type="button" data-present="${esc(person.name)}" aria-pressed="${ui.present.includes(person.name)}" style="--accent:${esc(person.color)}"><span class="dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`).join("")}
         </div>
         ${ui.present.length ? `<span class="panel-note">${ui.present.length} at the table · <button class="text-link" type="button" data-clear-present>Clear</button></span>` : ""}
       </div>`;
@@ -402,6 +456,7 @@
   }
 
   function renderLibrary() {
+    hideSheetInfo();
     if (!libraryRoot) return;
     const ui = moduleState();
     const focusSelector = document.activeElement?.matches?.("[data-library-search]") ? "[data-library-search]" : "";
@@ -448,16 +503,11 @@
     const owners = entry.owners;
     const winners = record ? Array.from(record.winners.entries()).sort((a, b) => b[1] - a[1]) : [];
     const recent = record ? record.records.slice(0, 6) : [];
-    const fitRows = [];
-    for (let count = game.minPlayers; count <= Math.min(game.maxPlayers, 10); count += 1) {
-      const fit = play.playerCountFit(game, count);
-      fitRows.push(`<span class="fit-cell is-${esc(fit.key)}" title="${esc(fit.label)}"><strong>${count}</strong><small>${esc(fit.key === "best" ? "Best" : fit.key === "good" ? "Good" : fit.key === "avoid" ? "Weak" : "OK")}</small></span>`);
-    }
     return `
       <div class="game-detail">
         <p class="game-detail-range">${esc(play.gameRangeText(game)).replace("\n", "<br>")}</p>
         <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Category", "text", "maxlength=\"100\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
-        <div class="fit-strip" aria-label="Player count fit">${fitRows.join("")}</div>
+        <div class="fit-strip" aria-label="Player count fit">${playerCountBadges(game)}<span class="player-fit-legend"><span class="is-best">Best</span><span class="is-good">Good</span><span class="is-avoid">Bad</span><span class="is-plays">Neutral</span></span></div>
         <section class="detail-section">
           <h3>Ownership</h3>
           <div class="segmented" role="group" aria-label="Ownership">
@@ -907,6 +957,8 @@
       libraryRoot.querySelector(`[data-player-count="${stepper.dataset.playerCount}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const info = event.target.closest("[data-sheet-info]");
+    if (info) { showSheetInfo(info, true); return; }
     const heading = event.target.closest("[data-sheet-sort]");
     if (heading) {
       const key = heading.dataset.sheetSort;
@@ -981,6 +1033,11 @@
     libraryRoot = document.querySelector("#libraryView");
     historyRoot = document.querySelector("#historyView");
     libraryRoot.addEventListener("click", handleLibraryClick);
+    libraryRoot.addEventListener("mouseover", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget)) showSheetInfo(button, false); });
+    libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !infoPinned) hideSheetInfo(); });
+    libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button) showSheetInfo(button, false); });
+    libraryRoot.addEventListener("focusout", () => { if (!infoPinned) hideSheetInfo(); });
+    window.addEventListener("scroll", hideSheetInfo, true);
     libraryRoot.addEventListener("input", handleLibraryInput);
     libraryRoot.addEventListener("change", handleLibraryChange);
     libraryRoot.addEventListener("submit", event => { if (event.target.matches("[data-add-person]")) addPerson(event); });

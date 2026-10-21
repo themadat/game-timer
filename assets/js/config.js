@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.2";
+  const VERSION = "2.1.0.3";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,14 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T20:00:00.000Z",
+        title: "Compact library columns",
+        summary: "A denser library with player-count squares, colored play times, and quick information symbols.",
+        improvements: ["Published year sits beside the name; BGG links show green when linked and red when missing", "Combined player counts and time ranges; hover or tap turn and faction symbols for details", "Player-count controls share the Who’s playing row and filters have matching heights"],
+        features: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.2",
         date: "2026-10-21T18:00:00.000Z",
         title: "Spreadsheet game library",
         summary: "Browse games in a sortable spreadsheet with catalog details and color bubbles.",
