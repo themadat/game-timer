@@ -24,8 +24,8 @@
 
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
-    ["rating", "My rating"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["category", "Category"], ["note", "Notes"], ["owners", "Owner"]
+    ["rating", "Rate"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
+    ["length", "Time"], ["category", "Tags"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
@@ -42,7 +42,7 @@
 
   function sheetInfoButton(game, key, icon, label) {
     const info = sheetValue(game, key);
-    return `<button class="sheet-info-button ${info ? "has-info" : ""}" type="button" data-sheet-info="${esc(info || `No ${label.toLowerCase()} recorded.`)}" data-info-label="${label}" aria-label="${esc(label + ': ' + (info || 'Not recorded'))}" aria-expanded="false">${symbol(icon)}</button>`;
+    return `<button data-info-game="${esc(game.id)}" data-info-kind="${key}" class="sheet-info-button ${info ? "has-info" : ""}" type="button" data-sheet-info="${esc(info || `No ${label.toLowerCase()} recorded.`)}" data-info-label="${label}" aria-label="${esc(label + ': ' + (info || 'Not recorded'))}" aria-expanded="false">${symbol(icon)}</button>`;
   }
 
   let infoAnchor = null;
@@ -66,7 +66,9 @@
       popup.addEventListener("toggle", event => { if (event.newState === "closed") { infoAnchor?.setAttribute("aria-expanded", "false"); infoAnchor = null; infoPinned = false; } });
     }
     infoAnchor?.setAttribute("aria-expanded", "false");
-    popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong><p>${esc(button.dataset.sheetInfo)}</p>`;
+    const game = button.dataset.infoGame ? play.gameById(button.dataset.infoGame) : null;
+    const factions = game && button.dataset.infoKind === "factions" ? factionColors(game) : [];
+    popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong>${factions.length ? `<ul class="faction-color-list">${factions.map(color => `<li><span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" aria-hidden="true"></span><span>${esc(color.name)}</span></li>`).join("")}</ul>` : `<p>${esc(button.dataset.sheetInfo)}</p>`}`;
     popup.showPopover();
     infoAnchor = button;
     infoPinned = Boolean(pin);
@@ -91,9 +93,26 @@
     if (key === "weight") return game.complexityWeight;
     if (key === "length") return averageMinutes(game);
     if (key === "turnStart") return game.turnOrder ? [game.turnOrder.label, game.turnOrder.note].filter(Boolean).join(" · ") : "";
-    if (key === "factions") return play.colorsForGame(game).filter(color => !Object.keys(App.gameData.NAMED_COLORS).some(name => name.toLowerCase() === color.name.toLowerCase())).map(color => color.name).join(", ");
+    if (key === "factions") return factionColors(game).map(color => color.name).join(", ");
     if (key === "colors") return play.colorsForGame(game).map(color => color.name).join(", ");
     return game[key] ?? null;
+  }
+
+  function factionColors(game) {
+    return play.colorsForGame(game).filter(color => !Object.keys(App.gameData.NAMED_COLORS).some(name => name.toLowerCase() === color.name.toLowerCase()));
+  }
+
+  function gameTags(game) {
+    return [...new Set(String(sheetValue(game, "category") || "").split(/[,;]/).map(tag => tag.trim()).filter(Boolean))];
+  }
+
+  function ownerPillsMarkup(game) {
+    const entry = libraryEntry(game.id);
+    if (entry.owned && entry.owners.length) return `<span class="owner-pills">${entry.owners.map(name => {
+      const person = people().find(person => sameName(person.name, name));
+      return `<span class="owner-pill" style="--owner-color:${esc(u.normalizeColor(person?.color, '#94a3b8'))}"><span class="owner-dot" aria-hidden="true"></span>${esc(name)}</span>`;
+    }).join("")}</span>`;
+    return `<span class="owner-pill ${entry.owned ? 'is-shared' : entry.wishlist ? 'is-wishlist' : 'is-unowned'}">${esc(sheetValue(game, "owners"))}</span>`;
   }
 
   function gameColorsMarkup(game) {
@@ -102,7 +121,10 @@
     if (STANDARD_COLORS.every(color => available.has(u.normalizeColor(color.value, "#94a3b8").toLowerCase()))) {
       return '<span class="sheet-colors"><span class="sheet-color sheet-rainbow" title="All colors available" role="img" aria-label="All colors available"></span></span>';
     }
-    return `<span class="sheet-colors">${colors.map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
+    const factions = new Set(factionColors(game).map(color => color.name));
+    return `<span class="sheet-colors">${colors.map(color => factions.has(color.name)
+      ? `<button type="button" class="sheet-color faction-color-button" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" data-sheet-info="${esc(color.name)}" data-info-label="Faction" aria-label="${esc(color.name)}" aria-expanded="false"></button>`
+      : `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
   }
 
   function gameRow(game) {
@@ -110,16 +132,18 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span>${gameColorsMarkup(game)}</span></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span>${gameColorsMarkup(game)}</span></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
-      if (key === "rating" && value) content = starsMarkup(value);
-      if (key === "bggRating" && value) content = `${esc(value)} / 10`;
-      if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${esc(value)} / 5">${esc(value)}</span>`;
+      if (key === "rating") content = `<input class="sheet-rate-input rating-band-${value ? Math.ceil(value) : 0}" type="number" min="0" max="5" step="0.5" inputmode="decimal" data-sheet-rating="${id}" value="${value ? Number(value).toFixed(1) : ''}" placeholder="—" aria-label="Rate ${esc(game.name)} out of 5" title="Rate from 0 to 5 in half-star steps; clear to remove">`;
+      if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
+      if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${Number(value).toFixed(1)} / 5">${Number(value).toFixed(1)}</span>`;
       if (key === "length") {
         const band = Math.min(6, Math.max(1, Math.ceil(game.maxMinutes / 30)));
         content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average"><span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
       }
       if (key === "minPlayers") content = playerCountBadges(game);
+      if (key === "owners") content = ownerPillsMarkup(game);
+      if (key === "category" && value) content = `<span class="game-tags">${gameTags(game).map(tag => `<span class="game-tag">${esc(tag)}</span>`).join("")}</span>`;
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
       if (key === "factions") content = sheetInfoButton(game, key, "libraryFactions", "Factions");
       if (["minMinutes", "maxMinutes"].includes(key) && value) content = `${esc(value)} min`;
@@ -129,12 +153,12 @@
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
-    return `<tr${game.id === "custom" ? ' class="is-pinned-game"' : ""}>${cells}<td><div class="sheet-actions"><button class="button small own-toggle" type="button" data-toggle-owned="${id}" aria-pressed="${entry.owned}" aria-label="Owned: ${esc(game.name)}">Owned</button><button class="button small" type="button" data-play-game="${id}">Play</button></div></td></tr>`;
+    return `<tr${game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell"><button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button></td>${cells}</tr>`;
   }
 
   function gameSheet(games) {
     const ui = moduleState();
-    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}<th scope="col">Actions</th></tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
+    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr><th scope="col" class="sheet-play-cell"><span class="visually-hidden">Play</span></th>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" class="${key === 'name' ? 'sheet-name-cell' : ''}" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "bggRating", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", bggRating: "libraryBggRating", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}</tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
   }
 
   let libraryRoot = null;
@@ -304,7 +328,7 @@
       if (ui.ownership === "played" && !plays) return false;
       if (ui.ownership === "unplayed" && plays) return false;
       if (ui.ownership === "available" && count && play.playerCountFit(game, count).score < 0) return false;
-      if (ui.category && ui.category !== "all" && sheetValue(game, "category") !== ui.category) return false;
+      if (ui.category && ui.category !== "all" && !gameTags(game).includes(ui.category)) return false;
       if (ui.verified === "yes" && !game.verified || ui.verified === "no" && game.verified) return false;
       if (terms.length) {
         const text = gameSearchText(game);
@@ -446,16 +470,17 @@
       </div>
       ${ui.tab === "games" ? `
         <div class="filter-row" role="group" aria-label="Library search and filters">
-          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"></label>
+        <details class="library-table-options"><summary>${symbol("people")}<span>Table${count ? ` · ${count}` : ''}</span></summary>${presentPickerMarkup()}</details>
+          <label class="search-field grow-control library-search-field"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"><kbd aria-hidden="true">.</kbd></label>
           <label class="select-field"><span class="visually-hidden">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
           <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
-          <label class="select-field"><span class="visually-hidden">Category</span><select data-library-category><option value="all">All categories</option>${[...new Set(allGames().map(game => sheetValue(game, "category")).filter(Boolean))].sort().map(category => `<option value="${esc(category)}" ${ui.category === category ? 'selected' : ''}>${esc(category)}</option>`).join("")}</select></label>
+          <label class="select-field"><span class="visually-hidden">Tags</span><select data-library-category><option value="all">All tags</option>${[...new Set(allGames().flatMap(gameTags))].sort().map(category => `<option value="${esc(category)}" ${ui.category === category ? 'selected' : ''}>${esc(category)}</option>`).join("")}</select></label>
           <label class="select-field"><span class="visually-hidden">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
           <button class="button small" type="button" data-library-reset>Reset</button>
         </div>
 
-        <details class="library-table-options"><summary>${symbol("people")}<span>Table${count ? ` · ${count}` : ''}</span></summary>${presentPickerMarkup()}</details>
+
       ` : ''}
       <button class="button small library-add-game" type="button" data-add-game>${symbol("plus")}<span>Add game</span></button>
     </section>`;
@@ -555,7 +580,7 @@
       <div class="game-detail">
         <p class="game-detail-range">${esc(play.gameRangeText(game)).replace("\n", "<br>")}</p>
         ${bggLookupMarkup(game, false)}
-        <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Category", "text", "maxlength=\"100\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
+        <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Tags (comma-separated)", "text", "maxlength=\"100\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
         <div class="fit-strip" aria-label="Player count fit">${playerCountBadges(game)}<span class="player-fit-legend"><span class="is-best">Best</span><span class="is-good">Good</span><span class="is-avoid">Bad</span><span class="is-plays">Neutral</span></span></div>
         <section class="detail-section">
           <h3>Ownership</h3>
@@ -1062,6 +1087,19 @@
   }
 
   function handleLibraryChange(event) {
+    if (event.target.matches("[data-sheet-rating]")) {
+      const input = event.target;
+      if (!input.reportValidity()) return;
+      const id = input.dataset.sheetRating;
+      const sheet = libraryRoot.querySelector(".library-sheet");
+      const left = sheet.scrollLeft, top = sheet.scrollTop;
+      mutateLibrary(id, entry => { entry.rating = Number(input.value) || 0; });
+      renderLibrary();
+      const updatedSheet = libraryRoot.querySelector(".library-sheet");
+      updatedSheet.scrollLeft = left; updatedSheet.scrollTop = top;
+      libraryRoot.querySelector(`[data-sheet-rating="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-category], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
@@ -1102,12 +1140,23 @@
     libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !infoPinned) hideSheetInfo(); });
     libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button) showSheetInfo(button, false); });
     libraryRoot.addEventListener("focusout", () => { if (!infoPinned) hideSheetInfo(); });
-    window.addEventListener("scroll", hideSheetInfo, true);
+    window.addEventListener("scroll", event => {
+      if (!document.querySelector("#libraryInfoPopover")?.contains(event.target)) hideSheetInfo();
+    }, true);
     document.addEventListener("click", event => {
       const options = libraryRoot.querySelector(".library-table-options[open]");
       if (options && !event.target.closest(".library-table-options")) options.open = false;
     });
     libraryRoot.addEventListener("keydown", event => {
+      if (event.target.matches("[data-sheet-rating]") && !event.isComposing) {
+        if (event.key === "Enter") { event.preventDefault(); event.target.blur(); }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          const value = libraryEntry(event.target.dataset.sheetRating).rating;
+          event.target.value = value ? Number(value).toFixed(1) : "";
+          event.target.blur();
+        }
+      }
       if (event.key !== "Escape") return;
       const options = libraryRoot.querySelector(".library-table-options[open]");
       if (options) { options.open = false; options.querySelector("summary").focus(); event.preventDefault(); }

@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.6";
+  const VERSION = "2.1.0.7";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T23:45:00.000Z",
+        title: "Inline ratings and faction details",
+        summary: "Rate games directly in the table, inspect faction colors, and browse a tighter Library layout.",
+        features: ["Inline half-star ratings with one-decimal scores and colors", "Faction bubbles reveal names; faction lists use matching color bullets"],
+        improvements: ["Play symbols precede names; owner pills replace the ownership action", "Eight player-count squares per row, one-decimal complexity and BGG scores", "Tags replace Category, and Table controls precede search with its period shortcut hint"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.6",
         date: "2026-10-21T23:30:00.000Z",
         title: "Library shortcuts and quieter updates",
         summary: "Disable automatic What’s New banners, navigate with underlined letter shortcuts, and search Library with a period.",
