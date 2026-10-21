@@ -26,7 +26,7 @@ Views render by replacing their section’s markup and use delegated events. Ren
 
 Application state (`gameTimer.state.v2`, schema v4) holds:
 - `workspace.history`: finished games with players, turns, pauses, placements. Statistics for games and people are derived from it.
-- `workspace.library.games`: per-game `owned`, `owners`, `wishlist`, `rating`, `note`; `workspace.library.customGames`: games added by the user.
+- `workspace.library.games`: per-game `owned`, `owners`, `wishlist`, `rating`, `note`, and catalog `metadata`; optional normalized `metadata.catalog` overrides name, player/time limits, weight, and recommendation counts when resolving games for Library and Play; `workspace.library.customGames`: games added by the user.
 - `workspace.people`: names and colors used in Setup and as owners.
 - `workspace.documents`: the single Notes document.
 - `preferences.game`: time/date format, display name mode, labels, demo mode, keep-awake, chime, vibration, long-turn threshold.

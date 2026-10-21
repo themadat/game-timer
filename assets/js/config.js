@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.7";
+  const VERSION = "2.1.0.8";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T23:50:00.000Z",
+        title: "Paste game information",
+        summary: "Paste BGG correction forms, game overviews, or player polls to fill game information locally.",
+        features: ["Autocomplete game matching with a field-by-field preview", "Fill existing games or stage a new game, with no network lookup", "Player polls select Best, Good, and Bad from the dominant vote"],
+        improvements: ["Pasted catalog details persist in backups and sync and are used in Play", "Full category and mechanism lists become tags"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.7",
         date: "2026-10-21T23:45:00.000Z",
         title: "Inline ratings and faction details",
         summary: "Rate games directly in the table, inspect faction colors, and browse a tighter Library layout.",

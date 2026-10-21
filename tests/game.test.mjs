@@ -28,6 +28,7 @@ function load() {
   App.storage = { getState: () => current, mutate(callback) { callback(current); current = App.stateModel.normalize(current); return current; } };
   App.components = { toast() {}, confirm: async () => true, openDialog() {}, closeDialog() {} };
   vm.runInContext(`(function (window) { ${read('features/play.js')} })(window);`, context);
+  vm.runInContext(`(function (window) { ${read('features/library.js')} })(window);`, context);
   return { App, setState: next => { current = next; } };
 }
 
@@ -183,4 +184,104 @@ test('What’s New visibility is a persistent preference with backward-compatibl
   assert.equal(reset.preferences.controls.showWhatsNew, true);
   assert.equal(reset.workspace.library.games.root.rating, 3.5);
   assert.equal(JSON.stringify(reset.workspace.history), JSON.stringify(state.workspace.history));
+});
+
+const pasteFixture = name => readFileSync(new URL('./fixtures/' + name, import.meta.url), 'utf8');
+const plain = value => JSON.parse(JSON.stringify(value));
+
+test('BGG correction paste reads primary identity, ranges and full tags without admin actions', () => {
+  const { App } = load();
+  const parsed = App.library.parseBggPaste(pasteFixture('bgg-correction.txt'));
+  assert.equal(parsed.fields.name, 'Dune');
+  assert.equal(parsed.fields.year, 2019);
+  assert.equal(parsed.fields.minPlayers, 2);
+  assert.equal(parsed.fields.maxPlayers, 6);
+  assert.equal(parsed.fields.minMinutes, 120);
+  assert.equal(parsed.fields.maxMinutes, 180);
+  assert.match(parsed.fields.category, /Science Fiction/);
+  assert.match(parsed.fields.category, /Variable Player Powers/);
+  assert.equal(parsed.fields.category.split(', ').filter(tag => tag === 'Negotiation').length, 1);
+  assert.doesNotMatch(parsed.fields.category, /Bill Eberle|CHOAM|Animals: Worms|Remove/);
+  assert.equal(parsed.fields.bggRating, undefined);
+  assert.equal(App.library.parseBggPaste('Edit Name\nDune').fields.name, 'Dune');
+});
+
+test('BGG overview prefers the primary game over reimplementation links and rating counts', () => {
+  const { App } = load();
+  assert.deepEqual(plain(App.library.parseBggPaste(pasteFixture('bgg-overview.md')).fields), {
+    name: 'Dune', bggId: '283355', year: 2019, minPlayers: 2, maxPlayers: 6,
+    minMinutes: 120, maxMinutes: 180, complexityWeight: 3.98, bggRating: 7.9
+  });
+  const text = '7.9\nDune (2019)\n2–6 Players\n120–180 Min\nWeight: 3.98 / 5';
+  const fields = App.library.parseBggPaste(text).fields;
+  assert.equal(fields.bggRating, 7.9);
+  assert.equal(fields.complexityWeight, 3.98);
+  assert.equal(fields.bggId, undefined);
+});
+
+test('BGG polls use dominant votes, skip open-ended counts and leave ties neutral', () => {
+  const { App } = load();
+  const result = App.library.parseBggPaste(pasteFixture('bgg-poll.md'));
+  assert.deepEqual(plain(result.fields), { bestPlayers: '6', recommendedPlayers: '5', avoidPlayers: '1, 2, 3, 4' });
+  assert.match(result.warnings.join(' '), /Open-ended/);
+  const tabbed = 'Players\tBest\tRecommended\tNot Recommended\n2\t50% (5)\t50% (5)\t0% (0)\n3\t80% (8)\t10% (1)\t10% (1)';
+  const ties = App.library.parseBggPaste(tabbed);
+  assert.equal(ties.fields.bestPlayers, '3');
+  assert.equal(ties.fields.recommendedPlayers, '--');
+  assert.match(ties.warnings.join(' '), /Tied votes at 2/);
+  const rounded = App.library.parseBggPaste('Best | Recommended | Not Recommended\n| 4 | 50.0% (1000) | 50.0% (1001) | 0% (0) | 2001 |');
+  assert.equal(rounded.fields.recommendedPlayers, '4');
+});
+
+test('BGG parser combines all three formats and refuses unsupported or reversed ranges', () => {
+  const { App } = load();
+  const combined = App.library.parseBggPaste(['bgg-correction.txt', 'bgg-overview.md', 'bgg-poll.md'].map(pasteFixture).join('\n'));
+  assert.equal(combined.fields.bggId, '283355');
+  assert.equal(combined.fields.bestPlayers, '6');
+  assert.match(combined.fields.category, /Variable Player Powers/);
+  assert.deepEqual(plain(App.library.parseBggPaste('Submit Correction\nNotes to Admin\nDesigner\nRemove John').fields), {});
+  const bad = App.library.parseBggPaste('Edit Minimum Players 6\nEdit Maximum Players 2\nWeight: 12 / 5\n9999–10000 Min');
+  assert.equal(bad.fields.minPlayers, undefined);
+  assert.equal(bad.fields.maxMinutes, undefined);
+  assert.equal(bad.fields.complexityWeight, undefined);
+  assert.ok(bad.warnings.length >= 2);
+});
+
+test('pasted catalog overrides survive sync, update Play and preserve user data and history', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.createDefaultState({ demo: false });
+  const parsed = App.library.parseBggPaste(['bgg-correction.txt', 'bgg-overview.md', 'bgg-poll.md'].map(pasteFixture).join('\n')).fields;
+  state.workspace.library.games.root = { owned: true, owners: ['Adam'], rating: 4.5, note: 'Keep my note', metadata: {
+    year: parsed.year, bggId: parsed.bggId, bggRating: parsed.bggRating, category: parsed.category,
+    catalog: { minMinutes: 120, maxMinutes: 180, complexityWeight: 3.98, bestPlayers: '6', recommendedPlayers: '5', avoidPlayers: '1, 2, 3, 4', colors: ['malicious'], unknown: true }
+  } };
+  const normalized = model.normalize(state);
+  const entry = normalized.workspace.library.games.root;
+  assert.equal(entry.metadata.catalog.complexityWeight, 3.98);
+  assert.equal(entry.metadata.catalog.colors, undefined);
+  assert.equal(entry.metadata.catalog.unknown, undefined);
+  assert.match(entry.metadata.category, /Variable Player Powers/);
+  const restored = model.prepareSync(model.syncPayload(normalized)).state;
+  App.storage.mutate(next => { next.workspace.library = restored.workspace.library; });
+  assert.equal(App.play.gameById('root').minMinutes, 120);
+  assert.equal(App.play.gameById('root').bestPlayers, '6');
+  assert.ok(App.play.gameById('root').colors.length > 1);
+  assert.equal(restored.workspace.library.games.root.rating, 4.5);
+  assert.equal(restored.workspace.library.games.root.note, 'Keep my note');
+  assert.deepEqual([...restored.workspace.library.games.root.owners], ['Adam']);
+  assert.equal(JSON.stringify(restored.workspace.history), JSON.stringify(state.workspace.history));
+});
+
+test('catalog normalization drops unsupported fields and invalid-only overrides', () => {
+  const { App } = load();
+  const normalized = App.stateModel.normalize({ workspace: { library: { games: {
+    root: { metadata: { catalog: { minPlayers: 0, maxPlayers: 99, minMinutes: -1, complexityWeight: 12, colors: [] } } },
+    catan: { metadata: { catalog: { minPlayers: 6, maxPlayers: 2, minMinutes: 60, maxMinutes: 30, bestPlayers: '6<script>' } } }
+  } } } });
+  assert.equal(normalized.workspace.library.games.root, undefined);
+  const catalog = normalized.workspace.library.games.catan.metadata.catalog;
+  assert.equal(catalog.maxPlayers, 6);
+  assert.equal(catalog.maxMinutes, 60);
+  assert.equal(catalog.bestPlayers, '6');
 });

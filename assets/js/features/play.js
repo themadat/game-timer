@@ -100,7 +100,14 @@
   }
 
   function allGames() {
-    return GAME_PRESETS.concat(customGames().map(game => Object.assign({ colors: [], custom: true }, game)));
+    return GAME_PRESETS.concat(customGames().map(game => Object.assign({ colors: [], custom: true }, game))).map(game => {
+      const catalog = appState().workspace.library.games[game.id]?.metadata?.catalog;
+      if (!catalog) return game;
+      const merged = Object.assign({}, game, catalog);
+      merged.maxPlayers = Math.max(merged.minPlayers, merged.maxPlayers);
+      merged.maxMinutes = Math.max(merged.minMinutes, merged.maxMinutes);
+      return merged;
+    });
   }
 
   function gameById(id) {

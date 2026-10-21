@@ -105,13 +105,31 @@
         maxPlayers: maxPlayers,
         minMinutes: minMinutes,
         maxMinutes: maxMinutes,
-        complexityWeight: Number.isFinite(weight) && weight >= 1 && weight <= 5 ? Math.round(weight * 10) / 10 : null,
+        complexityWeight: Number.isFinite(weight) && weight >= 1 && weight <= 5 ? Math.round(weight * 100) / 100 : null,
         recommendedPlayers: normalizePlayerCountText(source.recommendedPlayers, range),
         bestPlayers: normalizePlayerCountText(source.bestPlayers, range),
         avoidPlayers: normalizePlayerCountText(source.avoidPlayers, "--"),
         createdAt: u.ensureIso(source.createdAt)
       };
     }).filter(Boolean).slice(0, config.controls.maxCustomGames);
+  }
+
+  function normalizeCatalogOverrides(value) {
+    const source = u.plainObject(value);
+    const catalog = {};
+    const name = u.cleanLine(source.name, 100);
+    if (name) catalog.name = name;
+    [["minPlayers", 1, 20], ["maxPlayers", 1, 20], ["minMinutes", 1, 1440], ["maxMinutes", 1, 1440], ["complexityWeight", 1, 5]].forEach(function ([key, min, max]) {
+      const value = Number(source[key]);
+      if (Number.isFinite(value) && value >= min && value <= max) catalog[key] = key === "complexityWeight" ? Math.round(value * 100) / 100 : Math.round(value);
+    });
+    [["minPlayers", "maxPlayers"], ["minMinutes", "maxMinutes"]].forEach(function ([min, max]) {
+      if (catalog[min] !== undefined && catalog[max] !== undefined) catalog[max] = Math.max(catalog[min], catalog[max]);
+    });
+    ["bestPlayers", "recommendedPlayers", "avoidPlayers"].forEach(function (key) {
+      if (typeof source[key] === "string") catalog[key] = normalizePlayerCountText(source[key], "--");
+    });
+    return catalog;
   }
 
   function normalizeLibraryGames(value) {
@@ -131,10 +149,12 @@
         metadata: {
           year: /^\d{1,4}$/.test(String(entry.metadata?.year || "")) && Number(entry.metadata.year) > 0 ? Number(entry.metadata.year) : null,
           bggRating: Number(entry.metadata?.bggRating) >= 1 && Number(entry.metadata?.bggRating) <= 10 ? Math.round(Number(entry.metadata.bggRating) * 100) / 100 : null,
-          category: u.cleanLine(entry.metadata?.category, 100),
+          category: u.cleanLine(entry.metadata?.category, 1000),
           bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
         }
       };
+      const catalog = normalizeCatalogOverrides(entry.metadata?.catalog);
+      if (Object.keys(catalog).length) normalized.metadata.catalog = catalog;
       if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
     });
     return games;

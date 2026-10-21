@@ -1,0 +1,52 @@
+Make corrections using this form, then click "Submit Correction".
+Names more information
+Edit Name	Dune
+Edit Name Set as Primary Name Remove Name	Dune: Der Wüstenplanet (alternate)
+Edit Name Set as Primary Name Remove Name	Дюна (alternate)
+Add Alternate Name
+Year Released more information
+Edit Year Released	2019
+Minimum Players more information
+Edit Minimum Players	2
+Maximum Players more information
+Edit Maximum Players	6
+Mfg Suggested Ages more information
+Edit Mfg Suggested Ages	14 and up
+Minimum Playing Time more information
+Edit Minimum Playing Time	120 minutes
+Maximum Playing Time more information
+Edit Maximum Playing Time	180 minutes
+Designer more information
+Remove	Bill Eberle
+Remove	Jack Kittredge
+Add Designer
+Category more information
+Remove	Bluffing
+Remove	Fighting
+Remove	Negotiation
+Remove	Novel-based
+Remove	Political
+Remove	Science Fiction
+Remove	Wargame
+Add Category
+Mechanism more information
+Remove	Alliances
+Remove	Area Majority / Influence
+Remove	Area Movement
+Remove	Auction / Bidding
+Remove	Bribery
+Remove	Card Play Conflict Resolution
+Remove	Force Commitment
+Remove	Map Deformation
+Remove	Negotiation
+Remove	Predictive Bid
+Remove	Roles with Asymmetric Information
+Remove	Take That
+Remove	Variable Player Powers
+Add Mechanism
+Expansion
+Remove	Dune: CHOAM & Richese
+Add Expansion
+Family more information
+Remove	Animals: Worms
+Add Family

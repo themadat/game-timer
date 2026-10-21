@@ -284,18 +284,32 @@
     <form id="customGameForm" class="dialog-shell" novalidate>
       <header class="dialog-header"><div><span class="eyebrow">Library</span><h2 id="customGameTitle">Add a game</h2></div><button type="button" class="icon-button" data-close-dialog="customGameDialog" aria-label="Close"><span aria-hidden="true" data-symbol="close"></span></button></header>
       <div class="dialog-body custom-game-fields">
+        <button class="button wide" type="button" data-custom-game-paste>Paste game info</button>
         <label class="field wide"><span>Name</span><input id="customGameName" name="name" type="text" maxlength="100" required autocomplete="off" autocapitalize="words"></label>
         <label class="field"><span>Min players</span><input name="minPlayers" type="number" min="1" max="20" step="1" value="2" required></label>
         <label class="field"><span>Max players</span><input name="maxPlayers" type="number" min="1" max="20" step="1" value="4" required></label>
         <label class="field"><span>Best at</span><input name="bestPlayers" type="text" maxlength="40" placeholder="e.g. 3-4" autocomplete="off"></label>
         <label class="field"><span>Recommended</span><input name="recommendedPlayers" type="text" maxlength="40" placeholder="e.g. 2-5" autocomplete="off"></label>
         <label class="field"><span>Avoid at</span><input name="avoidPlayers" type="text" maxlength="40" placeholder="e.g. 2" autocomplete="off"></label>
-        <label class="field"><span>Weight (1–5)</span><input name="complexityWeight" type="number" min="1" max="5" step="0.1" placeholder="Optional"></label>
+        <label class="field"><span>Weight (1–5)</span><input name="complexityWeight" type="number" min="1" max="5" step="0.01" placeholder="Optional"></label>
         <label class="field"><span>Min minutes</span><input name="minMinutes" type="number" min="1" max="1440" step="1" value="30" required></label>
         <label class="field"><span>Max minutes</span><input name="maxMinutes" type="number" min="1" max="1440" step="1" value="60" required></label>
         <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>
       </div>
       <footer class="dialog-footer"><button type="button" class="button danger-text" id="customGameDelete" hidden>Delete game</button><span class="dialog-footer-spacer"></span><button type="button" class="button" data-close-dialog="customGameDialog">Cancel</button><button type="submit" class="button primary" id="customGameSave">Save game</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="gamePasteDialog" class="app-dialog game-dialog" aria-labelledby="gamePasteTitle">
+    <form id="gamePasteForm" class="dialog-shell">
+      <header class="dialog-header"><div><span class="eyebrow">Library</span><h2 id="gamePasteTitle">Paste game info</h2></div><button type="button" class="icon-button" data-close-dialog="gamePasteDialog" aria-label="Close"><span aria-hidden="true" data-symbol="close"></span></button></header>
+      <div class="dialog-body game-paste-body">
+        <label class="field"><span>Game</span><input id="gamePasteTarget" list="gamePasteTargets" type="text" maxlength="110" placeholder="Choose an existing game or enter a new name" autocomplete="off"></label><datalist id="gamePasteTargets"></datalist>
+        <label class="field"><span>Paste from BGG</span><textarea id="gamePasteText" rows="6" maxlength="50000" placeholder="Paste a correction form, game overview, or player recommendation table…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label>
+        <p id="gamePasteStatus" class="setting-note" role="status"></p>
+        <div id="gamePastePreview"></div>
+      </div>
+      <footer class="dialog-footer"><button type="button" class="button" data-close-dialog="gamePasteDialog">Cancel</button><button id="gamePasteApply" type="submit" class="button primary" disabled>Apply to game</button></footer>
     </form>
   </dialog>
 
