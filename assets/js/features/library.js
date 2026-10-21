@@ -25,10 +25,10 @@
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
     ["rating", "My rating"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["category", "Category"], ["note", "Notes"], ["verified", "Verified colors"], ["colors", "Colors"]
+    ["length", "Time"], ["category", "Category"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
-  Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time" });
+  Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
 
   function playerCountBadges(game) {
     const badges = [];
@@ -85,6 +85,7 @@
     if (key === "name") return game.name.replace(/\s*\(\d{4}\)$/, "");
     if (key === "year") return metadata.year || Number(game.name.match(/\((\d{4})\)$/)?.[1]) || null;
     if (key === "rating") return entry.rating || null;
+    if (key === "owners") return entry.owned ? (entry.owners.join(", ") || "Shared") : entry.wishlist ? "Wishlist" : "Not owned";
     if (key === "note") return entry.note;
     if (["bggRating", "category", "bggId"].includes(key)) return metadata[key] || null;
     if (key === "weight") return game.complexityWeight;
@@ -100,9 +101,9 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-pills">${ownershipPill(game)}${fitPill(game)}</span></th>`;
+      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span><span class="sheet-colors">${play.colorsForGame(game).map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span></span></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
-      if (key === "rating" && value) content = `${esc(value)} / 5`;
+      if (key === "rating" && value) content = starsMarkup(value);
       if (key === "bggRating" && value) content = `${esc(value)} / 10`;
       if (key === "length") {
         const band = Math.min(6, Math.max(1, Math.ceil(game.maxMinutes / 30)));
@@ -118,7 +119,7 @@
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
-    return `<tr>${cells}<td><div class="sheet-actions"><button class="button small own-toggle" type="button" data-toggle-owned="${id}" aria-pressed="${entry.owned}" aria-label="Owned: ${esc(game.name)}">Owned</button><button class="button small" type="button" data-play-game="${id}">Play</button></div></td></tr>`;
+    return `<tr${game.id === "custom" ? ' class="is-pinned-game"' : ""}>${cells}<td><div class="sheet-actions"><button class="button small own-toggle" type="button" data-toggle-owned="${id}" aria-pressed="${entry.owned}" aria-label="Owned: ${esc(game.name)}">Owned</button><button class="button small" type="button" data-play-game="${id}">Play</button></div></td></tr>`;
   }
 
   function gameSheet(games) {
@@ -282,7 +283,8 @@
     const query = ui.search.trim().toLowerCase();
     const count = tableCount();
     const terms = query.split(/\s+/).filter(Boolean);
-    const games = allGames().filter(game => game.id !== "custom").filter(game => {
+    const games = allGames().filter(game => {
+      if (game.id === "custom") return true;
       const entry = libraryEntry(game.id);
       const plays = playCount(game.id);
       if (ui.ownership === "owned" && !entry.owned) return false;
@@ -303,6 +305,8 @@
     const direction = ui.sortDirection === "desc" ? -1 : 1;
     const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true });
     return games.sort((a, b) => {
+      if (a.id === "custom") return -1;
+      if (b.id === "custom") return 1;
       let compared = 0;
       if (ui.sortBy === "fit") {
         compared = count ? play.playerCountFit(b, count).score - play.playerCountFit(a, count).score : 0;
@@ -340,7 +344,41 @@
 
   function starsMarkup(rating) {
     if (!rating) return "";
-    return `<span class="rating" aria-label="Rated ${rating} of 5">${"★".repeat(rating)}<span aria-hidden="true">${"☆".repeat(5 - rating)}</span></span>`;
+    return `<span class="rating rating-stars" role="img" aria-label="Rated ${rating} of 5" title="${rating} / 5">${[0, 1, 2, 3, 4].map(index => `<span class="rating-star" aria-hidden="true">☆<span style="width:${Math.max(0, Math.min(1, rating - index)) * 100}%">★</span></span>`).join("")}</span>`;
+  }
+
+  function bggLookupMarkup(game, customForm) {
+    const name = game ? sheetValue(game, "name") : "";
+    const bggId = game ? sheetValue(game, "bggId") : "";
+    return `<section class="bgg-lookup ${customForm ? 'wide' : 'detail-section'}" data-bgg-lookup><h3>BGG lookup</h3><p class="setting-note">Search BoardGameGeek, then paste the game’s page link below to connect it.</p><div class="bgg-lookup-row"><label class="field grow-control"><span>Game name</span><input type="search" data-bgg-query maxlength="100" value="${esc(name)}" autocomplete="off"></label><a class="button" data-bgg-search href="https://boardgamegeek.com/geeksearch.php?action=search&amp;objecttype=boardgame&amp;q=${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">${symbol("libraryWeb")}Search BGG</a></div><div class="bgg-lookup-row"><label class="field grow-control"><span>BGG game link or ID</span><input type="text" data-bgg-link ${customForm ? 'name="bggLink"' : ''} maxlength="500" value="${esc(bggId || '')}" placeholder="https://boardgamegeek.com/boardgame/…" autocomplete="off"></label>${customForm ? '' : '<button class="button" type="button" data-bgg-apply>Link game</button>'}</div><p class="setting-note" data-bgg-status role="status">${bggId ? `Linked to BGG #${esc(bggId)}.` : ''}</p></section>`;
+  }
+
+  function bggIdFromInput(value) {
+    const text = String(value || "").trim();
+    if (/^\d{1,12}$/.test(text) && Number(text) > 0) return text;
+    try {
+      const url = new URL(text);
+      if (url.protocol !== "https:" || !["boardgamegeek.com", "www.boardgamegeek.com"].includes(url.hostname) || url.username || url.password) return "";
+      const id = url.pathname.match(/^\/boardgame\/(\d{1,12})(?:\/|$)/)?.[1];
+      return Number(id) > 0 ? id : "";
+    } catch (_) { return ""; }
+  }
+
+  function updateBggSearch(event) {
+    if (!event.target.matches("[data-bgg-query]")) return;
+    const section = event.target.closest("[data-bgg-lookup]");
+    section.querySelector("[data-bgg-search]").href = "https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=" + encodeURIComponent(event.target.value.trim());
+  }
+
+  function applyBggLink(event) {
+    const button = event.target.closest("[data-bgg-apply]");
+    if (!button) return;
+    const section = button.closest("[data-bgg-lookup]");
+    const input = section.querySelector("[data-bgg-link]");
+    const id = bggIdFromInput(input.value);
+    if (!id) { section.querySelector("[data-bgg-status]").textContent = "Paste a valid HTTPS BoardGameGeek game link or numeric game ID."; input.focus(); return; }
+    mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { bggId: id }); });
+    refreshAfterLibraryChange();
   }
 
   function gameCard(game) {
@@ -506,6 +544,7 @@
     return `
       <div class="game-detail">
         <p class="game-detail-range">${esc(play.gameRangeText(game)).replace("\n", "<br>")}</p>
+        ${bggLookupMarkup(game, false)}
         <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Category", "text", "maxlength=\"100\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
         <div class="fit-strip" aria-label="Player count fit">${playerCountBadges(game)}<span class="player-fit-legend"><span class="is-best">Best</span><span class="is-good">Good</span><span class="is-avoid">Bad</span><span class="is-plays">Neutral</span></span></div>
         <section class="detail-section">
@@ -520,10 +559,9 @@
             <div class="chip-grid">${people().map(person => `<button class="chip-btn" type="button" data-detail-owner="${esc(person.name)}" aria-pressed="${owners.some(owner => sameName(owner, person.name))}" style="--accent:${esc(person.color)}"><span class="dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`).join("")}</div>
             <p class="setting-note">Leave everyone unselected if it belongs to the whole table.</p>
           </div>
-          <div class="rating-picker" role="group" aria-label="Rating">
-            <span class="eyebrow">Rating</span>
-            ${[1, 2, 3, 4, 5].map(value => `<button class="star-button" type="button" data-detail-rating="${value}" aria-pressed="${entry.rating >= value}" aria-label="${value} star${value === 1 ? "" : "s"}">${entry.rating >= value ? "★" : "☆"}</button>`).join("")}
-            ${entry.rating ? `<button class="text-link" type="button" data-detail-rating="0">Clear</button>` : ""}
+          <div class="rating-picker">
+            <label class="field"><span>My rating</span><select data-detail-rating-select>${Array.from({ length: 11 }, (_, index) => index / 2).map(value => `<option value="${value}" ${entry.rating === value ? 'selected' : ''}>${value ? `${value} / 5 stars` : 'Not rated'}</option>`).join("")}</select></label>
+            ${starsMarkup(entry.rating)}
           </div>
           <label class="field"><span>Notes</span><textarea data-detail-note rows="2" maxlength="1000" placeholder="House rules, missing pieces, expansions…">${esc(entry.note)}</textarea></label>
         </section>
@@ -565,6 +603,7 @@
   function handleGameDialogClick(event) {
     const game = play.gameById(openGameId);
     if (!game) return;
+    if (event.target.closest("[data-bgg-apply]")) { applyBggLink(event); return; }
     const owned = event.target.closest("[data-detail-owned]");
     if (owned) { mutateLibrary(game.id, entry => { entry.owned = owned.dataset.detailOwned === "true"; if (entry.owned) entry.wishlist = false; }); refreshAfterLibraryChange(); return; }
     if (event.target.closest("[data-detail-wishlist]")) { mutateLibrary(game.id, entry => { entry.wishlist = !entry.wishlist; }); refreshAfterLibraryChange(); return; }
@@ -625,6 +664,14 @@
       const value = game[key];
       form.elements[key].value = value === null || value === undefined || value === "--" ? "" : value;
     });
+    let lookup = form.querySelector("[data-bgg-lookup]");
+    if (lookup) lookup.remove();
+    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", bggLookupMarkup(game, true));
+    if (!game) {
+      const query = form.querySelector("[data-bgg-query]");
+      query.value = form.elements.name.value;
+      updateBggSearch({ target: query });
+    }
     components.openDialog("#customGameDialog", { focus: "#customGameName" });
   }
 
@@ -640,6 +687,7 @@
     const maxMinutes = Number(values.maxMinutes);
     let error = "";
     if (!name) error = "Enter a game name.";
+    else if (values.bggLink?.trim() && !bggIdFromInput(values.bggLink)) error = "Paste a valid HTTPS BoardGameGeek game link or numeric game ID.";
     else if (!(minPlayers >= 1 && maxPlayers >= minPlayers)) error = "Max players must be at least min players.";
     else if (!(minMinutes >= 1 && maxMinutes >= minMinutes)) error = "Max minutes must be at least min minutes.";
     else if (play.allGames().some(game => game.id !== editingCustomGameId && sameName(game.name, name))) error = "A game with that name is already in the library.";
@@ -667,6 +715,9 @@
       if (index >= 0) list[index] = Object.assign({}, list[index], record, { createdAt: list[index].createdAt });
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
+      const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink) });
+      next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
     components.closeDialog("#customGameDialog", "saved");
     components.toast(isNew ? name + " was added to your library as owned." : name + " was updated.", { title: isNew ? "Game added" : "Game saved", kind: "success" });
@@ -1049,7 +1100,25 @@
     historyRoot.addEventListener("change", event => { if (!event.target.matches("[data-history-search]")) handleHistoryFilter(event); });
     document.querySelector("#gameDialogBody").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogFooter").addEventListener("click", handleGameDialogClick);
+    document.querySelector("#gameDialogBody").addEventListener("input", updateBggSearch);
+    document.querySelector("#customGameForm").addEventListener("input", event => {
+      updateBggSearch(event);
+      if (event.target.name === "name") {
+        const query = event.currentTarget.querySelector("[data-bgg-query]");
+        if (query) { query.value = event.target.value; updateBggSearch({ target: query }); }
+      }
+    });
+    ["#customGameForm", "#gameDialogBody"].forEach(selector => document.querySelector(selector).addEventListener("keydown", event => {
+      if (event.key !== "Enter" || event.isComposing) return;
+      if (event.target.matches("[data-bgg-query]")) { event.preventDefault(); event.target.closest("[data-bgg-lookup]").querySelector("[data-bgg-search]").click(); }
+      if (event.target.matches("[data-bgg-link]") && event.target.closest("#gameDialogBody")) { event.preventDefault(); event.target.closest("[data-bgg-lookup]").querySelector("[data-bgg-apply]").click(); }
+    }));
     document.querySelector("#gameDialogBody").addEventListener("change", event => {
+      if (event.target.matches("[data-detail-rating-select]")) {
+        mutateLibrary(openGameId, entry => { entry.rating = Number(event.target.value); });
+        refreshAfterLibraryChange();
+        return;
+      }
       if (event.target.matches("[data-detail-metadata]")) {
         if (!event.target.checkValidity()) { event.target.reportValidity(); return; }
         const key = event.target.dataset.detailMetadata;

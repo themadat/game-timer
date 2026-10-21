@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.3";
+  const VERSION = "2.1.0.4";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T22:00:00.000Z",
+        title: "Library details and half-star ratings",
+        summary: "Colors and verification sit under game names, with a separate Owner column and half-star ratings.",
+        features: ["BGG name search and paste-link linking in game details and the custom-game editor", "Rate games in half-star steps"],
+        improvements: ["Wider names fit 16 colors; Custom Game stays first through sorting and filtering", "Owners have their own sortable column after Notes"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.3",
         date: "2026-10-21T20:00:00.000Z",
         title: "Compact library columns",
         summary: "A denser library with player-count squares, colored play times, and quick information symbols.",

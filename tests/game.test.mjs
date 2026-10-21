@@ -152,3 +152,22 @@ test('library sheet metadata survives normalization and sync without changing hi
   assert.equal(restored.workspace.library.games.root.metadata.bggId, '237182');
   assert.deepEqual(restored.workspace.history, normalized.workspace.history);
 });
+
+test('half-star ratings persist through normalization and sync with owner sorting', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.createDefaultState({ demo: false });
+  state.workspace.library.games.root = { rating: 3.5 };
+  state.workspace.library.games.catan = { rating: 0.5 };
+  state.workspace.library.games.scythe = { rating: 9 };
+  state.modules.library.sortBy = 'owners';
+  const normalized = model.normalize(state);
+  assert.equal(normalized.workspace.library.games.root.rating, 3.5);
+  assert.equal(normalized.workspace.library.games.catan.rating, 0.5);
+  assert.equal(normalized.workspace.library.games.scythe.rating, 5);
+  assert.equal(normalized.modules.library.sortBy, 'owners');
+  const restored = model.prepareSync(model.syncPayload(normalized)).state;
+  assert.equal(restored.workspace.library.games.root.rating, 3.5);
+  assert.equal(model.normalize(restored).workspace.library.games.catan.rating, 0.5);
+  assert.deepEqual(restored.workspace.history, normalized.workspace.history);
+});

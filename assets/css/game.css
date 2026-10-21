@@ -539,3 +539,27 @@
   .present-heading .count-stepper output { min-width: 2.5rem; font-size: .78rem; }
   .present-heading .count-stepper > .eyebrow { white-space: nowrap; }
 }
+
+/* Verification and a full 16-color row live below each game name. */
+.library-sheet tr > :first-child { width: 420px; min-width: 420px; max-width: 420px; box-sizing: border-box; }
+.sheet-name-details { display: flex; align-items: center; gap: 6px; margin-top: .25rem; }
+.sheet-name-details .sheet-colors { flex-wrap: nowrap; gap: 4px; min-width: 0; max-width: none; }
+.sheet-name-details .sheet-verification-mark { flex: 0 0 32px; }
+.library-sheet .sheet-owners { min-width: 130px; max-width: 220px; overflow-wrap: anywhere; }
+.rating-stars { display: inline-flex; white-space: nowrap; font-size: 1rem; line-height: 1; letter-spacing: 0; }
+.rating-stars .rating-star { display: inline-block; position: relative; color: var(--line-strong); }
+.rating-stars .rating-star > span { position: absolute; left: 0; top: 0; overflow: hidden; color: #c58b00; }
+.rating-picker { align-items: end; gap: .75rem; }
+.rating-picker > .rating-stars { padding-bottom: .6rem; }
+.bgg-lookup { display: grid; gap: .55rem; }
+.bgg-lookup h3 { margin: 0; font-size: .98rem; }
+.bgg-lookup-row { display: flex; align-items: end; gap: .5rem; }
+.bgg-lookup-row input { width: 100%; }
+.bgg-lookup-row .button { flex-shrink: 0; }
+@media (max-width: 600px) {
+  .library-sheet tr > :first-child { position: static; width: 420px; min-width: 420px; max-width: 420px; }
+  .library-sheet thead tr > :first-child { position: sticky; top: 0; }
+  .bgg-lookup-row { flex-wrap: wrap; }
+  .bgg-lookup-row .field { flex-basis: 100%; }
+}
+@media (max-width: 600px) { .library-sheet tr > :first-child { left: auto; } }

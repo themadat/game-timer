@@ -19,7 +19,7 @@
   const VIEW_IDS = ["play", "library", "history"];
   const LIBRARY_TABS = ["games", "people"];
   const LIBRARY_OWNERSHIP = ["all", "owned", "available", "unowned", "wishlist", "played", "unplayed"];
-  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "note", "bggId", "turnStart", "factions", "verified", "colors"];
+  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "note", "bggId", "turnStart", "factions", "verified", "colors", "owners"];
   const gameData = App.gameData || { QUICK_PLAYERS: [], NAMED_COLORS: {}, GAME_PRESETS: [] };
 
   function demoRecords(now) {
@@ -126,7 +126,7 @@
         owned: entry.owned === true || owners.length > 0,
         owners: owners,
         wishlist: entry.wishlist === true,
-        rating: Math.round(cleanNumber(entry.rating, 0, 5, 0)),
+        rating: Math.round(cleanNumber(entry.rating, 0, 5, 0) * 2) / 2,
         note: u.cleanText(entry.note, 1000).trim(),
         metadata: {
           year: /^\d{1,4}$/.test(String(entry.metadata?.year || "")) && Number(entry.metadata.year) > 0 ? Number(entry.metadata.year) : null,
