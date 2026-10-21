@@ -105,9 +105,10 @@
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating" && value) content = starsMarkup(value);
       if (key === "bggRating" && value) content = `${esc(value)} / 10`;
+      if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${esc(value)} / 5">${esc(value)}</span>`;
       if (key === "length") {
         const band = Math.min(6, Math.max(1, Math.ceil(game.maxMinutes / 30)));
-        content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average">${symbol("libraryTime")}<span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
+        content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average"><span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
@@ -426,12 +427,29 @@
       </div>`;
   }
 
-  function librarySummary() {
-    const games = allGames().filter(game => game.id !== "custom");
-    const owned = games.filter(game => libraryEntry(game.id).owned).length;
-    const wish = games.filter(game => libraryEntry(game.id).wishlist).length;
-    const plays = history().length;
-    return `<span class="count-pill">${games.length} games</span><span class="count-pill">${owned} owned</span>${wish ? `<span class="count-pill">${wish} wishlist</span>` : ""}<span class="count-pill">${plays} ${plays === 1 ? "play" : "plays"}</span>`;
+  function libraryControlsMarkup() {
+    const ui = moduleState();
+    const count = tableCount();
+    return `<section class="panel library-controls" aria-label="Library controls">
+      <div class="segmented compact" role="tablist" aria-label="Library sections">
+        <button type="button" role="tab" data-library-tab="games" aria-selected="${ui.tab === "games"}" aria-pressed="${ui.tab === "games"}">${symbol("library")}<span>Games</span></button>
+        <button type="button" role="tab" data-library-tab="people" aria-selected="${ui.tab === "people"}" aria-pressed="${ui.tab === "people"}">${symbol("people")}<span>People</span></button>
+      </div>
+      ${ui.tab === "games" ? `
+        <div class="filter-row" role="group" aria-label="Library search and filters">
+          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"></label>
+          <label class="select-field"><span class="visually-hidden">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
+          <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
+          <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
+          <label class="select-field"><span class="visually-hidden">Category</span><select data-library-category><option value="all">All categories</option>${[...new Set(allGames().map(game => sheetValue(game, "category")).filter(Boolean))].sort().map(category => `<option value="${esc(category)}" ${ui.category === category ? 'selected' : ''}>${esc(category)}</option>`).join("")}</select></label>
+          <label class="select-field"><span class="visually-hidden">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
+          <button class="button small" type="button" data-library-reset>Reset</button>
+        </div>
+
+        <details class="library-table-options"><summary>${symbol("people")}<span>Table${count ? ` · ${count}` : ''}</span></summary>${presentPickerMarkup()}</details>
+      ` : ''}
+      <button class="button small library-add-game" type="button" data-add-game>${symbol("plus")}<span>Add game</span></button>
+    </section>`;
   }
 
   function renderGamesTab() {
@@ -439,18 +457,6 @@
     const games = filteredGames();
     const count = tableCount();
     return `
-      <section class="panel library-filters" aria-label="Library filters">
-        ${presentPickerMarkup()}
-        <div class="filter-row">
-          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" data-library-search value="${esc(ui.search)}" placeholder="Search any column, owners, notes…" autocomplete="off"></label>
-          <label class="select-field"><span class="eyebrow">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
-          <label class="select-field"><span class="eyebrow">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
-          <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
-          <label class="select-field"><span class="eyebrow">Category</span><select data-library-category><option value="all">All categories</option>${[...new Set(allGames().map(game => sheetValue(game, "category")).filter(Boolean))].sort().map(category => `<option value="${esc(category)}" ${ui.category === category ? 'selected' : ''}>${esc(category)}</option>`).join("")}</select></label>
-          <label class="select-field"><span class="eyebrow">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
-          <button class="button small" type="button" data-library-reset>Reset</button>
-        </div>
-      </section>
       <p class="results-line" role="status">${games.length} ${games.length === 1 ? "game" : "games"}${ui.ownership !== "all" ? " · " + esc(OWNERSHIP_LABELS[ui.ownership]) : ""}${count && ui.sortBy === "fit" ? " · ranked for " + count + " players" : ""}</p>
       ${games.length ? gameSheet(games) : `<div class="empty-state"><strong>No games match</strong><span>Try another filter, or add a game you own.</span><button class="button small" type="button" data-library-reset>Reset filters</button></div>`}`;
   }
@@ -497,19 +503,14 @@
     hideSheetInfo();
     if (!libraryRoot) return;
     const ui = moduleState();
+    const tableOptionsOpen = Boolean(libraryRoot.querySelector(".library-table-options")?.open);
     const focusSelector = document.activeElement?.matches?.("[data-library-search]") ? "[data-library-search]" : "";
     libraryRoot.innerHTML = `
       <div class="library">
-        <header class="play-bar library-bar">
-          <div class="segmented" role="tablist" aria-label="Library sections">
-            <button type="button" role="tab" data-library-tab="games" aria-selected="${ui.tab === "games"}" aria-pressed="${ui.tab === "games"}">${symbol("library")}<span>Games</span></button>
-            <button type="button" role="tab" data-library-tab="people" aria-selected="${ui.tab === "people"}" aria-pressed="${ui.tab === "people"}">${symbol("people")}<span>People</span></button>
-          </div>
-          <div class="library-summary">${librarySummary()}</div>
-          <div class="play-bar-actions"><button class="button" type="button" data-add-game>${symbol("plus")}<span>Add game</span></button></div>
-        </header>
+        ${libraryControlsMarkup()}
         ${ui.tab === "people" ? renderPeopleTab() : renderGamesTab()}
       </div>`;
+    if (tableOptionsOpen && libraryRoot.querySelector(".library-table-options")) libraryRoot.querySelector(".library-table-options").open = true;
     if (focusSelector) {
       const input = libraryRoot.querySelector(focusSelector);
       input?.focus();
@@ -1089,6 +1090,15 @@
     libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button) showSheetInfo(button, false); });
     libraryRoot.addEventListener("focusout", () => { if (!infoPinned) hideSheetInfo(); });
     window.addEventListener("scroll", hideSheetInfo, true);
+    document.addEventListener("click", event => {
+      const options = libraryRoot.querySelector(".library-table-options[open]");
+      if (options && !event.target.closest(".library-table-options")) options.open = false;
+    });
+    libraryRoot.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      const options = libraryRoot.querySelector(".library-table-options[open]");
+      if (options) { options.open = false; options.querySelector("summary").focus(); event.preventDefault(); }
+    });
     libraryRoot.addEventListener("input", handleLibraryInput);
     libraryRoot.addEventListener("change", handleLibraryChange);
     libraryRoot.addEventListener("submit", event => { if (event.target.matches("[data-add-person]")) addPerson(event); });

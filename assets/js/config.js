@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.4";
+  const VERSION = "2.1.0.5";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,14 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T23:00:00.000Z",
+        title: "Compact sticky Library toolbar",
+        summary: "Library tabs, search, filters, and Add game share one compact toolbar that stays visible as you scroll.",
+        improvements: ["Table player controls open from the toolbar", "Five complexity colors in one-point bands", "Table symbols match the color bubbles; tighter rows and no repeated timer symbol"],
+        features: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.4",
         date: "2026-10-21T22:00:00.000Z",
         title: "Library details and half-star ratings",
         summary: "Colors and verification sit under game names, with a separate Owner column and half-star ratings.",

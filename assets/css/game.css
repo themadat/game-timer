@@ -563,3 +563,63 @@
   .bgg-lookup-row .field { flex-basis: 100%; }
 }
 @media (max-width: 600px) { .library-sheet tr > :first-child { left: auto; } }
+
+/* One compact toolbar stays beneath the app header while browsing Library. */
+.library-controls { --control-height: 32px; position: sticky; top: var(--gt-header-offset); z-index: 12; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; padding: .4rem .5rem; margin-bottom: .25rem; border-radius: 10px; }
+.library-controls .filter-row { display: contents; }
+.library-controls .segmented { flex-shrink: 0; padding: 2px; min-height: 32px; }
+.library-controls .segmented button { min-height: 26px; padding: .2rem .4rem; font-size: .76rem; }
+.library-controls .segmented .glyph { width: 15px; height: 15px; }
+.library-controls .search-field { flex: 1 1 145px; }
+.library-controls .search-field input { min-width: 130px; }
+.library-controls .select-field { flex: 0 1 115px; min-width: 0; }
+.library-controls .select-field select { width: 100%; min-width: 0; }
+.library-controls input, .library-controls select { height: 32px; min-height: 32px; padding: .25rem .4rem; font-size: .78rem; }
+.library-controls .button { min-height: 32px; padding: .25rem .45rem; font-size: .76rem; }
+.library-controls .icon-button { width: 32px; min-width: 32px; height: 32px; }
+.library-controls .library-add-game { margin-left: auto; }
+.library-table-options { position: static; flex-shrink: 0; }
+.library-table-options > summary { display: flex; align-items: center; gap: .3rem; min-height: 32px; padding: .25rem .45rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: .76rem; font-weight: 650; cursor: pointer; list-style: none; }
+.library-table-options > summary::-webkit-details-marker { display: none; }
+.library-table-options > summary .glyph { width: 16px; height: 16px; }
+.library-table-options[open] > summary { background: var(--accent-soft); }
+.library-table-options > .present-picker { position: absolute; top: calc(100% + 4px); right: 0; width: min(560px, calc(100vw - 32px)); padding: .65rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+.library-table-options .chip-grid { gap: .3rem; }
+.library-table-options .chip-btn { min-height: 32px; padding: .25rem .45rem; }
+.library-controls + .results-line { margin: .2rem .2rem .3rem; }
+.library-sheet th, .library-sheet td { padding: .3rem .55rem; }
+.library-sheet thead th { padding-block: .35rem; }
+.library-sheet .glyph, .library-sheet .sf-symbol { width: 17px; height: 17px; }
+.library-sheet .sheet-web, .library-sheet .sheet-info-button { width: 26px; height: 26px; padding: 4px; }
+.library-sheet .sheet-name-details { gap: 6px; margin-top: .15rem; }
+.library-sheet .sheet-verification-mark { width: 17px; height: 17px; flex: 0 0 17px; padding: 0; }
+.library-sheet .player-count-square { width: 17px; height: 17px; flex: 0 0 17px; }
+.library-sheet .player-count-badges { max-width: 180px; gap: 3px; }
+.library-sheet .sheet-turnStart, .library-sheet .sheet-factions { width: 2rem; padding: .25rem; }
+.library-sheet .sheet-actions .button { min-height: 30px; padding: .2rem .4rem; }
+.sheet-weight { font-weight: 700; font-variant-numeric: tabular-nums; }
+.weight-band-1 { color: #237a43; }
+.weight-band-2 { color: #4d7628; }
+.weight-band-3 { color: #8a700d; }
+.weight-band-4 { color: #a65c14; }
+.weight-band-5 { color: #bb303b; }
+:root[data-theme="dark"] .weight-band-1 { color: #70d595; }
+:root[data-theme="dark"] .weight-band-2 { color: #afd777; }
+:root[data-theme="dark"] .weight-band-3 { color: #e3cb66; }
+:root[data-theme="dark"] .weight-band-4 { color: #efb275; }
+:root[data-theme="dark"] .weight-band-5 { color: #ff8b95; }
+@media (max-width: 600px) {
+  .library-controls { gap: .3rem; padding: .35rem; }
+  .library-controls .segmented { order: -3; }
+  .library-controls .library-add-game { order: -2; }
+  .library-controls .library-table-options { order: -1; }
+  .library-controls .search-field { flex-basis: 100%; }
+  .library-controls .select-field { flex: 1 1 calc(50% - .3rem); }
+  .library-controls input, .library-controls select { font-size: 16px; }
+}
+@media (max-width: 600px) {
+  .library-controls .filter-row { display: flex; flex: 0 0 100%; flex-wrap: nowrap; align-items: center; gap: .3rem; min-width: 0; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
+  .library-controls .filter-row .search-field { flex: 0 0 180px; }
+  .library-controls .filter-row .select-field { flex: 0 0 125px; }
+  .library-controls .filter-row .icon-button, .library-controls .filter-row .button { flex-shrink: 0; }
+}
