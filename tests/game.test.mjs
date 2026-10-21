@@ -171,3 +171,16 @@ test('half-star ratings persist through normalization and sync with owner sortin
   assert.equal(model.normalize(restored).workspace.library.games.catan.rating, 0.5);
   assert.deepEqual(restored.workspace.history, normalized.workspace.history);
 });
+
+test('What’s New visibility is a persistent preference with backward-compatible defaults', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const defaults = model.normalize({});
+  assert.equal(defaults.preferences.controls.showWhatsNew, true);
+  const state = model.normalize({ preferences: { controls: { showWhatsNew: false } }, workspace: { library: { games: { root: { rating: 3.5 } } } } });
+  assert.equal(model.normalize(JSON.parse(JSON.stringify(state))).preferences.controls.showWhatsNew, false);
+  const reset = model.resetPreferences(state);
+  assert.equal(reset.preferences.controls.showWhatsNew, true);
+  assert.equal(reset.workspace.library.games.root.rating, 3.5);
+  assert.equal(JSON.stringify(reset.workspace.history), JSON.stringify(state.workspace.history));
+});

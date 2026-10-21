@@ -96,12 +96,21 @@
     return game[key] ?? null;
   }
 
+  function gameColorsMarkup(game) {
+    const colors = play.colorsForGame(game);
+    const available = new Set(colors.map(color => u.normalizeColor(color.value, "#94a3b8").toLowerCase()));
+    if (STANDARD_COLORS.every(color => available.has(u.normalizeColor(color.value, "#94a3b8").toLowerCase()))) {
+      return '<span class="sheet-colors"><span class="sheet-color sheet-rainbow" title="All colors available" role="img" aria-label="All colors available"></span></span>';
+    }
+    return `<span class="sheet-colors">${colors.map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
+  }
+
   function gameRow(game) {
     const id = esc(game.id);
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span><span class="sheet-colors">${play.colorsForGame(game).map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span></span></th>`;
+      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span>${gameColorsMarkup(game)}</span></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating" && value) content = starsMarkup(value);
       if (key === "bggRating" && value) content = `${esc(value)} / 10`;
@@ -116,7 +125,7 @@
       if (["minMinutes", "maxMinutes"].includes(key) && value) content = `${esc(value)} min`;
       if (key === "verified") content = `<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" aria-label="${game.verified ? "Verified colors" : "Colors unchecked"}">${symbol("libraryVerified")}</span>`;
       if (key === "bggId") content = `<a class="sheet-web ${value ? 'is-linked' : 'is-unlinked'}" aria-label="${esc((value ? 'View BGG: ' : 'Find on BGG (not linked): ') + game.name)}" title="${value ? 'Linked to BGG' : 'Not linked · search BGG'}" href="${value ? 'https://boardgamegeek.com/boardgame/' + encodeURIComponent(value) : 'https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=' + encodeURIComponent(sheetValue(game, 'name'))}" target="_blank" rel="noopener noreferrer">${symbol("libraryWeb")}</a>`;
-      if (key === "colors") content = `<span class="sheet-colors">${play.colorsForGame(game).map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
+      if (key === "colors") content = `${gameColorsMarkup(game)}`;
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
@@ -432,12 +441,12 @@
     const count = tableCount();
     return `<section class="panel library-controls" aria-label="Library controls">
       <div class="segmented compact" role="tablist" aria-label="Library sections">
-        <button type="button" role="tab" data-library-tab="games" aria-selected="${ui.tab === "games"}" aria-pressed="${ui.tab === "games"}">${symbol("library")}<span>Games</span></button>
-        <button type="button" role="tab" data-library-tab="people" aria-selected="${ui.tab === "people"}" aria-pressed="${ui.tab === "people"}">${symbol("people")}<span>People</span></button>
+        <button type="button" role="tab" data-library-tab="games" data-shortcut="G" aria-keyshortcuts="G Control+Alt+Shift+G" aria-selected="${ui.tab === "games"}" aria-pressed="${ui.tab === "games"}">${symbol("library")}<span><span class="keyboard-mnemonic">G</span>ames</span></button>
+        <button type="button" role="tab" data-library-tab="people" data-shortcut="E" aria-keyshortcuts="E Control+Alt+Shift+E" aria-selected="${ui.tab === "people"}" aria-pressed="${ui.tab === "people"}">${symbol("people")}<span>P<span class="keyboard-mnemonic">e</span>ople</span></button>
       </div>
       ${ui.tab === "games" ? `
         <div class="filter-row" role="group" aria-label="Library search and filters">
-          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"></label>
+          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"></label>
           <label class="select-field"><span class="visually-hidden">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
           <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
@@ -1042,9 +1051,13 @@
 
   function handleLibraryInput(event) {
     if (event.target.matches("[data-library-search]")) {
-      const value = u.cleanLine(event.target.value, 200);
-      updateLibraryUi(ui => { ui.search = value; });
+      const value = event.target.value.slice(0, 200);
+      const start = event.target.selectionStart, end = event.target.selectionEnd;
+      updateLibraryUi(ui => { ui.search = u.cleanLine(value, 200); });
       renderLibrary();
+      const input = libraryRoot.querySelector("[data-library-search]");
+      input.value = value;
+      input.setSelectionRange(start, end);
     }
   }
 

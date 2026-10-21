@@ -623,3 +623,6 @@
   .library-controls .filter-row .select-field { flex: 0 0 125px; }
   .library-controls .filter-row .icon-button, .library-controls .filter-row .button { flex-shrink: 0; }
 }
+
+.keyboard-mnemonic { text-decoration: underline; text-underline-offset: .16em; text-decoration-thickness: 1px; }
+.sheet-rainbow { background: conic-gradient(#e64949, #ed941c, #f4d63f, #42b86a, #25b7cb, #3a6ce5, #a55cde, #e64949); }

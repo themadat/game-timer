@@ -27,7 +27,13 @@
     { keys: "3", hintKey: "3", chordKey: "3", label: "Show History", group: "Navigation" },
     { keys: "/", hintKey: "/", chordKey: "/", label: "Search games, people, history, and help", group: "Global" },
     { keys: "Esc", hintKey: "Esc", chordKey: "Esc", label: "Close a dialog or menu", group: "Global" },
-    { keys: "H or ?", hintKey: "H", chordKey: "H", label: "Open Help Center", group: "Global" },
+    { keys: "?", hintKey: "?", chordKey: "?", label: "Open Help Center", group: "Global", chord: false },
+    { keys: "P", label: "Show Play (pauses or resumes during a live game)", group: "Navigation", chord: false },
+    { keys: "L", label: "Show Library", group: "Navigation", chord: false },
+    { keys: "H", label: "Show History", group: "Navigation", chord: false },
+    { keys: "G", label: "Show Games in Library", group: "Library", chord: false },
+    { keys: "E", label: "Show People in Library", group: "Library", chord: false },
+    { keys: ".", label: "Open and focus Library search", group: "Library", chord: false },
     { keys: ",", hintKey: ",", chordKey: ",", label: "Open Settings", group: "Global" },
     { keys: "N", hintKey: "N", chordKey: "N", label: "Open Notes", group: "Actions" },
     { keys: "V", hintKey: "V", chordKey: "V", label: "Open What’s New", group: "Actions" },
@@ -132,8 +138,9 @@
     const unread = latest && state().ui.seenReleaseVersion !== latest.version;
     $("#releaseUnreadDot").hidden = !unread;
     const banner = $("#whatsNewBanner");
-    banner.hidden = !unread;
-    if (unread) {
+    const showBanner = unread && state().preferences.controls.showWhatsNew;
+    banner.hidden = !showBanner;
+    if (showBanner) {
       $("[data-whats-new-version]").textContent = "v" + latest.version;
       $("[data-whats-new-title]").textContent = latest.title;
       $("[data-whats-new-summary]").textContent = latest.summary;
@@ -469,6 +476,8 @@
     $$('[data-theme-mode]').forEach(function (button) { button.setAttribute("aria-pressed", String(button.dataset.themeMode === appearance.mode)); });
     renderTextSizeControl();
     setInputValue($("#whatsNewDismissSeconds"), preferences.controls.whatsNewDismissSeconds);
+    $("#whatsNewDismissSeconds").disabled = !preferences.controls.showWhatsNew;
+    $$('[data-whats-new-enabled]').forEach(function (button) { button.setAttribute("aria-pressed", String((button.dataset.whatsNewEnabled === "true") === preferences.controls.showWhatsNew)); });
     $$('[data-button-style]').forEach(function (button) { button.setAttribute("aria-pressed", String(button.dataset.buttonStyle === preferences.controls.buttonStyle)); });
     $$('[data-hints-enabled]').forEach(function (button) { button.setAttribute("aria-pressed", String((button.dataset.hintsEnabled === "true") === preferences.hints.enabled)); });
     renderGameSettings();
@@ -858,6 +867,13 @@
     $$('[data-hints-enabled]').forEach(function (button) {
       button.addEventListener("click", function () { storage.mutate(function (next) { next.preferences.hints.enabled = button.dataset.hintsEnabled === "true"; }, { reason: "hints" }); renderHeader(); renderSettings(); });
     });
+    $$('[data-whats-new-enabled]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        storage.mutate(function (next) { next.preferences.controls.showWhatsNew = button.dataset.whatsNewEnabled === "true"; }, { reason: "banner-preference" });
+        storage.saveNow();
+        renderHeader(); renderSettings();
+      });
+    });
     $("#whatsNewDismissSeconds").addEventListener("change", function () {
       if (!this.reportValidity()) return;
       const seconds = Number(this.value);
@@ -988,6 +1004,14 @@
     }) || null;
   }
 
+  function focusLibrarySearch() {
+    storage.mutate(function (next) { next.modules.library.tab = "games"; }, { reason: "library-tab", touch: false });
+    switchView("library");
+    const input = $("[data-library-search]");
+    input?.focus();
+    input?.select();
+  }
+
   function handleGlobalKeydown(event) {
     updateShortcutHints(event, false);
     if (event.key === "Escape") {
@@ -1019,7 +1043,12 @@
     else if (event.code === "Digit1" && mainActive) runShortcut(event, function () { switchView("play", { focus: plain }); });
     else if (event.code === "Digit2" && mainActive) runShortcut(event, function () { switchView("library", { focus: plain }); });
     else if (event.code === "Digit3" && mainActive) runShortcut(event, function () { switchView("history", { focus: plain }); });
-    else if (event.code === "KeyH") runShortcut(event, function () { openSupport("help", event.target); });
+    else if (mainActive && event.code === "Period") runShortcut(event, focusLibrarySearch);
+    else if (mainActive && plain && event.code === "KeyP") runShortcut(event, function () { switchView("play", { focus: true }); });
+    else if (mainActive && plain && event.code === "KeyL") runShortcut(event, function () { switchView("library", { focus: true }); });
+    else if (mainActive && plain && event.code === "KeyH") runShortcut(event, function () { switchView("history", { focus: true }); });
+    else if (mainActive && plain && currentView() === "library" && event.code === "KeyG") runShortcut(event, function () { $("[data-library-tab='games']")?.click(); });
+    else if (mainActive && plain && currentView() === "library" && event.code === "KeyE") runShortcut(event, function () { $("[data-library-tab='people']")?.click(); });
     else if (event.code === "Comma") runShortcut(event, function () { openSupport("settings", event.target); });
     else if (event.code === "KeyN") runShortcut(event, function () { openNotes(event.target); });
     else if (event.code === "KeyV") runShortcut(event, function () { openSupport("releases", event.target); });

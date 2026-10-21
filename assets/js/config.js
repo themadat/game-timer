@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.5";
+  const VERSION = "2.1.0.6";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T23:30:00.000Z",
+        title: "Library shortcuts and quieter updates",
+        summary: "Disable automatic What’s New banners, navigate with underlined letter shortcuts, and search Library with a period.",
+        features: ["What’s New pop-up On/Off setting", "P/L/H navigation, G/E Library tabs, and period to focus Library search"],
+        improvements: ["The full available color set displays as one rainbow circle"],
+        fixes: ["Library search preserves spaces and cursor position while typing"], knownIssues: []
+      },
+      {
+        version: "2.1.0.5",
         date: "2026-10-21T23:00:00.000Z",
         title: "Compact sticky Library toolbar",
         summary: "Library tabs, search, filters, and Add game share one compact toolbar that stays visible as you scroll.",

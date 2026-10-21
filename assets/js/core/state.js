@@ -238,6 +238,7 @@
           textScale: 1
         },
         controls: {
+          showWhatsNew: true,
           whatsNewDismissSeconds: config.controls.whatsNewAutoDismissMs / 1000,
           buttonStyle: "both",
           shortcutHints: true,
@@ -600,6 +601,7 @@
           textScale: u.clamp(sourceAppearance.textScale, 0.85, 1.3, u.clamp(sourceAppearance.readingScale, 0.85, 1.3, 1))
         },
         controls: {
+          showWhatsNew: sourceControls.showWhatsNew !== false,
           whatsNewDismissSeconds: Math.round(u.clamp(sourceControls.whatsNewDismissSeconds, 1, 300, config.controls.whatsNewAutoDismissMs / 1000)),
           buttonStyle: ["icons", "text", "both"].includes(sourceControls.buttonStyle) ? sourceControls.buttonStyle : "both",
           shortcutHints: sourceControls.shortcutHints !== false,
