@@ -51,6 +51,12 @@
       </div>
     </div>
 
+    <nav class="view-tabs" role="tablist" aria-label="Sections">
+      <button id="playTab" type="button" role="tab" aria-selected="true" aria-controls="playView" data-view-tab="play" data-shortcut="1" aria-keyshortcuts="1 Control+Alt+Shift+1"><span class="view-tab-icon" aria-hidden="true" data-symbol="play"></span><span>Play</span><span id="playTabStatus" class="live-dot" hidden></span></button>
+      <button id="libraryTab" type="button" role="tab" aria-selected="false" aria-controls="libraryView" data-view-tab="library" data-shortcut="2" aria-keyshortcuts="2 Control+Alt+Shift+2" tabindex="-1"><span class="view-tab-icon" aria-hidden="true" data-symbol="library"></span><span>Library</span></button>
+      <button id="historyTab" type="button" role="tab" aria-selected="false" aria-controls="historyView" data-view-tab="history" data-shortcut="3" aria-keyshortcuts="3 Control+Alt+Shift+3" tabindex="-1"><span class="view-tab-icon" aria-hidden="true" data-symbol="history"></span><span>History</span><span id="historyCount" class="tab-count" hidden>0</span></button>
+    </nav>
+
     <div class="global-search-wrap" data-shortcut="/">
       <span class="search-icon" aria-hidden="true" data-symbol="search"></span>
       <label class="visually-hidden" for="globalSearch">Search games, people, history, and help</label>
@@ -95,11 +101,6 @@
     <button type="button" class="icon-button" data-dismiss-hint="game-timer-basics" aria-label="Dismiss hint"><span aria-hidden="true" data-symbol="close"></span></button>
   </aside>
 
-  <nav class="view-tabs" role="tablist" aria-label="Sections">
-    <button id="playTab" type="button" role="tab" aria-selected="true" aria-controls="playView" data-view-tab="play" data-shortcut="1" aria-keyshortcuts="1 Control+Alt+Shift+1"><span class="view-tab-icon" aria-hidden="true" data-symbol="play"></span><span>Play</span><span id="playTabStatus" class="live-dot" hidden></span></button>
-    <button id="libraryTab" type="button" role="tab" aria-selected="false" aria-controls="libraryView" data-view-tab="library" data-shortcut="2" aria-keyshortcuts="2 Control+Alt+Shift+2" tabindex="-1"><span class="view-tab-icon" aria-hidden="true" data-symbol="library"></span><span>Library</span></button>
-    <button id="historyTab" type="button" role="tab" aria-selected="false" aria-controls="historyView" data-view-tab="history" data-shortcut="3" aria-keyshortcuts="3 Control+Alt+Shift+3" tabindex="-1"><span class="view-tab-icon" aria-hidden="true" data-symbol="history"></span><span>History</span><span id="historyCount" class="tab-count" hidden>0</span></button>
-  </nav>
 
   <main id="mainContent" tabindex="-1" aria-label="Game Timer">
     <section id="playView" class="view-panel play-view" role="tabpanel" aria-labelledby="playTab"></section>

@@ -211,11 +211,18 @@
     const file = await response.json();
     if (!file || file.type !== "file" || typeof file.content !== "string" || typeof file.sha !== "string") throw new Error("The configured GitHub path is not a readable file.");
     let decoded;
-    try {
-      const binary = atob(file.content.replace(/\s/g, ""));
-      decoded = new TextDecoder().decode(Uint8Array.from(binary, function (character) { return character.charCodeAt(0); }));
-    } catch (error) {
-      throw new Error("The GitHub file could not be decoded.");
+    if (!file.content && file.size > 0) {
+      // GitHub omits base64 content for files over 1 MB; request the raw file instead.
+      const raw = await fetch(apiContentsUrl(cloud) + "?ref=" + encodeURIComponent(cloud.branch), { headers: Object.assign({}, headers(token), { Accept: "application/vnd.github.raw+json" }), signal: context.signal, cache: "no-store" });
+      if (!raw.ok) throw await responseError(raw);
+      decoded = await raw.text();
+    } else {
+      try {
+        const binary = atob(file.content.replace(/\s/g, ""));
+        decoded = new TextDecoder().decode(Uint8Array.from(binary, function (character) { return character.charCodeAt(0); }));
+      } catch (error) {
+        throw new Error("The GitHub file could not be decoded.");
+      }
     }
     let parsed;
     try { parsed = JSON.parse(decoded); } catch (error) { throw new Error("The GitHub data file is not valid JSON."); }
@@ -230,10 +237,17 @@
     return btoa(binary);
   }
 
+  function payloadJson(state) {
+    // Long histories are stored compactly to stay well under GitHub's file limits.
+    const payload = model.syncPayload(state);
+    const pretty = JSON.stringify(payload, null, 2);
+    return pretty.length > 400000 ? JSON.stringify(payload) : pretty;
+  }
+
   async function writeRemote(cloud, token, context, state, sha) {
     const body = {
       message: "Update " + config.identity.shortName + " data (v" + config.identity.version + ")",
-      content: utf8Base64(JSON.stringify(model.syncPayload(state), null, 2)),
+      content: utf8Base64(payloadJson(state)),
       branch: cloud.branch
     };
     if (sha) body.sha = sha;

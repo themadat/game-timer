@@ -5,13 +5,13 @@ Use labelled semantic controls and `assets/js/icons.js` for standard symbols. St
 - `components.openDialog`: remember trigger, open native modal, move focus; closing restores focus. Use confirm for destructive actions.
 - `components.toast` and `setLoading`: shared announcements and busy UI.
 - Notes: one plain-text, autosaving modal; fullscreen on mobile.
-- Settings: vertical icon-led tabs for Settings (Appearance, Game Timer, Backup), Help, What’s New, Roadmap, Shortcuts, and the optional Developer panel. Data Sync is hidden while sync is disabled.
+- Settings: vertical icon-led tabs for Settings (Appearance, Game Timer, Backup), Help, What’s New, Roadmap, Shortcuts, and the optional Developer panel. Data Sync configures GitHub Sync.
 - Appearance: system/light/dark, icons/text/both buttons, app-wide text scale, hints default off. Reduced motion follows the OS.
 - App icon: click/T changes theme; hold or D/pipe toggles Developer Mode.
 
 ## Game views
 
-- View tabs (Play, Library, History) are a tablist; arrows move between them and 1/2/3 switch from anywhere outside a dialog. The Play tab shows a live dot while a session runs.
+- View tabs (Play, Library, History) sit in the top bar between the title and search; on phones they share the second row with a search icon that expands when focused. They are a tablist; arrows move between them and 1/2/3 switch from anywhere outside a dialog. The Play tab shows a live dot while a session runs.
 - Play: the game picker toggles the game list (search plus All/Owned/Fits filters). Name chips seat people; fixed-color games auto-advance to the next unused color or faction. Roster handles drag with a pointer or move with ↑/↓.
 - Session: player cards are buttons (tap or Enter/Space). Space advances and P pauses when focus is not on a control. Cards adapt density to their height; phones use two columns and hide search while live.
 - Statistics: placement selects keep a fixed column so award badges never shift alignment. Share opens a Text/Image chooser with copy and preview fallbacks.

@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.0.0.1";
+  const VERSION = "2.1.0.1";
 
   const CONFIG = {
     identity: {
@@ -50,7 +50,7 @@
     features: {
       records: false,
       documents: true,
-      cloudSync: false,
+      cloudSync: true,
       roadmap: true,
       developerTools: true,
       hints: true,
@@ -86,6 +86,24 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T12:00:00.000Z",
+        title: "Cloud sync and a slimmer top bar",
+        summary: "Your game library, history, and people can now sync between devices through GitHub, and Play, Library, and History live in the top bar.",
+        features: [
+          "GitHub Sync for the library (owned games, owners, wishlist, ratings, notes, added games), game history, people, and Notes",
+          "Optional Auto Sync while the app is open, with manual review for conflicts",
+          "Play, Library, and History tabs in the top bar"
+        ],
+        improvements: [
+          "More room for player cards: the section tabs no longer take their own row",
+          "Search collapses to an icon on phones and expands when tapped",
+          "Long histories sync reliably, including cloud files over 1 MB"
+        ],
+        fixes: [],
+        knownIssues: ["Sync needs a fine-grained GitHub token with Contents access to the app-data repository on each device."]
+      },
+      {
+        version: "2.0.0.1",
         date: "2026-10-17T12:00:00.000Z",
         title: "Game Timer 2.0 — the glow-up",
         summary: "Game Timer moves onto the installable app shell with a full game library, saved game history, table aids, and a redesigned setup, session, and statistics flow.",
@@ -301,7 +319,7 @@
       { id: "road-w012", title: "Tune iPhone and iPad portrait layouts", description: "Keep refining small-screen and portrait tablet layouts, especially the Statistics timeline and tables.", state: "planned", priority: 1, target: "2.1", effort: 3, createdAt: "2026-05-01T12:00:00.000Z" },
       { id: "road-w013", title: "Playful share options", description: "Share variants that celebrate the winner or call out the slowest player, with friendly, dramatic, or spicy tones.", state: "wishlist", priority: 2, target: "Unscheduled", effort: 2, createdAt: "2026-05-01T12:00:00.000Z" },
       { id: "road-w011", title: "Native app wrapper", description: "Evaluate packaging Game Timer as a native app while preserving the tabletop-first layout and offline behavior.", state: "wishlist", priority: 3, target: "Unscheduled", effort: 4, createdAt: "2026-05-01T12:00:00.000Z" },
-      { id: "road-sync", title: "Optional GitHub Sync", description: "Turn on the shell’s GitHub Sync so library, history, and people follow you between devices.", state: "wishlist", priority: 2, target: "Unscheduled", effort: 2, createdAt: "2026-10-17T12:00:00.000Z" },
+      { id: "road-sync", title: "GitHub Sync", description: "Library, history, and people follow you between devices through the shell’s GitHub Sync.", state: "released", priority: 2, target: "2.1", effort: 2, createdAt: "2026-10-17T12:00:00.000Z" },
       { id: "road-w016", title: "2.0 source split and release", description: "Split games, help, release notes, and roadmap into separate files and deploy with GitHub Pages.", state: "released", priority: 1, target: "2.0", effort: 4, createdAt: "2026-05-01T12:00:00.000Z" },
       { id: "road-w014", title: "Align placements with many badges", description: "Placement and timing badges stay aligned when a player has three or more awards.", state: "released", priority: 3, target: "2.0", effort: 1, createdAt: "2026-05-01T12:00:00.000Z" },
       { id: "road-library", title: "Game Library and History", description: "Ownership, owners, wishlist, play counts, saved results, and per-person records.", state: "released", priority: 1, target: "2.0", effort: 4, createdAt: "2026-10-17T12:00:00.000Z" }
@@ -318,7 +336,8 @@
       { id: "settings", title: "Game Timer settings", section: "Settings", keywords: "time format clock units date format display name faction emoji labels demo mode awake chime vibrate warning", html: "<p>Settings → Game Timer controls clock or unit time format, date format, whether player or faction names lead, text or emoji labels, keep-awake, turn chime, vibration, and the long-turn warning. <strong>Demo Mode</strong> jumps a started game straight to a simulated finish for trying out Statistics.</p>" },
       { id: "notes", title: "Notes", section: "Settings", keywords: "notes text edit modal autosave house rules", html: "<p>Open Notes from the top bar or press <kbd>N</kbd>. The single plain-text editor saves locally and is included in backups — handy for house rules and scores.</p>" },
       { id: "backup", title: "Backup and restore", section: "Data", keywords: "json export import backup restore recovery history library", html: "<p>Export a JSON backup from Settings. It includes your library, history, people, notes, and preferences. Imports are validated and confirmed before replacing data, and the current copy is kept as a recovery snapshot.</p>" },
-      { id: "privacy", title: "Privacy and saving", section: "Data", keywords: "privacy local storage autosave session resume reload", html: "<p>Everything stays in this browser’s storage. The running session saves every few seconds and when the app is hidden, so a reload or crash resumes where you left off.</p>" },
+      { id: "sync", title: "Sync between devices", section: "Data", keywords: "sync github cloud token devices phone tablet auto conflict merge app-data", html: "<p>Settings → Data Sync keeps your library, game history, people, and Notes in one JSON file in the <code>app-data</code> GitHub repository. Create a fine-grained token with <strong>Contents: Read and write</strong> for that repository only, paste it, then Test and Save. The first <strong>Sync Now</strong> creates the file. Turn on Auto Sync to upload and download changes while the app is open; conflicting edits always ask which copy to keep. Repeat the token setup on each device.</p><p>Appearance, Game Timer settings, filters, and a running session stay on each device.</p>" },
+      { id: "privacy", title: "Privacy and saving", section: "Data", keywords: "privacy local storage autosave session resume reload", html: "<p>Everything stays in this browser’s storage unless you turn on GitHub Sync. Tokens are stored separately and never included in backups or synced data. The running session saves every few seconds and when the app is hidden, so a reload or crash resumes where you left off.</p>" },
       { id: "install", title: "Install and update", section: "Installation", keywords: "install add home screen iphone ipad android mac windows pwa offline update refresh", html: "<p>Use your browser’s Install app, Add to Home Screen, or Add to Dock command. The installed app works offline. <strong>Update</strong> in the top bar saves, checks for a new version, and refreshes.</p>" },
       { id: "app-icon", title: "App icon controls", section: "Appearance", keywords: "icon theme dark light developer mode hold press", html: "<p>Click or tap the app icon, or press <kbd>T</kbd>, to switch between light and dark themes. Press and hold the icon, or press <kbd>|</kbd> or <kbd>D</kbd>, to toggle Developer Mode.</p>" },
       { id: "shortcuts", title: "Keyboard access", section: "Accessibility", keywords: "keyboard shortcuts slash escape hints play library history", html: "<p>Press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd> for Play, Library, and History, <kbd>/</kbd> to search, <kbd>,</kbd> for Settings, and <kbd>H</kbd> for Help. Hold Shift–Control–Option to reveal shortcut badges on visible controls such as Start, Pause, Auto, and End. The full list is in Settings → Shortcuts.</p>" },

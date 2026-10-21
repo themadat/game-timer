@@ -18,6 +18,7 @@ Then open <http://127.0.0.1:8000/>.
 - **History** — every finished game is saved automatically; reopen its statistics, fix placements, share, play again, or delete.
 - **People** — the names offered in Setup and as owners, with games, wins, win rate, podiums, and average turn.
 - **Table aids** — keep the screen awake during a session, optional turn chime and vibration, and a long-turn warning.
+- **Sync** — optional GitHub Sync keeps the library, history, people, and Notes in step across devices (Settings → Data Sync).
 - **Shell** — Help Center, What’s New, Roadmap, Notes, keyboard shortcuts with hint badges, light/dark/system theme, text size, JSON backup/restore with recovery, and one-tap Update.
 
 Version 1.9 data is picked up automatically: an in-progress session resumes, the saved “Last Results” game is imported into History, and display preferences carry over.
@@ -32,7 +33,7 @@ assets/js/features/play.js    Setup, session timer, statistics, sharing
 assets/js/features/library.js Library, people, history, and their dialogs
 assets/js/features/session-aids.js  Wake lock, chimes, vibration, long-turn warning
 assets/js/app.js              Shell: views, search, settings, shortcuts
-assets/js/core/               State model, storage, dialogs, backup, PWA, (dormant) sync
+assets/js/core/               State model, storage, dialogs, backup, PWA, GitHub Sync
 assets/css/app.css            Shell styles and theme tokens
 assets/css/game.css           Play, Library, and History styles
 sw.js, manifest*.webmanifest  Offline cache and install metadata
@@ -46,6 +47,10 @@ Edit `assets/js/config.js` for identity, Help, Roadmap, and release notes. For a
 node --test tests/*.test.mjs
 git diff --check
 ```
+
+## GitHub Sync
+
+Sync writes `data/game-timer.json` in the private [app-data](https://github.com/themadat/app-data) repository; the first Sync Now creates it. On each device, create a [fine-grained token](https://github.com/settings/personal-access-tokens) for only `app-data` with **Contents: Read and write**, then enter it in Settings → Data Sync, Test, and Save. Tokens never enter backups or synced data.
 
 ## Deploy
 

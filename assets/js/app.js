@@ -1171,6 +1171,10 @@
     bindRuntimeEvents();
     pwa.init();
     sync.init();
+    const header = $(".app-header");
+    const syncHeaderHeight = function () { document.documentElement.style.setProperty("--app-header-height", Math.ceil(header.getBoundingClientRect().height) + "px"); };
+    if (typeof ResizeObserver === "function") new ResizeObserver(syncHeaderHeight).observe(header);
+    syncHeaderHeight();
     const hashView = (location.hash || "").replace("#", "");
     if (VIEWS.includes(hashView) && hashView !== state().ui.view) storage.mutate(function (next) { next.ui.view = hashView; }, { reason: "view", touch: false });
     renderAll();

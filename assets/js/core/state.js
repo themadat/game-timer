@@ -847,7 +847,15 @@
     if (local.notes && remote.notes && local.notes !== remote.notes) throw new Error("Notes differ. Choose which copy to keep.");
     const data = {};
     if (local.notes || remote.notes) data.notes = local.notes || remote.notes;
-    [["history", "id", config.controls.maxHistory], ["people", "name", config.controls.maxPeople], ["customGames", "id", config.controls.maxCustomGames], ["records", "id", config.controls.maxRecords]].forEach(function (entry) {
+    // People are a name list; the same name added on two devices is one person, keeping this device's color.
+    const people = new Map();
+    (local.people || []).concat(remote.people || []).forEach(function (person) {
+      const key = person.name.toLowerCase();
+      if (!people.has(key)) people.set(key, person);
+    });
+    if (people.size > config.controls.maxPeople) throw new Error("The combined people list exceeds the limit.");
+    if (people.size) data.people = Array.from(people.values());
+    [["history", "id", config.controls.maxHistory], ["customGames", "id", config.controls.maxCustomGames], ["records", "id", config.controls.maxRecords]].forEach(function (entry) {
       const items = new Map();
       (local[entry[0]] || []).concat(remote[entry[0]] || []).forEach(function (item) {
         const current = items.get(item[entry[1]]);

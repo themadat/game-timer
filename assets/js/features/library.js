@@ -939,7 +939,7 @@
       if (record) play.openShare(record, document.querySelector("#historyDialogBody .summary-capture"), event.currentTarget);
     });
     window.addEventListener("app:statechange", event => {
-      if (["import", "recovery", "erase-all", "history-save", "history-placement", "legacy-import", "sample-history"].includes(event.detail?.reason)) invalidateStats();
+      if (["import", "recovery", "erase-all", "history-save", "history-placement", "legacy-import", "sample-history", "sync-download", "sync-merge"].includes(event.detail?.reason)) invalidateStats();
     });
   }
 

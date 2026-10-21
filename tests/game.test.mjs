@@ -112,3 +112,22 @@ test('new installs start with the default people and no history', () => {
   assert.deepEqual(state.workspace.history, []);
   assert.equal(state.ui.view, 'play');
 });
+
+test('sync payload carries library, history, and people and merges separate devices', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const record = (id, gameEndedAt) => ({ id, gameId: 'catan', gameName: 'Catan', gameStartedAt: gameEndedAt - 10, gameEndedAt, players: [{ name: 'Adam', type: 'player', placement: '1', turns: [] }] });
+  const local = model.normalize({ workspace: { people: [{ name: 'Adam' }], library: { games: { catan: { owned: true, owners: ['Adam'] } } }, history: [record('g1', 20)] }, preferences: { game: { timeFormat: 'units' } } });
+  const remote = model.normalize({ workspace: { people: [{ name: 'Adam' }, { name: 'Kacie' }], library: { games: { root: { wishlist: true } } }, history: [record('g2', 40)] } });
+  const payload = model.syncPayload(local);
+  assert.deepEqual(Object.keys(payload.data).sort(), ['history', 'libraryGames', 'people']);
+  assert.equal(model.prepareSync(payload).state.workspace.history[0].id, 'g1');
+  const merged = model.merge(local, remote);
+  assert.deepEqual(merged.workspace.history.map(item => item.id), ['g2', 'g1']);
+  assert.deepEqual(Object.keys(merged.workspace.library.games).sort(), ['catan', 'root']);
+  assert.deepEqual(merged.workspace.people.map(person => person.name), ['Adam', 'Kacie']);
+  assert.equal(merged.preferences.game.timeFormat, 'units');
+  const edited = model.normalize(JSON.parse(JSON.stringify(remote)));
+  edited.workspace.library.games.catan = { owned: true, owners: ['Kacie'] };
+  assert.equal(model.canMerge(local, edited), false);
+});

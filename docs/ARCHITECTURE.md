@@ -38,6 +38,8 @@ The live session is a separate high-frequency snapshot (`gameTimer.session.v1`, 
 
 Ending a game (outside Demo Mode) writes a history record immediately; placement changes in Statistics or the History dialog update that record.
 
-## Sync (dormant)
+## GitHub Sync
 
-The shell’s GitHub Sync contract is kept and extended to `notes`, `people`, `libraryGames`, `customGames`, and `history`. It is off by config; enabling it requires provisioning `data/game-timer.json` in the `app-data` repository and a fine-grained token, then setting `features.cloudSync: true`.
+Optional GitHub Sync stores one `local-first-app-data` envelope at `themadat/app-data` → `data/game-timer.json` (fixed in config). Its data allowlist is `notes`, `people`, `libraryGames`, `customGames`, and `history`; preferences, filters, the running session, and credentials stay on the device. The first Sync Now creates the file after confirmation.
+
+Downloads and merges save a recovery copy first. Merge unions history and custom games by id and people by name; the same record or library entry edited differently on two devices is a conflict that needs a manual choice. Optional Auto Sync uploads local-only changes and downloads remote-only changes while the app is visible. Files over 400 KB are written as compact JSON, and files over 1 MB are read through GitHub’s raw media type.

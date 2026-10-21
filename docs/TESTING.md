@@ -26,5 +26,6 @@ Serve with `python3 -m http.server 8000`; stop afterward. After editing assets w
 - People: add, rename (updates owners and history), recolor, remove; records match History.
 - History: filters, overview totals, dialog placements update stats, Play again, Share, Delete.
 - Settings: Game Timer preferences re-render views; theme, text size; backup export/import preview; Reset Preferences keeps data; Erase All clears session and legacy keys.
+- Sync: Data Sync shows the fixed `app-data` target; Test/Save keeps a masked token; first Sync Now creates the file; a second device downloads library and history with recovery; edits on both devices to the same game or record ask which copy to keep; the payload preview contains only notes, people, library, and history.
 - Legacy: with 1.9 keys present (`gameTimerTheme`, `gameTimerTimeFormat`, `gameTimer.lastResult.v1`, `gameTimer.session.v1`), first launch imports preferences, adds the last result to History, and resumes the session.
 - Desktop and 375px/mobile: no horizontal overflow, reachable controls, visible focus, both themes, reduced motion; installed app works offline and Update refreshes.
