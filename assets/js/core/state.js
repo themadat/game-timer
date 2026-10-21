@@ -159,6 +159,7 @@
         const tags = Array.from(new Set(list.map(function (tag) { return u.cleanLine(tag, 150); }).filter(Boolean))).slice(0, 100);
         if (tags.length) normalized.metadata[key] = tags;
       });
+      if (["Board", "Cards", "Coop", "1v1", "Table"].includes(entry.metadata?.mainType)) normalized.metadata.mainType = entry.metadata.mainType;
       const mainTag = u.cleanLine(entry.metadata?.mainTag, 150);
       const allTags = normalized.metadata.category.split(/[,;]/).map(function (tag) { return tag.trim(); }).concat(normalized.metadata.mechanisms || [], normalized.metadata.expansions || []);
       if (mainTag && allTags.includes(mainTag)) normalized.metadata.mainTag = mainTag;
@@ -319,7 +320,7 @@
         supportTab: "settings"
       },
       modules: {
-        library: { tab: "games", search: "", ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
+        library: { tab: "games", search: "", host: "all", ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
         history: { search: "", game: "all", person: "all" },
         play: { gameFilter: "all" },
         records: { showDemoFields: true },
@@ -574,6 +575,10 @@
     const sourceLibrary = u.plainObject(sourceWorkspace.library);
     const gameDefaults = defaultGamePreferences();
     const people = Array.isArray(sourceWorkspace.people) ? normalizePeople(sourceWorkspace.people) : defaultPeople();
+    const hostNames = new Set(people.map(function (person) { return person.name; }));
+    Object.values(u.plainObject(sourceLibrary.games)).forEach(function (entry) {
+      (Array.isArray(entry?.owners) ? entry.owners : []).forEach(function (name) { hostNames.add(u.cleanLine(name, 60)); });
+    });
     const sourceRoadmap = u.plainObject(sourceModules.roadmap);
     const sourceCloud = u.plainObject(sourceModules.cloudSync);
     const theme = defaultTheme();
@@ -697,6 +702,7 @@
           search: u.cleanLine(sourceLibraryUi.search, 200),
           category: u.cleanLine(sourceLibraryUi.category, 100) || "all",
           verified: ["yes", "no"].includes(sourceLibraryUi.verified) ? sourceLibraryUi.verified : "all",
+          host: hostNames.has(u.cleanLine(sourceLibraryUi.host, 60)) ? u.cleanLine(sourceLibraryUi.host, 60) : "all",
           ownership: LIBRARY_OWNERSHIP.includes(sourceLibraryUi.ownership) ? sourceLibraryUi.ownership : "all",
           present: Array.from(new Set((Array.isArray(sourceLibraryUi.present) ? sourceLibraryUi.present : []).map(function (name) { return u.cleanLine(name, 60); }).filter(function (name) { return people.some(function (person) { return person.name === name; }); }))),
           playerCount: Math.round(cleanNumber(sourceLibraryUi.playerCount, 0, 20, 0)),

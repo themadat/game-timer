@@ -300,13 +300,7 @@
     </form>
   </dialog>
 
-  <dialog id="gameRatingDialog" class="app-dialog small-dialog" aria-labelledby="gameRatingTitle">
-    <div class="dialog-shell">
-      <header class="dialog-header"><h2 id="gameRatingTitle">Rate game</h2><button type="button" class="icon-button" data-close-dialog="gameRatingDialog" aria-label="Close"><span aria-hidden="true" data-symbol="close"></span></button></header>
-      <div class="dialog-body"><p class="setting-note">Choose a rating out of 5, in half-star steps.</p><div id="gameRatingChoices" class="rating-choice-grid" role="group" aria-label="Game rating"></div></div>
-      <footer class="dialog-footer"><button type="button" class="button" data-rating-pick="0">Not rated</button><button type="button" class="button" data-close-dialog="gameRatingDialog">Cancel</button></footer>
-    </div>
-  </dialog>
+  <div id="gameRatingPopover" class="rating-popover" popover="auto" role="listbox" aria-label="Game rating"><div id="gameRatingChoices"></div></div>
 
   <dialog id="gamePasteDialog" class="app-dialog game-dialog" aria-labelledby="gamePasteTitle">
     <form id="gamePasteForm" class="dialog-shell">

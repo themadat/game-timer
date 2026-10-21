@@ -305,3 +305,25 @@ test('tag sections and a valid main tag survive normalization and sync with lega
   assert.equal(restored.workspace.library.games.dune.metadata.mainTag, 'Area Movement');
   assert.deepEqual([...restored.workspace.library.games.dune.metadata.mechanisms], ['Alliances', 'Area Movement']);
 });
+
+test('main types, independent owned/wishlist flags and owner-based host filters normalize safely', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.normalize({ workspace: { people: [{ name: 'Adam' }], library: { games: {
+    root: { owned: true, owners: ['Adam'], wishlist: true, metadata: { mainType: 'Coop', category: 'Strategy', mechanisms: ['Alliances'] } },
+    catan: { metadata: { mainType: 'Unknown' } }
+  } } }, modules: { library: { host: 'Adam' } } });
+  assert.equal(state.workspace.library.games.root.owned, true);
+  assert.equal(state.workspace.library.games.root.wishlist, true);
+  assert.equal(state.workspace.library.games.root.metadata.mainType, 'Coop');
+  assert.equal(state.workspace.library.games.catan, undefined);
+  assert.equal(state.modules.library.host, 'Adam');
+  const restored = model.prepareSync(model.syncPayload(state)).state;
+  assert.equal(restored.workspace.library.games.root.wishlist, true);
+  assert.equal(restored.workspace.library.games.root.metadata.mainType, 'Coop');
+  const reset = model.resetPreferences(state);
+  assert.equal(reset.modules.library.host, 'all');
+  assert.equal(reset.workspace.library.games.root.wishlist, true);
+  state.modules.library.host = 'Missing host';
+  assert.equal(model.normalize(state).modules.library.host, 'all');
+});

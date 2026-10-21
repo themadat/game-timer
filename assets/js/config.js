@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.9";
+  const VERSION = "2.1.0.10";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T23:58:00.000Z",
+        title: "Anchored ratings and hosting filters",
+        summary: "Ratings open beside their pills, game types organize tags, and the table can filter by its host.",
+        features: ["Vertical ratings from -- and 5.0 down, aligned with the current score", "Board, Cards, Coop, 1v1, and Table types with three columns of detailed tags", "Filter games by the selected host’s ownership"],
+        improvements: ["Owned games can also stay on the wishlist", "Names, right-aligned colors, and the year share one line"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.9",
         date: "2026-10-21T23:55:00.000Z",
         title: "Compact columns and grouped tags",
         summary: "The library fills the available space, ratings open from pills, and one main tag expands into organized sections.",

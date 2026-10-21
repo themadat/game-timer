@@ -20,6 +20,7 @@
     played: "Played",
     unplayed: "Never played"
   };
+  const MAIN_GAME_TYPES = ["Board", "Cards", "Coop", "1v1", "Table"];
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
@@ -285,12 +286,12 @@
       popup.className = "sheet-info-popover";
       popup.setAttribute("popover", "auto");
       document.body.appendChild(popup);
-      popup.addEventListener("click", event => {
-        const tag = event.target.closest("[data-main-tag]");
-        if (!tag) return;
-        const game = play.gameById(tag.dataset.tagGame);
-        if (!game || !gameTags(game).includes(tag.dataset.mainTag)) return;
-        mutateLibrary(game.id, entry => { entry.metadata = Object.assign({}, entry.metadata, { mainTag: tag.dataset.mainTag }); });
+      popup.addEventListener("change", event => {
+        const select = event.target.closest("[data-main-type]");
+        if (!select || !MAIN_GAME_TYPES.includes(select.value)) return;
+        const game = play.gameById(select.dataset.mainType);
+        if (!game) return;
+        mutateLibrary(game.id, entry => { entry.metadata = Object.assign({}, entry.metadata, { mainType: select.value }); });
         hideSheetInfo();
         refreshSheetPosition(`[data-info-kind="tags"][data-info-game="${CSS.escape(game.id)}"]`);
       });
@@ -298,6 +299,7 @@
       popup.addEventListener("toggle", event => { if (event.newState === "closed") { infoAnchor?.setAttribute("aria-expanded", "false"); infoAnchor = null; infoPinned = false; } });
     }
     infoAnchor?.setAttribute("aria-expanded", "false");
+    popup.dataset.kind = button.dataset.infoKind || "info";
     const game = button.dataset.infoGame ? play.gameById(button.dataset.infoGame) : null;
     const factions = game && button.dataset.infoKind === "factions" ? factionColors(game) : [];
     popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong>${factions.length ? `<ul class="faction-color-list">${factions.map(color => `<li><span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" aria-hidden="true"></span><span>${esc(color.name)}</span></li>`).join("")}</ul>` : `<p>${esc(button.dataset.sheetInfo)}</p>`}`;
@@ -345,15 +347,13 @@
     };
   }
   function gameTags(game) {
-    return [...new Set(Object.values(gameTagGroups(game)).flat())];
+    return [...new Set([mainGameTag(game), ...Object.values(gameTagGroups(game)).flat()])];
   }
   function mainGameTag(game) {
-    const tags = gameTags(game);
-    const main = libraryEntry(game.id).metadata?.mainTag;
-    return tags.includes(main) ? main : tags[0] || "Tags";
+    return libraryEntry(game.id).metadata?.mainType || "Board";
   }
   function tagSectionsMarkup(game) {
-    return `<strong>Tags</strong><p class="setting-note">Choose the main tag shown in the table.</p>${Object.entries(gameTagGroups(game)).map(([label, tags]) => `<section class="tag-group"><h3>${label}</h3><div class="game-tags">${tags.length ? tags.map(tag => `<button type="button" class="game-tag" data-main-tag="${esc(tag)}" data-tag-game="${esc(game.id)}" aria-pressed="${mainGameTag(game) === tag}">${esc(tag)}</button>`).join("") : '<span class="setting-note">None added</span>'}</div></section>`).join("")}`;
+    return `<label class="field main-type-field"><span>Main type</span><select data-main-type="${esc(game.id)}">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label><div class="tag-sections">${Object.entries(gameTagGroups(game)).map(([label, tags]) => `<section class="tag-group"><h3>${label}</h3><ul class="tag-values">${tags.length ? tags.map(tag => `<li>${esc(tag)}</li>`).join("") : '<li class="setting-note">None added</li>'}</ul></section>`).join("")}</div>`;
   }
 
   function refreshSheetPosition(focusSelector) {
@@ -365,20 +365,49 @@
     if (focusSelector) libraryRoot.querySelector(focusSelector)?.focus({ preventScroll: true });
   }
   let ratingGameId = "";
+  let ratingAnchor = null;
+  let ratingReturnFocus = false;
+  function hideRatingPicker() {
+    document.querySelector("#gameRatingPopover")?.hidePopover();
+    ratingAnchor?.setAttribute("aria-expanded", "false");
+    ratingAnchor = null;
+  }
   function openRatingPicker(button) {
+    const popup = document.querySelector("#gameRatingPopover");
+    if (ratingAnchor === button && popup.matches(":popover-open")) { hideRatingPicker(); return; }
     ratingGameId = button.dataset.sheetRating;
+    ratingAnchor = button;
+    ratingReturnFocus = false;
     const game = play.gameById(ratingGameId);
     if (!game) return;
     const rating = libraryEntry(game.id).rating;
-    document.querySelector("#gameRatingTitle").textContent = "Rate " + sheetValue(game, "name");
-    document.querySelector("#gameRatingChoices").innerHTML = Array.from({ length: 10 }, (_, index) => (index + 1) / 2).map(value => `<button type="button" class="rating-choice rating-band-${Math.ceil(value)}" data-rating-pick="${value}" aria-pressed="${rating === value}" aria-label="${value.toFixed(1)} out of 5">${value.toFixed(1)}</button>`).join("");
-    components.openDialog("#gameRatingDialog", { trigger: button, focus: rating ? '[aria-pressed="true"]' : '[data-rating-pick="0.5"]' });
+    popup.setAttribute("aria-label", "Rate " + sheetValue(game, "name"));
+    const values = [0, ...Array.from({ length: 10 }, (_, index) => 5 - index / 2)];
+    document.querySelector("#gameRatingChoices").innerHTML = values.map(value => `<button type="button" role="option" class="rating-choice rating-band-${Math.ceil(value)}" data-rating-pick="${value}" aria-selected="${rating === value}" tabindex="${rating === value ? '0' : '-1'}" aria-label="${value ? value.toFixed(1) + ' out of 5' : 'Not rated'}">${value ? value.toFixed(1) : '--'}</button>`).join("");
+    popup.style.maxHeight = "none";
+    popup.showPopover();
+    popup.scrollTop = 0;
+    button.setAttribute("aria-expanded", "true");
+    button.setAttribute("aria-controls", popup.id);
+    const selected = popup.querySelector('[aria-selected="true"]');
+    const anchor = button.getBoundingClientRect();
+    const center = anchor.top + anchor.height / 2;
+    const selectedCenter = selected.offsetTop + selected.offsetHeight / 2;
+    const fullHeight = popup.scrollHeight + 2;
+    const wantedTop = center - selectedCenter;
+    const top = Math.max(8, wantedTop);
+    const height = Math.min(fullHeight, window.innerHeight - 8 - top, fullHeight - Math.max(0, top - wantedTop));
+    popup.style.maxHeight = Math.max(1, height) + "px";
+    popup.style.top = top + "px";
+    popup.style.left = Math.max(8, anchor.right + popup.offsetWidth + 4 <= window.innerWidth ? anchor.right + 4 : anchor.left - popup.offsetWidth - 4) + "px";
+    popup.scrollTop = top + selectedCenter - center;
+    selected.focus({ preventScroll: true });
   }
   function pickRating(event) {
     const button = event.target.closest("[data-rating-pick]");
     if (!button || !ratingGameId) return;
     mutateLibrary(ratingGameId, entry => { entry.rating = Number(button.dataset.ratingPick); });
-    components.closeDialog("#gameRatingDialog", "saved");
+    hideRatingPicker();
     refreshSheetPosition(`[data-sheet-rating="${CSS.escape(ratingGameId)}"]`);
   }
 
@@ -391,11 +420,14 @@
 
   function ownerPillsMarkup(game) {
     const entry = libraryEntry(game.id);
-    if (entry.owned && entry.owners.length) return `<span class="owner-pills">${entry.owners.map(name => {
+    let owner = "";
+    if (entry.owned && entry.owners.length) owner = entry.owners.map(name => {
       const person = people().find(person => sameName(person.name, name));
       return `<span class="owner-pill" style="--owner-color:${esc(u.normalizeColor(person?.color, '#94a3b8'))}"><span class="owner-dot" aria-hidden="true"></span>${esc(name)}</span>`;
-    }).join("")}</span>`;
-    return `<span class="owner-pill ${entry.owned ? 'is-shared' : entry.wishlist ? 'is-wishlist' : 'is-unowned'}">${esc(sheetValue(game, "owners"))}</span>`;
+    }).join("");
+    else if (entry.owned) owner = '<span class="owner-pill is-shared">Shared</span>';
+    else if (!entry.wishlist) owner = '<span class="owner-pill is-unowned">Not owned</span>';
+    return `<span class="owner-pills">${owner}${entry.wishlist ? `<span class="owner-pill is-wishlist">${symbol("heart")}Wishlist</span>` : ''}</span>`;
   }
 
   function gameColorsMarkup(game) {
@@ -415,9 +447,9 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><button class="text-link sheet-name" type="button" data-open-game="${id}"><span>${esc(value)}</span>${sheetValue(game, "year") ? `<span class="sheet-year">(${esc(sheetValue(game, "year"))})</span>` : ""}</button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span>${gameColorsMarkup(game)}</span></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details"><span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span>${gameColorsMarkup(game)}</span><span class="sheet-year">${sheetValue(game, "year") ? `(${esc(sheetValue(game, "year"))})` : ''}</span></div></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
-      if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="dialog" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
+      if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
       if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${Number(value).toFixed(1)} / 5">${Number(value).toFixed(1)}</span>`;
       if (key === "length") {
@@ -585,7 +617,7 @@
 
   function gameSearchText(game) {
     const entry = libraryEntry(game.id);
-    return [play.gameSearchText(game), entry.note, ...SHEET_COLUMNS.map(([key]) => sheetValue(game, key)), entry.wishlist ? "wishlist wish" : "", entry.owned ? "" : "not owned unowned"].filter(Boolean).join(" ").toLowerCase();
+    return [play.gameSearchText(game), entry.note, ...SHEET_COLUMNS.map(([key]) => sheetValue(game, key)), ...gameTags(game), entry.wishlist ? "wishlist wish" : "", entry.owned ? "" : "not owned unowned"].filter(Boolean).join(" ").toLowerCase();
   }
 
   function gameSearchMeta(game) {
@@ -604,6 +636,7 @@
       if (game.id === "custom") return true;
       const entry = libraryEntry(game.id);
       const plays = playCount(game.id);
+      if (ui.host && ui.host !== "all" && (!entry.owned || !entry.owners.some(name => sameName(name, ui.host)))) return false;
       if (ui.ownership === "owned" && !entry.owned) return false;
       if (ui.ownership === "available" && !isAvailable(game)) return false;
       if (ui.ownership === "unowned" && entry.owned) return false;
@@ -726,10 +759,15 @@
       </article>`;
   }
 
+  function hostNames() {
+    return [...new Set([...people().map(person => person.name), ...Object.values(appState().workspace.library.games).flatMap(entry => entry.owners)])].sort((a, b) => a.localeCompare(b));
+  }
+
   function presentPickerMarkup() {
     const ui = moduleState();
     return `
       <div class="present-picker">
+        <label class="field host-field"><span class="eyebrow">Who’s hosting?</span><select data-library-host><option value="all">Any host</option>${hostNames().map(name => `<option value="${esc(name)}" ${ui.host === name ? 'selected' : ''}>${esc(name)}</option>`).join("")}</select></label>
         <div class="present-heading"><span class="eyebrow">Who’s playing?</span><div class="count-stepper" ${ui.present.length ? "hidden" : ""}>
           <span class="eyebrow">or player count</span>
           <button class="icon-button" type="button" data-player-count="-1" aria-label="Fewer players">−</button>
@@ -775,7 +813,7 @@
     const games = filteredGames();
     const count = tableCount();
     return `
-      <p class="results-line" role="status">${games.length} ${games.length === 1 ? "game" : "games"}${ui.ownership !== "all" ? " · " + esc(OWNERSHIP_LABELS[ui.ownership]) : ""}${count && ui.sortBy === "fit" ? " · ranked for " + count + " players" : ""}</p>
+      <p class="results-line" role="status">${games.length} ${games.length === 1 ? "game" : "games"}${ui.ownership !== "all" ? " · " + esc(OWNERSHIP_LABELS[ui.ownership]) : ""}${count && ui.sortBy === "fit" ? " · ranked for " + count + " players" : ""}${ui.host && ui.host !== "all" ? " · hosted by " + esc(ui.host) : ""}</p>
       ${games.length ? gameSheet(games) : `<div class="empty-state"><strong>No games match</strong><span>Try another filter, or add a game you own.</span><button class="button small" type="button" data-library-reset>Reset filters</button></div>`}`;
   }
 
@@ -819,6 +857,7 @@
 
   function renderLibrary() {
     hideSheetInfo();
+    hideRatingPicker();
     if (!libraryRoot) return;
     const ui = moduleState();
     const tableOptionsOpen = Boolean(libraryRoot.querySelector(".library-table-options")?.open);
@@ -928,7 +967,7 @@
     if (!game) return;
     if (event.target.closest("[data-bgg-apply]")) { applyBggLink(event); return; }
     const owned = event.target.closest("[data-detail-owned]");
-    if (owned) { mutateLibrary(game.id, entry => { entry.owned = owned.dataset.detailOwned === "true"; if (entry.owned) entry.wishlist = false; }); refreshAfterLibraryChange(); return; }
+    if (owned) { mutateLibrary(game.id, entry => { entry.owned = owned.dataset.detailOwned === "true"; }); refreshAfterLibraryChange(); return; }
     if (event.target.closest("[data-detail-wishlist]")) { mutateLibrary(game.id, entry => { entry.wishlist = !entry.wishlist; }); refreshAfterLibraryChange(); return; }
     const owner = event.target.closest("[data-detail-owner]");
     if (owner) {
@@ -989,7 +1028,7 @@
     });
     let extra = form.querySelector("[data-custom-paste-fields]");
     if (extra) extra.remove();
-    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
+    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields><label class="field"><span>Main type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
     let lookup = form.querySelector("[data-bgg-lookup]");
     if (lookup) lookup.remove();
     form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", bggLookupMarkup(game, true));
@@ -1043,7 +1082,7 @@
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
-      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
@@ -1355,10 +1394,10 @@
       return;
     }
     if (event.target.closest("[data-library-direction]")) { updateLibraryUi(ui => { ui.sortDirection = ui.sortDirection === "desc" ? "asc" : "desc"; }); renderLibrary(); return; }
-    if (event.target.closest("[data-library-reset]")) { updateLibraryUi(ui => { ui.category = "all"; ui.verified = "all"; ui.search = ""; ui.ownership = "all"; ui.sortBy = "fit"; ui.sortDirection = "asc"; ui.playerCount = 0; ui.present = []; }); renderLibrary(); return; }
+    if (event.target.closest("[data-library-reset]")) { updateLibraryUi(ui => { ui.host = "all"; ui.category = "all"; ui.verified = "all"; ui.search = ""; ui.ownership = "all"; ui.sortBy = "fit"; ui.sortDirection = "asc"; ui.playerCount = 0; ui.present = []; }); renderLibrary(); return; }
     const owned = event.target.closest("[data-toggle-owned]");
     if (owned) {
-      mutateLibrary(owned.dataset.toggleOwned, entry => { entry.owned = !entry.owned; if (entry.owned) entry.wishlist = false; });
+      mutateLibrary(owned.dataset.toggleOwned, entry => { entry.owned = !entry.owned; });
       renderLibrary();
       libraryRoot.querySelector(`[data-toggle-owned="${CSS.escape(owned.dataset.toggleOwned)}"]`)?.focus({ preventScroll: true });
       return;
@@ -1384,6 +1423,12 @@
   }
 
   function handleLibraryChange(event) {
+    if (event.target.matches("[data-library-host]")) {
+      const name = event.target.value;
+      updateLibraryUi(ui => { ui.host = name; }); renderLibrary();
+      libraryRoot.querySelector("[data-library-host]")?.focus({ preventScroll: true });
+      return;
+    }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-category], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
@@ -1417,8 +1462,28 @@
   }
 
   function init() {
-    document.querySelector("#gameRatingDialog").addEventListener("click", pickRating);
-    window.addEventListener("resize", fitLibrarySheet);
+    const ratingPopup = document.querySelector("#gameRatingPopover");
+    ratingPopup.addEventListener("click", pickRating);
+    ratingPopup.addEventListener("toggle", event => {
+      if (event.newState === "closed") {
+        const anchor = ratingAnchor;
+        ratingAnchor = null;
+        anchor?.setAttribute("aria-expanded", "false");
+        if (ratingReturnFocus && anchor?.isConnected) anchor.focus({ preventScroll: true });
+        ratingReturnFocus = false;
+      }
+    });
+    ratingPopup.addEventListener("keydown", event => {
+      if (event.key === "Escape") ratingReturnFocus = true;
+      if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+      event.preventDefault(); event.stopPropagation();
+      const options = [...ratingPopup.querySelectorAll("[data-rating-pick]")];
+      const index = options.indexOf(document.activeElement);
+      const next = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : Math.max(0, Math.min(options.length - 1, index + (event.key === "ArrowUp" ? -1 : 1)));
+      options[next].focus();
+    });
+    window.addEventListener("resize", () => { hideRatingPicker(); fitLibrarySheet(); });
+    window.addEventListener("app:viewrendered", () => { if (ratingAnchor && (libraryRoot?.hidden || !ratingAnchor.isConnected)) hideRatingPicker(); });
     if (typeof ResizeObserver === "function") {
       const observer = new ResizeObserver(() => requestAnimationFrame(fitLibrarySheet));
       [".app-header", "#whatsNewBanner", "#contextHint"].forEach(selector => { const node = document.querySelector(selector); if (node) observer.observe(node); });
@@ -1439,6 +1504,7 @@
     libraryRoot.addEventListener("focusout", () => { if (!infoPinned) hideSheetInfo(); });
     window.addEventListener("scroll", event => {
       if (!document.querySelector("#libraryInfoPopover")?.contains(event.target)) hideSheetInfo();
+      if (!ratingPopup.contains(event.target)) hideRatingPicker();
     }, true);
     document.addEventListener("click", event => {
       const options = libraryRoot.querySelector(".library-table-options[open]");

@@ -697,3 +697,28 @@
 .tag-group h3 { margin: 0 0 .35rem; font-size: .78rem; }
 .tag-group .game-tag { text-align: left; }
 .tag-group .game-tag[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Anchored score menu, columnar tags, and one-line game names. */
+.rating-popover { position: fixed; inset: auto; margin: 0; width: 56px; padding: 4px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); scrollbar-width: none; }
+.rating-popover::-webkit-scrollbar { display: none; }
+.rating-popover #gameRatingChoices { display: grid; gap: 2px; }
+.rating-popover .rating-choice { display: block; width: 100%; height: 26px; min-height: 26px; padding: .15rem .25rem; border: 0; border-radius: 5px; font-size: .8rem; line-height: 1.25; }
+.rating-popover .rating-choice[aria-selected="true"] { outline: 1px solid currentColor; outline-offset: -1px; background: color-mix(in srgb, currentColor 22%, var(--surface)); }
+.sheet-info-popover[data-kind="tags"] { width: min(720px, calc(100vw - 16px)); max-height: min(520px, 75vh); }
+.main-type-field { max-width: 180px; }
+.main-type-field select { width: 100%; }
+.tag-sections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.tag-values { list-style: none; margin: 0; padding: 0; }
+.tag-values li { display: block; padding: .25rem 0; overflow-wrap: anywhere; }
+.host-field { max-width: 220px; }
+.host-field select { width: 100%; }
+.library-sheet .sheet-name-cell { width: 620px; min-width: 620px; max-width: 620px; }
+.sheet-name-line { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.library-sheet .sheet-name-line > .sheet-name { display: block; flex: 1 1 auto; width: auto; min-width: 0; padding: 0; white-space: nowrap; }
+.sheet-name .name-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-sheet .sheet-name-line .sheet-name-details { display: flex; flex: 0 0 auto; align-items: center; margin: 0 0 0 auto; gap: 6px; }
+.library-sheet .sheet-name-line .sheet-year { flex: 0 0 44px; min-width: 44px; margin: 0; text-align: right; }
+.library-sheet .sheet-owners { max-width: none; white-space: nowrap; }
+.owner-pills { flex-wrap: nowrap; }
+.owner-pill { white-space: nowrap; }
+.library-sheet .sheet-cell-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
