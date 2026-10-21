@@ -22,6 +22,55 @@
   };
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
+  const SHEET_COLUMNS = [
+    ["name", "Name"], ["year", "Published year"], ["rating", "My rating"], ["bggRating", "BGG rating"], ["weight", "Weight"],
+    ["minPlayers", "Players · min"], ["maxPlayers", "Players · max"], ["bestPlayers", "Players · best"], ["recommendedPlayers", "Players · good"], ["avoidPlayers", "Players · bad"],
+    ["minMinutes", "Time · short"], ["maxMinutes", "Time · long"], ["length", "Time · average"], ["category", "Category"], ["note", "Notes"],
+    ["bggId", "BGG link"], ["turnStart", "Turn start"], ["factions", "Factions"], ["verified", "Verified colors"], ["colors", "Colors"]
+  ];
+  SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
+
+  function sheetValue(game, key) {
+    const entry = libraryEntry(game.id);
+    const metadata = entry.metadata || {};
+    if (key === "name") return game.name.replace(/\s*\(\d{4}\)$/, "");
+    if (key === "year") return metadata.year || Number(game.name.match(/\((\d{4})\)$/)?.[1]) || null;
+    if (key === "rating") return entry.rating || null;
+    if (key === "note") return entry.note;
+    if (["bggRating", "category", "bggId"].includes(key)) return metadata[key] || null;
+    if (key === "weight") return game.complexityWeight;
+    if (key === "length") return averageMinutes(game);
+    if (key === "turnStart") return game.turnOrder ? [game.turnOrder.label, game.turnOrder.note].filter(Boolean).join(" · ") : "";
+    if (key === "factions") return play.colorsForGame(game).filter(color => !Object.keys(App.gameData.NAMED_COLORS).some(name => name.toLowerCase() === color.name.toLowerCase())).map(color => color.name).join(", ");
+    if (key === "colors") return play.colorsForGame(game).map(color => color.name).join(", ");
+    return game[key] ?? null;
+  }
+
+  function gameRow(game) {
+    const id = esc(game.id);
+    const entry = libraryEntry(game.id);
+    const cells = SHEET_COLUMNS.map(([key]) => {
+      const value = sheetValue(game, key);
+      if (key === "name") return `<th scope="row"><button class="text-link sheet-name" type="button" data-open-game="${id}">${esc(value)}</button><span class="sheet-pills">${ownershipPill(game)}${fitPill(game)}</span></th>`;
+      let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
+      if (key === "rating" && value) content = `${esc(value)} / 5`;
+      if (key === "bggRating" && value) content = `${esc(value)} / 10`;
+      if (key === "length" && value) content = `${Math.round(value)} min`;
+      if (["minMinutes", "maxMinutes"].includes(key) && value) content = `${esc(value)} min`;
+      if (key === "verified") content = game.verified ? "Yes" : "Unchecked";
+      if (key === "bggId") content = `<a href="${value ? 'https://boardgamegeek.com/boardgame/' + encodeURIComponent(value) : 'https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=' + encodeURIComponent(sheetValue(game, 'name'))}" target="_blank" rel="noopener noreferrer">${value ? 'View BGG' : 'Find on BGG'} ↗</a>`;
+      if (key === "colors") content = `<span class="sheet-colors">${play.colorsForGame(game).map(color => `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
+      if (["note", "turnStart", "factions"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
+      return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
+    }).join("");
+    return `<tr>${cells}<td><div class="sheet-actions"><button class="button small own-toggle" type="button" data-toggle-owned="${id}" aria-pressed="${entry.owned}" aria-label="Owned: ${esc(game.name)}">Owned</button><button class="button small" type="button" data-play-game="${id}">Play</button></div></td></tr>`;
+  }
+
+  function gameSheet(games) {
+    const ui = moduleState();
+    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Times are in minutes. Average uses saved plays when available, otherwise the midpoint of short and long.</caption><thead><tr>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}<th scope="col">Actions</th></tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
+  }
+
   let libraryRoot = null;
   let historyRoot = null;
   let openGameId = "";
@@ -163,7 +212,7 @@
 
   function gameSearchText(game) {
     const entry = libraryEntry(game.id);
-    return [play.gameSearchText(game), entry.note, entry.wishlist ? "wishlist wish" : "", entry.owned ? "" : "not owned unowned"].filter(Boolean).join(" ").toLowerCase();
+    return [play.gameSearchText(game), entry.note, ...SHEET_COLUMNS.map(([key]) => sheetValue(game, key)), entry.wishlist ? "wishlist wish" : "", entry.owned ? "" : "not owned unowned"].filter(Boolean).join(" ").toLowerCase();
   }
 
   function gameSearchMeta(game) {
@@ -188,6 +237,8 @@
       if (ui.ownership === "played" && !plays) return false;
       if (ui.ownership === "unplayed" && plays) return false;
       if (ui.ownership === "available" && count && play.playerCountFit(game, count).score < 0) return false;
+      if (ui.category && ui.category !== "all" && sheetValue(game, "category") !== ui.category) return false;
+      if (ui.verified === "yes" && !game.verified || ui.verified === "no" && game.verified) return false;
       if (terms.length) {
         const text = gameSearchText(game);
         if (!terms.every(term => text.includes(term))) return false;
@@ -206,6 +257,12 @@
       else if (ui.sortBy === "recent") compared = (gameStats(b.id)?.lastPlayed || 0) - (gameStats(a.id)?.lastPlayed || 0);
       else if (ui.sortBy === "length") compared = averageMinutes(a) - averageMinutes(b);
       else if (ui.sortBy === "weight") compared = (Number(a.complexityWeight) || 0) - (Number(b.complexityWeight) || 0);
+      else if (ui.sortBy !== "name") {
+        const av = sheetValue(a, ui.sortBy), bv = sheetValue(b, ui.sortBy);
+        if (av === null || av === "" || av === "--") return bv === null || bv === "" || bv === "--" ? byName(a, b) : 1;
+        if (bv === null || bv === "" || bv === "--") return -1;
+        compared = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
+      } else compared = byName(a, b);
       return compared * direction || byName(a, b);
     });
   }
@@ -293,15 +350,17 @@
       <section class="panel library-filters" aria-label="Library filters">
         ${presentPickerMarkup()}
         <div class="filter-row">
-          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" data-library-search value="${esc(ui.search)}" placeholder="Search games, owners, notes" autocomplete="off"></label>
+          <label class="search-field grow-control"><span class="visually-hidden">Search library</span><input type="search" data-library-search value="${esc(ui.search)}" placeholder="Search any column, owners, notes…" autocomplete="off"></label>
           <label class="select-field"><span class="eyebrow">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
           <label class="select-field"><span class="eyebrow">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
+          <label class="select-field"><span class="eyebrow">Category</span><select data-library-category><option value="all">All categories</option>${[...new Set(allGames().map(game => sheetValue(game, "category")).filter(Boolean))].sort().map(category => `<option value="${esc(category)}" ${ui.category === category ? 'selected' : ''}>${esc(category)}</option>`).join("")}</select></label>
+          <label class="select-field"><span class="eyebrow">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
           <button class="button small" type="button" data-library-reset>Reset</button>
         </div>
       </section>
       <p class="results-line" role="status">${games.length} ${games.length === 1 ? "game" : "games"}${ui.ownership !== "all" ? " · " + esc(OWNERSHIP_LABELS[ui.ownership]) : ""}${count && ui.sortBy === "fit" ? " · ranked for " + count + " players" : ""}</p>
-      <div class="library-grid">${games.length ? games.map(gameCard).join("") : `<div class="empty-state"><strong>No games match</strong><span>Try another filter, or add a game you own.</span><button class="button small" type="button" data-library-reset>Reset filters</button></div>`}</div>`;
+      ${games.length ? gameSheet(games) : `<div class="empty-state"><strong>No games match</strong><span>Try another filter, or add a game you own.</span><button class="button small" type="button" data-library-reset>Reset filters</button></div>`}`;
   }
 
   function personCard(person) {
@@ -372,7 +431,7 @@
       const entry = Object.assign({ owned: false, owners: [], wishlist: false, rating: 0, note: "" }, games[gameId] || {});
       update(entry);
       if (!entry.owned) entry.owners = [];
-      if (entry.owned || entry.wishlist || entry.rating || entry.note) games[gameId] = entry;
+      if (entry.owned || entry.wishlist || entry.rating || entry.note || Object.values(entry.metadata || {}).some(Boolean)) games[gameId] = entry;
       else delete games[gameId];
     }, { reason: reason || "library-edit" });
   }
@@ -397,6 +456,7 @@
     return `
       <div class="game-detail">
         <p class="game-detail-range">${esc(play.gameRangeText(game)).replace("\n", "<br>")}</p>
+        <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Category", "text", "maxlength=\"100\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
         <div class="fit-strip" aria-label="Player count fit">${fitRows.join("")}</div>
         <section class="detail-section">
           <h3>Ownership</h3>
@@ -847,8 +907,20 @@
       libraryRoot.querySelector(`[data-player-count="${stepper.dataset.playerCount}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const heading = event.target.closest("[data-sheet-sort]");
+    if (heading) {
+      const key = heading.dataset.sheetSort;
+      const scroll = libraryRoot.querySelector(".library-sheet");
+      const left = scroll?.scrollLeft || 0, top = scroll?.scrollTop || 0;
+      updateLibraryUi(ui => { ui.sortDirection = ui.sortBy === key && ui.sortDirection === "asc" ? "desc" : "asc"; ui.sortBy = key; });
+      renderLibrary();
+      const sheet = libraryRoot.querySelector(".library-sheet");
+      if (sheet) { sheet.scrollLeft = left; sheet.scrollTop = top; }
+      libraryRoot.querySelector(`[data-sheet-sort="${key}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     if (event.target.closest("[data-library-direction]")) { updateLibraryUi(ui => { ui.sortDirection = ui.sortDirection === "desc" ? "asc" : "desc"; }); renderLibrary(); return; }
-    if (event.target.closest("[data-library-reset]")) { updateLibraryUi(ui => { ui.search = ""; ui.ownership = "all"; ui.sortBy = "fit"; ui.sortDirection = "asc"; ui.playerCount = 0; ui.present = []; }); renderLibrary(); return; }
+    if (event.target.closest("[data-library-reset]")) { updateLibraryUi(ui => { ui.category = "all"; ui.verified = "all"; ui.search = ""; ui.ownership = "all"; ui.sortBy = "fit"; ui.sortDirection = "asc"; ui.playerCount = 0; ui.present = []; }); renderLibrary(); return; }
     const owned = event.target.closest("[data-toggle-owned]");
     if (owned) {
       mutateLibrary(owned.dataset.toggleOwned, entry => { entry.owned = !entry.owned; if (entry.owned) entry.wishlist = false; });
@@ -874,6 +946,7 @@
 
   function handleLibraryChange(event) {
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
+    else if (event.target.matches("[data-library-category], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
     else if (event.target.matches("[data-person-name]")) renamePerson(event.target.dataset.personName, event.target.value);
     else if (event.target.matches("[data-person-color]")) {
@@ -920,6 +993,13 @@
     document.querySelector("#gameDialogBody").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogFooter").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogBody").addEventListener("change", event => {
+      if (event.target.matches("[data-detail-metadata]")) {
+        if (!event.target.checkValidity()) { event.target.reportValidity(); return; }
+        const key = event.target.dataset.detailMetadata;
+        const value = event.target.value.trim();
+        mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: value }); });
+        if (appState().ui.view === "library") renderLibrary();
+      }
       if (event.target.matches("[data-detail-note]")) {
         const note = u.cleanText(event.target.value, 1000).trim();
         mutateLibrary(openGameId, entry => { entry.note = note; });

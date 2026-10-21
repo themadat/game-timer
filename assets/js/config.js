@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.1";
+  const VERSION = "2.1.0.2";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,16 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-21T18:00:00.000Z",
+        title: "Spreadsheet game library",
+        summary: "Browse games in a sortable spreadsheet with catalog details and color bubbles.",
+        features: ["Sticky game names and column headings, category and verified-color filters", "Editable published year, BGG rating, category, and BGG game ID in game details"],
+        improvements: ["All requested player counts, times, turn rules, factions, and notes in one table"],
+        fixes: [],
+        knownIssues: []
+      },
+      {
+        version: "2.1.0.1",
         date: "2026-10-21T12:00:00.000Z",
         title: "Cloud sync and a slimmer top bar",
         summary: "Your game library, history, and people can now sync between devices through GitHub, and Play, Library, and History live in the top bar.",

@@ -15,7 +15,7 @@ Use labelled semantic controls and `assets/js/icons.js` for standard symbols. St
 - Play: the game picker toggles the game list (search plus All/Owned/Fits filters). Name chips seat people; fixed-color games auto-advance to the next unused color or faction. Roster handles drag with a pointer or move with ↑/↓.
 - Session: player cards are buttons (tap or Enter/Space). Space advances and P pauses when focus is not on a control. Cards adapt density to their height; phones use two columns and hide search while live.
 - Statistics: placement selects keep a fixed column so award badges never shift alignment. Share opens a Text/Image chooser with copy and preview fallbacks.
-- Library: “Who’s playing?” chips drive availability and Best-fit ranking; cards open the game dialog for ownership, owners, rating, notes, and play stats.
+- Library: “Who’s playing?” chips drive availability and Best-fit ranking; a scrollable spreadsheet has sortable headers and sticky game names. Category and color verification filters supplement ownership and search. Game names open the dialog for ownership, owners, rating, notes, catalog metadata, and play stats. Average time uses saved plays, falling back to the midpoint of the catalog range. BGG ratings are entered manually; missing BGG IDs link to a BGG search.
 - History: rows open a dialog with the full statistics, editable placements, Share, Play again, and Delete.
 
 ## Search

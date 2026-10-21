@@ -19,7 +19,7 @@
   const VIEW_IDS = ["play", "library", "history"];
   const LIBRARY_TABS = ["games", "people"];
   const LIBRARY_OWNERSHIP = ["all", "owned", "available", "unowned", "wishlist", "played", "unplayed"];
-  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins"];
+  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "note", "bggId", "turnStart", "factions", "verified", "colors"];
   const gameData = App.gameData || { QUICK_PLAYERS: [], NAMED_COLORS: {}, GAME_PRESETS: [] };
 
   function demoRecords(now) {
@@ -127,9 +127,15 @@
         owners: owners,
         wishlist: entry.wishlist === true,
         rating: Math.round(cleanNumber(entry.rating, 0, 5, 0)),
-        note: u.cleanText(entry.note, 1000).trim()
+        note: u.cleanText(entry.note, 1000).trim(),
+        metadata: {
+          year: /^\d{1,4}$/.test(String(entry.metadata?.year || "")) && Number(entry.metadata.year) > 0 ? Number(entry.metadata.year) : null,
+          bggRating: Number(entry.metadata?.bggRating) >= 1 && Number(entry.metadata?.bggRating) <= 10 ? Math.round(Number(entry.metadata.bggRating) * 100) / 100 : null,
+          category: u.cleanLine(entry.metadata?.category, 100),
+          bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
+        }
       };
-      if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note) games[id] = normalized;
+      if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
     });
     return games;
   }
@@ -658,6 +664,8 @@
         library: {
           tab: LIBRARY_TABS.includes(sourceLibraryUi.tab) ? sourceLibraryUi.tab : "games",
           search: u.cleanLine(sourceLibraryUi.search, 200),
+          category: u.cleanLine(sourceLibraryUi.category, 100) || "all",
+          verified: ["yes", "no"].includes(sourceLibraryUi.verified) ? sourceLibraryUi.verified : "all",
           ownership: LIBRARY_OWNERSHIP.includes(sourceLibraryUi.ownership) ? sourceLibraryUi.ownership : "all",
           present: Array.from(new Set((Array.isArray(sourceLibraryUi.present) ? sourceLibraryUi.present : []).map(function (name) { return u.cleanLine(name, 60); }).filter(function (name) { return people.some(function (person) { return person.name === name; }); }))),
           playerCount: Math.round(cleanNumber(sourceLibraryUi.playerCount, 0, 20, 0)),

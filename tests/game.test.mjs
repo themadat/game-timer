@@ -94,14 +94,14 @@ test('state keeps valid history, library, people, and custom games while droppin
       ]
     }
   });
-  assert.deepEqual(normalized.workspace.people.map(person => person.name), ['Adam']);
+  assert.deepEqual([...normalized.workspace.people].map(person => person.name), ['Adam']);
   assert.equal(normalized.workspace.people[0].color, '#ef4444');
-  assert.deepEqual(normalized.workspace.library.games.catan.owners, ['Adam']);
+  assert.deepEqual([...normalized.workspace.library.games.catan.owners], ['Adam']);
   assert.equal(normalized.workspace.library.games.root, undefined);
   assert.equal(normalized.workspace.library.games.scythe.rating, 5);
   assert.equal(normalized.workspace.library.customGames.length, 1);
   assert.match(normalized.workspace.library.customGames[0].id, /^custom-/);
-  assert.deepEqual(normalized.workspace.history.map(record => record.id), ['g1']);
+  assert.deepEqual([...normalized.workspace.history].map(record => record.id), ['g1']);
   assert.equal(normalized.preferences.game.keepAwake, true);
 });
 
@@ -109,7 +109,7 @@ test('new installs start with the default people and no history', () => {
   const { App } = load();
   const state = App.stateModel.normalize(App.stateModel.createDefaultState({ demo: false }));
   assert.ok(state.workspace.people.length >= 2);
-  assert.deepEqual(state.workspace.history, []);
+  assert.deepEqual([...state.workspace.history], []);
   assert.equal(state.ui.view, 'play');
 });
 
@@ -123,11 +123,32 @@ test('sync payload carries library, history, and people and merges separate devi
   assert.deepEqual(Object.keys(payload.data).sort(), ['history', 'libraryGames', 'people']);
   assert.equal(model.prepareSync(payload).state.workspace.history[0].id, 'g1');
   const merged = model.merge(local, remote);
-  assert.deepEqual(merged.workspace.history.map(item => item.id), ['g2', 'g1']);
+  assert.deepEqual([...merged.workspace.history].map(item => item.id), ['g2', 'g1']);
   assert.deepEqual(Object.keys(merged.workspace.library.games).sort(), ['catan', 'root']);
-  assert.deepEqual(merged.workspace.people.map(person => person.name), ['Adam', 'Kacie']);
+  assert.deepEqual([...merged.workspace.people].map(person => person.name), ['Adam', 'Kacie']);
   assert.equal(merged.preferences.game.timeFormat, 'units');
   const edited = model.normalize(JSON.parse(JSON.stringify(remote)));
   edited.workspace.library.games.catan = { owned: true, owners: ['Kacie'] };
   assert.equal(model.canMerge(local, edited), false);
+});
+
+test('library sheet metadata survives normalization and sync without changing history', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.createDefaultState({ demo: false });
+  state.workspace.library.games.root = { metadata: { year: '2018', bggRating: '8.125', category: 'Strategy', bggId: '237182' } };
+  state.workspace.library.games.catan = { metadata: { year: 'oops', bggRating: 15, bggId: 'javascript:alert(1)' }, owned: true, rating: 4, note: 'Keep' };
+  Object.assign(state.modules.library, { sortBy: 'bggRating', category: 'Strategy', verified: 'yes' });
+  const normalized = model.normalize(state);
+  assert.deepEqual(JSON.parse(JSON.stringify(normalized.workspace.library.games.root.metadata)), { year: 2018, bggRating: 8.13, category: 'Strategy', bggId: '237182' });
+  assert.equal(normalized.workspace.library.games.catan.metadata.year, null);
+  assert.equal(normalized.workspace.library.games.catan.metadata.bggRating, null);
+  assert.equal(normalized.workspace.library.games.catan.metadata.bggId, '');
+  assert.equal(normalized.workspace.library.games.catan.note, 'Keep');
+  assert.equal(normalized.modules.library.sortBy, 'bggRating');
+  assert.equal(normalized.modules.library.category, 'Strategy');
+  assert.equal(normalized.modules.library.verified, 'yes');
+  const restored = model.prepareSync(model.syncPayload(normalized)).state;
+  assert.equal(restored.workspace.library.games.root.metadata.bggId, '237182');
+  assert.deepEqual(restored.workspace.history, normalized.workspace.history);
 });
