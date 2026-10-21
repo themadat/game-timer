@@ -132,6 +132,33 @@
     return catalog;
   }
 
+  function normalizeGameSetup(value) {
+    const source = u.plainObject(value);
+    const setup = {};
+    if (typeof source.openColorPool === "boolean") setup.openColorPool = source.openColorPool;
+    if (Array.isArray(source.colors)) {
+      setup.colors = source.colors.slice(0, 40).map(item => {
+        const color = u.plainObject(item);
+        return { name: u.cleanLine(color.name, 60), value: /^#[0-9a-f]{6}$/i.test(color.value) ? color.value.toLowerCase() : "" };
+      }).filter((color, index, colors) => color.name && color.value && colors.findIndex(other => other.name.toLowerCase() === color.name.toLowerCase()) === index);
+      if (!setup.colors.length && setup.openColorPool === false) delete setup.openColorPool;
+    }
+    if (typeof source.verified === "boolean") setup.verified = source.verified;
+    if (source.turnOrder === null) setup.turnOrder = null;
+    else if (source.turnOrder && typeof source.turnOrder === "object") {
+      const rule = source.turnOrder;
+      setup.turnOrder = {
+        firstMode: ["random-all", "current-order", "faction-order"].includes(rule.firstMode) ? rule.firstMode : "current-order",
+        autoSortFactions: rule.autoSortFactions === true,
+        label: u.cleanLine(rule.label, 80) || "First player",
+        note: u.cleanText(rule.note, 1000).trim(),
+        icon: "↕",
+        defaultOthers: Array.from(new Set((Array.isArray(rule.defaultOthers) ? rule.defaultOthers : []).map(name => u.cleanLine(name, 60)).filter(Boolean))).slice(0, 12)
+      };
+    }
+    return setup;
+  }
+
   function normalizeLibraryGames(value) {
     const source = u.plainObject(value);
     const games = {};
@@ -165,6 +192,8 @@
       if (mainTag && allTags.includes(mainTag)) normalized.metadata.mainTag = mainTag;
       const catalog = normalizeCatalogOverrides(entry.metadata?.catalog);
       if (Object.keys(catalog).length) normalized.metadata.catalog = catalog;
+      const setup = normalizeGameSetup(entry.metadata?.setup);
+      if (Object.keys(setup).length) normalized.metadata.setup = setup;
       if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
     });
     return games;

@@ -23,7 +23,8 @@ Serve with `python3 -m http.server 8000`; stop afterward. After editing assets w
 - Session: tap/Enter/Space to change turns, pause/resume, Auto, End confirmation with no turns; long-turn warning highlight; reload mid-session resumes; Play tab live dot.
 - Statistics: totals, timeline lanes, placements with ties, winner banner, awards alignment, Share text and image (preview fallback), New game.
 - Library: ownership toggle, owners, wishlist, rating, notes; Who’s playing → Available and Best fit; add/edit/delete custom game; Play from Library seats present people with the game’s colors/factions.
-- Paste info: correction form, overview, and player poll; matched game and manual autocomplete; selective preview and cancellation; existing game saves, new-game staging, custom-form staging; no external request and no changes to history, personal ratings, notes, owners, or colors.
+- Game editor: Details, Catalog & BGG, Colors & timing, and Your plays tabs fit a desktop viewport; choose available colors, verification, first-player rules, faction seating, and other timers; save and reset; confirm these reach Play and survive custom-game edits and sync. Mobile controls remain reachable.
+- Paste info: correction form, overview, and player poll together in the three inputs with one submission; matched game and manual autocomplete; selective preview and cancellation; existing game saves, new-game staging, custom-form staging; no external request and no changes to history, personal ratings, notes, owners, or colors.
 - People: add, rename (updates owners and history), recolor, remove; records match History.
 - History: filters, overview totals, dialog placements update stats, Play again, Share, Delete.
 - Settings: Game Timer preferences re-render views; theme, text size; backup export/import preview; Reset Preferences keeps data; Erase All clears session and legacy keys.

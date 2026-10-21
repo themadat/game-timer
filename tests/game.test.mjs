@@ -327,3 +327,42 @@ test('main types, independent owned/wishlist flags and owner-based host filters 
   state.modules.library.host = 'Missing host';
   assert.equal(model.normalize(state).modules.library.host, 'all');
 });
+
+test('game setup colors and timing rules survive normalization and sync and reach Play', () => {
+  const { App } = load();
+  const state = App.stateModel.createDefaultState({ demo: false });
+  state.workspace.library.games.root = { owned: true, wishlist: true, rating: 4.5, note: 'Keep', metadata: { setup: {
+    openColorPool: false, verified: true,
+    colors: [{ name: 'Faction A', value: '#ABCDEF' }, { name: 'Faction B', value: '#123456' }],
+    turnOrder: { firstMode: 'faction-order', autoSortFactions: true, label: 'Faction turn', note: 'Clockwise', defaultOthers: ['Bidding', 'Upkeep', 'Bidding'] }
+  } } };
+  const restored = App.stateModel.prepareSync(App.stateModel.syncPayload(App.stateModel.normalize(state))).state;
+  App.storage.mutate(next => { next.workspace.library = restored.workspace.library; });
+  const game = App.play.gameById('root');
+  assert.equal(game.openColorPool, false);
+  assert.equal(game.verified, true);
+  assert.deepEqual(plain(App.play.colorsForGame(game)), [{ name: 'Faction A', value: '#abcdef' }, { name: 'Faction B', value: '#123456' }]);
+  assert.equal(game.turnOrder.firstMode, 'faction-order');
+  assert.deepEqual([...game.turnOrder.defaultOthers], ['Bidding', 'Upkeep']);
+  assert.equal(restored.workspace.library.games.root.rating, 4.5);
+  assert.equal(restored.workspace.library.games.root.note, 'Keep');
+  assert.equal(restored.workspace.library.games.root.wishlist, true);
+  assert.deepEqual(plain(restored.workspace.history), plain(state.workspace.history));
+});
+
+test('setup normalization rejects unsafe colors and rules and allows clearing built-in rules', () => {
+  const { App } = load();
+  const state = App.stateModel.createDefaultState({ demo: false });
+  state.workspace.library.games['dune-2019'] = { metadata: { setup: { openColorPool: false, colors: [{name:'Bad',value:'url(https://example.com)'}, {name:'Green',value:'#22c55e'}, {name:'Green',value:'#ffffff'}], turnOrder: null, unknown: true } } };
+  const normalized = App.stateModel.normalize(state);
+  const setup = normalized.workspace.library.games['dune-2019'].metadata.setup;
+  assert.deepEqual(plain(setup.colors), [{name:'Green',value:'#22c55e'}]);
+  assert.equal(setup.unknown, undefined);
+  App.storage.mutate(next => { next.workspace.library = normalized.workspace.library; });
+  assert.equal(App.play.gameById('dune-2019').turnOrder, null);
+  state.workspace.library.games['dune-2019'].metadata.setup = { openColorPool: false, colors: [], turnOrder: { firstMode:'arbitrary', defaultOthers:['', 'Bidding'], autoSortFactions:'yes' } };
+  const invalid = App.stateModel.normalize(state).workspace.library.games['dune-2019'].metadata.setup;
+  assert.equal(invalid.openColorPool, undefined);
+  assert.equal(invalid.turnOrder.firstMode, 'current-order');
+  assert.equal(invalid.turnOrder.autoSortFactions, false);
+});

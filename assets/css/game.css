@@ -722,3 +722,35 @@
 .owner-pills { flex-wrap: nowrap; }
 .owner-pill { white-space: nowrap; }
 .library-sheet .sheet-cell-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Game editor: focused panels keep desktop controls in the available viewport. */
+#gameDialog, #gamePasteDialog { width: min(1180px, calc(100vw - 2rem)); max-height: calc(100svh - 2rem); }
+.game-detail { gap: .75rem; }
+.game-detail-tabs { display: flex; gap: .4rem; border-bottom: 1px solid var(--line); padding-bottom: .65rem; }
+.game-detail-tabs button { padding: .45rem .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); font: inherit; cursor: pointer; }
+.game-detail-tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+.game-details-grid, .game-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
+.game-detail [hidden] { display: none !important; }
+.game-catalog-panel { display: grid; gap: .75rem; }
+#gameDialog .detail-section { padding-top: 0; border-top: 0; }
+#gameDialog .custom-game-fields { gap: .5rem; }
+#gameDialog .field { min-width: 0; }
+#gameDialog .field input, #gameDialog .field select, #gameDialog .field textarea { width: 100%; }
+#gameDialog .field textarea { resize: vertical; max-height: 150px; }
+.game-setup-grid > section { display: grid; gap: .65rem; min-width: 0; }
+.game-color-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem .5rem; }
+.game-color-option { display: flex; gap: .4rem; align-items: center; min-width: 0; font-size: .8rem; padding: .25rem 0; }
+.game-color-option input, .game-setup-check input { width: 16px; min-height: 16px; height: 16px; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
+.game-color-option .dot { width: 17px; height: 17px; flex: 0 0 17px; border: 1px solid var(--line); border-radius: 50%; }
+.game-color-option > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-setup-check { display: flex; align-items: center; gap: .45rem; font-size: .85rem; }
+.game-setup-actions { display: flex; align-items: center; gap: .7rem; margin-top: .8rem; }
+.game-setup-actions [data-setup-status] { margin-right: auto; }
+.game-paste-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+@media (max-width: 760px) {
+  .game-details-grid, .game-setup-grid, .game-paste-inputs { grid-template-columns: 1fr; }
+  .game-detail-tabs { flex-wrap: wrap; }
+  .game-detail-tabs button { padding: .4rem .5rem; font-size: .85rem; }
+  .game-setup-actions { flex-wrap: wrap; }
+  .game-color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

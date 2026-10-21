@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.10";
+  const VERSION = "2.1.0.11";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-22T00:05:00.000Z",
+        title: "Game colors and timing editor",
+        summary: "A wider tabbed game editor makes room for colors, first-player rules, and extra timers.",
+        features: ["Select available game colors and preserve faction names", "Customize first-player rules, faction seating, and other timers", "Paste correction forms, overviews, and player polls together before one submission"],
+        improvements: ["Desktop game details use focused tabs", "Verification appears after the color circles"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.10",
         date: "2026-10-21T23:58:00.000Z",
         title: "Anchored ratings and hosting filters",
         summary: "Ratings open beside their pills, game types organize tags, and the table can filter by its host.",
