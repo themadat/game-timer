@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.11";
+  const VERSION = "2.1.0.12";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-22T18:00:00.000Z",
+        title: "Autosaving game details and focused filters",
+        summary: "Game edits save automatically, hosts support multiple selections, and categories and mechanisms have separate filters.",
+        features: ["Autosaving color and timing controls with single-click choices", "Name factions and add custom hex colors", "Choose multiple hosts using pills", "Separate type, category, and mechanism filters; expansion lists open beside the game type"],
+        improvements: ["Search shows the matching game count", "Table options open below their button", "Consistent editor field heights and readable entered text"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.11",
         date: "2026-10-22T00:05:00.000Z",
         title: "Game colors and timing editor",
         summary: "A wider tabbed game editor makes room for colors, first-player rules, and extra timers.",

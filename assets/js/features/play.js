@@ -104,6 +104,7 @@
       const metadata = appState().workspace.library.games[game.id]?.metadata;
       if (!metadata?.catalog && !metadata?.setup) return game;
       const merged = Object.assign({}, game, metadata.catalog, metadata.setup);
+      if (typeof merged.factions === "boolean" && merged.colors) merged.colors = merged.colors.map(color => Object.assign({}, color, { faction: merged.factions }));
       merged.maxPlayers = Math.max(merged.minPlayers, merged.maxPlayers);
       merged.maxMinutes = Math.max(merged.minMinutes, merged.maxMinutes);
       return merged;
@@ -166,17 +167,16 @@
   }
 
   function usesOpenColorPool(game = currentPreset()) {
-    return Boolean(game?.openColorPool || !game?.colors?.length);
+    return game?.openColorPool === true || (game?.openColorPool !== false && !game?.colors?.length);
   }
 
   function colorsForGame(game = currentPreset()) {
-    const colors = usesOpenColorPool(game) ? STANDARD_COLORS : game.colors;
+    const colors = usesOpenColorPool(game) ? STANDARD_COLORS : game.colors || [];
     return colors.map(color => typeof color === "string" ? { name: color, value: color } : color);
   }
 
   function selectedGameColors() {
-    const colors = colorsForGame();
-    return colors.length ? colors : STANDARD_COLORS;
+    return colorsForGame();
   }
 
   function isNamedColorLabel(name) {
@@ -185,7 +185,7 @@
   }
 
   function isFactionColorOption(color) {
-    return Boolean(color && color.value !== PLAYER_QUICK_COLOR && !isNamedColorLabel(color.name));
+    return Boolean(color && color.value !== PLAYER_QUICK_COLOR && (typeof color.faction === "boolean" ? color.faction : !isNamedColorLabel(color.name)));
   }
 
   function hasFactionColorOptions(colors = selectedGameColors()) {

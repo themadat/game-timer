@@ -754,3 +754,31 @@
   .game-setup-actions { flex-wrap: wrap; }
   .game-color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Library filters and the autosaving game editor. */
+.library-search-field { min-width: 290px; }
+.library-controls .library-search-field input { padding-right: 155px; color: var(--text); }
+.library-game-count { position: absolute; right: 2.4rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .7rem; white-space: nowrap; pointer-events: none; }
+.library-table-options > .present-picker { position: fixed; right: auto; width: min(560px, calc(100vw - 16px)); max-height: 65svh; overflow-y: auto; z-index: 100; box-sizing: border-box; }
+.host-picker { margin-top: .4rem; }
+.expansion-count { margin-left: .3rem; font-variant-numeric: tabular-nums; }
+.library-sheet :is(.sheet-categories, .sheet-mechanisms) { white-space: nowrap; }
+.library-sheet :is(.sheet-categories, .sheet-mechanisms) .game-tag { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.sheet-turnStart, .sheet-factions) .sheet-info-button.has-info { opacity: .3; }
+:is(.sheet-turnStart, .sheet-factions) .sheet-info-button:is(:hover, :focus-visible, [aria-expanded="true"]) { opacity: 1; }
+input:not([type="checkbox"]):not([type="radio"]), textarea, select { color: var(--text); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+:is(#gameDialog, #customGameDialog) :is(input:not([type="checkbox"]), select) { min-height: 38px; height: 38px; box-sizing: border-box; }
+.setup-choices { flex-wrap: wrap; }
+.setup-choices button { flex: 1 1 auto; min-height: 34px; padding: .3rem .5rem; }
+.game-color-option { display: grid; grid-template-columns: 16px 17px minmax(0, 1fr); gap: .3rem; }
+#gameDialog .game-color-option [data-color-name] { width: 100%; min-width: 0; min-height: 25px; height: 25px; padding: .15rem .25rem; font-size: .72rem; }
+.game-color-picker { gap: .2rem .4rem; }
+.add-game-color { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(100px, 1.3fr) auto; gap: .4rem; align-items: end; }
+#gameDialog .game-setup-grid > section { gap: .5rem; }
+.game-setup-grid [data-reset-game-setup] { justify-self: start; }
+@media (max-width: 760px) {
+  .library-controls .filter-row .library-search-field { flex-basis: 300px; }
+  .add-game-color { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .add-game-color > button { grid-column: 1 / -1; }
+}

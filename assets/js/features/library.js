@@ -225,7 +225,8 @@
     if (pasteContext === "custom") {
       fillCustomGameFromPaste(fields);
       components.closeDialog("#gamePasteDialog", "filled");
-      components.toast("Fields filled. Review them and save the game.", { title: "Paste applied", kind: "success" });
+      if (editingCustomGameId) saveCustomGame({preventDefault() {}, currentTarget: document.querySelector("#customGameForm")}, true);
+      components.toast(editingCustomGameId ? "Game details saved automatically." : "Fields filled. Review them and save the game.", { title: "Paste applied", kind: "success" });
     } else if (game) {
       mutateLibrary(game.id, entry => {
         entry.metadata = Object.assign({}, entry.metadata);
@@ -250,7 +251,7 @@
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
     ["rating", "Rate"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["category", "Tags"], ["note", "Notes"], ["owners", "Owner"]
+    ["length", "Time"], ["category", "Type"], ["categories", "Category"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
@@ -307,6 +308,10 @@
     const factions = game && button.dataset.infoKind === "factions" ? factionColors(game) : [];
     popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong>${factions.length ? `<ul class="faction-color-list">${factions.map(color => `<li><span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" aria-hidden="true"></span><span>${esc(color.name)}</span></li>`).join("")}</ul>` : `<p>${esc(button.dataset.sheetInfo)}</p>`}`;
     if (game && button.dataset.infoKind === "tags") popup.innerHTML = tagSectionsMarkup(game);
+    if (game && ["categories", "mechanisms", "expansions"].includes(button.dataset.infoKind)) {
+      const values = gameTagGroups(game)[({categories:"Category",mechanisms:"Mechanism",expansions:"Expansions"})[button.dataset.infoKind]];
+      popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong><ul class="tag-values">${values.length ? values.map(value => `<li>${esc(value)}</li>`).join("") : '<li>None added</li>'}</ul>`;
+    }
     popup.showPopover();
     infoAnchor = button;
     infoPinned = Boolean(pin);
@@ -329,6 +334,7 @@
     if (key === "note") return entry.note;
     if (["mechanisms", "expansions"].includes(key)) return (metadata[key] || []).join("; ");
     if (["bggRating", "category", "bggId"].includes(key)) return metadata[key] || null;
+    if (key === "categories") return metadata.category || "";
     if (key === "weight") return game.complexityWeight;
     if (key === "length") return averageMinutes(game);
     if (key === "turnStart") return game.turnOrder ? [game.turnOrder.label, game.turnOrder.note].filter(Boolean).join(" · ") : "";
@@ -338,6 +344,8 @@
   }
 
   function factionColors(game) {
+    if (game.factions === false) return [];
+    if (game.factions === true) return play.colorsForGame(game);
     return play.colorsForGame(game).filter(color => !Object.keys(App.gameData.NAMED_COLORS).some(name => name.toLowerCase() === color.name.toLowerCase()));
   }
 
@@ -356,7 +364,10 @@
     return libraryEntry(game.id).metadata?.mainType || "Board";
   }
   function tagSectionsMarkup(game) {
-    return `<label class="field main-type-field"><span>Main type</span><select data-main-type="${esc(game.id)}">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label><div class="tag-sections">${Object.entries(gameTagGroups(game)).map(([label, tags]) => `<section class="tag-group"><h3>${label}</h3><ul class="tag-values">${tags.length ? tags.map(tag => `<li>${esc(tag)}</li>`).join("") : '<li class="setting-note">None added</li>'}</ul></section>`).join("")}</div>`;
+    return `<label class="field main-type-field"><span>Main type</span><select data-main-type="${esc(game.id)}">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>`;
+  }
+  function gameListButton(game, kind, label, values) {
+    return `<button class="game-tag" type="button" data-info-game="${esc(game.id)}" data-info-kind="${kind}" data-info-label="${label}" data-sheet-info="${esc(values.join('\n') || 'None added')}" aria-expanded="false">${esc(values[0] || '—')}${values.length > 1 ? ` +${values.length - 1}` : ''}${symbol("chevronDown")}</button>`;
   }
 
   function refreshSheetPosition(focusSelector) {
@@ -461,7 +472,12 @@
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "owners") content = ownerPillsMarkup(game);
-      if (key === "category") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="${esc(gameTags(game).join(', '))}" data-info-game="${id}" data-info-kind="tags" data-info-label="Tags" aria-expanded="false">${esc(mainGameTag(game))}${symbol("chevronDown")}</button>`;
+      if (key === "category") {
+        const expansions = gameTagGroups(game).Expansions;
+        content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main type" data-info-game="${id}" data-info-kind="tags" data-info-label="Main type" aria-expanded="false">${esc(mainGameTag(game))}${symbol("chevronDown")}</button>${expansions.length ? `<button class="text-link expansion-count" type="button" data-info-game="${id}" data-info-kind="expansions" data-info-label="Expansions" data-sheet-info="Expansions" aria-label="${expansions.length} expansions" aria-expanded="false">[${expansions.length}]</button>` : ''}`;
+      }
+      if (key === "categories") content = gameListButton(game, key, "Category", gameTagGroups(game).Category);
+      if (key === "mechanisms") content = gameListButton(game, key, "Mechanism", gameTagGroups(game).Mechanism);
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
       if (key === "factions") content = sheetInfoButton(game, key, "libraryFactions", "Factions");
       if (["minMinutes", "maxMinutes"].includes(key) && value) content = `${esc(value)} min`;
@@ -639,7 +655,7 @@
       if (game.id === "custom") return true;
       const entry = libraryEntry(game.id);
       const plays = playCount(game.id);
-      if (ui.host && ui.host !== "all" && (!entry.owned || !entry.owners.some(name => sameName(name, ui.host)))) return false;
+      if (ui.hosts?.length && (!entry.owned || !entry.owners.some(name => ui.hosts.some(host => sameName(name, host))))) return false;
       if (ui.ownership === "owned" && !entry.owned) return false;
       if (ui.ownership === "available" && !isAvailable(game)) return false;
       if (ui.ownership === "unowned" && entry.owned) return false;
@@ -647,7 +663,9 @@
       if (ui.ownership === "played" && !plays) return false;
       if (ui.ownership === "unplayed" && plays) return false;
       if (ui.ownership === "available" && count && play.playerCountFit(game, count).score < 0) return false;
-      if (ui.category && ui.category !== "all" && !gameTags(game).includes(ui.category)) return false;
+      if (ui.category && ui.category !== "all" && !gameTagGroups(game).Category.includes(ui.category)) return false;
+      if (ui.mechanism && ui.mechanism !== "all" && !gameTagGroups(game).Mechanism.includes(ui.mechanism)) return false;
+      if (ui.mainType && ui.mainType !== "all" && mainGameTag(game) !== ui.mainType) return false;
       if (ui.verified === "yes" && !game.verified || ui.verified === "no" && game.verified) return false;
       if (terms.length) {
         const text = gameSearchText(game);
@@ -770,7 +788,7 @@
     const ui = moduleState();
     return `
       <div class="present-picker">
-        <label class="field host-field"><span class="eyebrow">Who’s hosting?</span><select data-library-host><option value="all">Any host</option>${hostNames().map(name => `<option value="${esc(name)}" ${ui.host === name ? 'selected' : ''}>${esc(name)}</option>`).join("")}</select></label>
+        <div><span class="eyebrow">Who’s hosting?</span><div class="chip-grid host-picker"><button type="button" class="chip-btn" data-host="" aria-pressed="${!ui.hosts?.length}">Any host</button>${hostNames().map(name => `<button type="button" class="chip-btn" data-host="${esc(name)}" aria-pressed="${Boolean(ui.hosts?.includes(name))}">${esc(name)}</button>`).join("")}</div></div>
         <div class="present-heading"><span class="eyebrow">Who’s playing?</span><div class="count-stepper" ${ui.present.length ? "hidden" : ""}>
           <span class="eyebrow">or player count</span>
           <button class="icon-button" type="button" data-player-count="-1" aria-label="Fewer players">−</button>
@@ -795,11 +813,12 @@
       ${ui.tab === "games" ? `
         <div class="filter-row" role="group" aria-label="Library search and filters">
         <details class="library-table-options"><summary>${symbol("people")}<span>Table${count ? ` · ${count}` : ''}</span></summary>${presentPickerMarkup()}</details>
-          <label class="search-field grow-control library-search-field"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"><kbd aria-hidden="true">.</kbd></label>
+          <label class="search-field grow-control library-search-field"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"><span class="library-game-count" role="status">${filteredGames().length} out of ${allGames().length} games</span><kbd aria-hidden="true">.</kbd></label>
           <label class="select-field"><span class="visually-hidden">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
           <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
-          <label class="select-field"><span class="visually-hidden">Tags</span><select data-library-category><option value="all">All tags</option>${[...new Set(allGames().flatMap(gameTags))].sort().map(category => `<option value="${esc(category)}" ${ui.category === category ? 'selected' : ''}>${esc(category)}</option>`).join("")}</select></label>
+          <label class="select-field"><span class="visually-hidden">Type</span><select data-library-main-type><option value="all">All types</option>${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${ui.mainType === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>
+          ${[["category", "Category", "Category"], ["mechanism", "Mechanism", "Mechanism"]].map(([key, label, group]) => `<label class="select-field"><span class="visually-hidden">${label}</span><select data-library-${key}><option value="all">${label}</option>${[...new Set(allGames().flatMap(game => gameTagGroups(game)[group]))].sort().map(value => `<option value="${esc(value)}" ${ui[key] === value ? 'selected' : ''}>${esc(value)}</option>`).join("")}</select></label>`).join("")}
           <label class="select-field"><span class="visually-hidden">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
           <button class="button small" type="button" data-library-reset>Reset</button>
         </div>
@@ -816,7 +835,7 @@
     const games = filteredGames();
     const count = tableCount();
     return `
-      <p class="results-line" role="status">${games.length} ${games.length === 1 ? "game" : "games"}${ui.ownership !== "all" ? " · " + esc(OWNERSHIP_LABELS[ui.ownership]) : ""}${count && ui.sortBy === "fit" ? " · ranked for " + count + " players" : ""}${ui.host && ui.host !== "all" ? " · hosted by " + esc(ui.host) : ""}</p>
+
       ${games.length ? gameSheet(games) : `<div class="empty-state"><strong>No games match</strong><span>Try another filter, or add a game you own.</span><button class="button small" type="button" data-library-reset>Reset filters</button></div>`}`;
   }
 
@@ -858,6 +877,15 @@
       <div class="people-grid">${ranked.map(personCard).join("") || `<div class="empty-state"><strong>No people yet</strong><span>Add the people you play with.</span></div>`}</div>`;
   }
 
+  function positionTableMenu() {
+    const details = libraryRoot?.querySelector(".library-table-options[open]");
+    if (!details) return;
+    const rect = details.querySelector("summary").getBoundingClientRect();
+    const popup = details.querySelector(".present-picker");
+    popup.style.left = Math.max(8, Math.min(rect.left, innerWidth - Math.min(560, innerWidth - 16) - 8)) + "px";
+    popup.style.top = rect.bottom + 4 + "px";
+  }
+
   function renderLibrary() {
     hideSheetInfo();
     hideRatingPicker();
@@ -871,6 +899,7 @@
         ${ui.tab === "people" ? renderPeopleTab() : renderGamesTab()}
       </div>`;
     if (tableOptionsOpen && libraryRoot.querySelector(".library-table-options")) libraryRoot.querySelector(".library-table-options").open = true;
+    positionTableMenu();
     if (focusSelector) {
       const input = libraryRoot.querySelector(focusSelector);
       input?.focus();
@@ -899,49 +928,97 @@
 
   function setupColorOptions(game) {
     const base = GAME_PRESETS.find(item => item.id === game.id);
-    const colors = [...play.colorsForGame(game), ...(base ? play.colorsForGame(base) : []), ...STANDARD_COLORS];
+    const palette = libraryEntry(game.id).metadata?.setup?.palette;
+    const colors = [...(palette || []), ...play.colorsForGame(game), ...(base ? play.colorsForGame(base) : []), ...STANDARD_COLORS];
     return colors.filter((color, index) => colors.findIndex(other => other.name === color.name && other.value === color.value) === index);
+  }
+  function setupColorRow(color, checked, factions) {
+    return `<div class="game-color-option" data-setup-value="${esc(color.value)}" data-setup-name="${esc(color.name)}" title="${esc(color.name)}"><input type="checkbox" data-setup-color ${checked ? 'checked' : ''} aria-label="Available: ${esc(color.name)}"><span class="dot" style="background:${esc(color.value)}" aria-hidden="true"></span><span data-color-label ${factions ? 'hidden' : ''}>${esc(color.name)}</span><input data-color-name aria-label="Faction name for ${esc(color.name)}" maxlength="60" value="${esc(color.name)}" ${factions ? '' : 'hidden'}></div>`;
   }
   function gameSetupMarkup(game) {
     const rule = game.turnOrder || {};
     const colors = setupColorOptions(game);
     const selected = play.colorsForGame(game);
-    return `<div class="game-setup-grid">
+    const standard = game.openColorPool === true || (game.openColorPool !== false && !game.colors?.length);
+    const factions = game.factions ?? Boolean(factionColors(game).length);
+    return `<div class="game-setup-grid" data-pool-mode="${standard ? 'all' : 'selected'}" data-first-mode="${esc(rule.firstMode || '')}">
       <section><h3>Available colors & factions</h3>
-        <label class="field"><span>Color pool</span><select data-setup-pool><option value="all" ${game.openColorPool || !game.colors?.length ? 'selected' : ''}>All standard colors</option><option value="selected" ${!game.openColorPool && game.colors?.length ? 'selected' : ''}>Selected colors / factions</option></select></label>
-        <div class="game-color-picker">${colors.map((color, index) => `<label class="game-color-option" title="${esc(color.name)}"><input type="checkbox" data-setup-color="${index}" ${selected.some(item => item.name === color.name && item.value === color.value) ? 'checked' : ''}><span class="dot" style="--accent:${esc(color.value)};background:${esc(color.value)}" aria-hidden="true"></span><span>${esc(color.name)}</span></label>`).join("")}</div>
+        <div class="segmented setup-choices" role="group" aria-label="Color pool"><button type="button" data-setup-pool="all" aria-pressed="${standard}">Standard colors</button><button type="button" data-setup-pool="selected" aria-pressed="${!standard}">Choose colors</button></div>
+        <label class="game-setup-check"><input type="checkbox" data-setup-factions ${factions ? 'checked' : ''}> Factions — name each color</label>
+        <div class="game-color-picker">${colors.map(color => setupColorRow(color, !standard && selected.some(item => item.name === color.name && item.value === color.value), factions)).join("")}</div>
+        <div class="add-game-color"><label class="field"><span>New color hex</span><input data-new-color-hex placeholder="#12ab34" maxlength="7" aria-label="New color hex code"></label><label class="field"><span>Name</span><input data-new-color-name maxlength="60" placeholder="Color or faction name"></label><button type="button" class="button" data-add-game-color>Add color</button></div>
         <label class="game-setup-check"><input type="checkbox" data-setup-verified ${game.verified ? 'checked' : ''}> Colors verified</label>
-        <p class="setting-note">Faction names stay attached to their colors. Their listed order is the faction order.</p>
       </section>
       <section><h3>First player & timing</h3>
-        <div class="custom-game-fields">
-          <label class="field"><span>First player</span><select data-setup-first>${[["", "No special rule"], ["random-all", "Random player"], ["current-order", "First in player order"], ["faction-order", "First in faction order"]].map(([value, label]) => `<option value="${value}" ${(rule.firstMode || "") === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
-          <label class="field"><span>Rule title</span><input data-setup-label maxlength="80" value="${esc(rule.label || '')}" placeholder="First player"></label>
-        </div>
+        <div class="segmented setup-choices" role="group" aria-label="First player">${[["", "None"], ["random-all", "Random"], ["current-order", "Player order"], ["faction-order", "Faction order"]].map(([value, label]) => `<button type="button" data-setup-first="${value}" aria-pressed="${(rule.firstMode || '') === value}">${label}</button>`).join("")}</div>
+        <label class="field"><span>Rule title</span><input data-setup-label maxlength="80" value="${esc(rule.label || '')}" placeholder="First player"></label>
         <label class="game-setup-check"><input type="checkbox" data-setup-sort ${rule.autoSortFactions ? 'checked' : ''}> Seat players in faction order</label>
-        <label class="field"><span>First-player / turn-order instructions</span><textarea rows="3" maxlength="1000" data-setup-note placeholder="Youngest player, last winner, clockwise turns…">${esc(rule.note || '')}</textarea></label>
+        <label class="field"><span>First-player / turn-order instructions</span><textarea rows="2" maxlength="1000" data-setup-note placeholder="Youngest player, last winner, clockwise turns…">${esc(rule.note || '')}</textarea></label>
         <label class="field"><span>Other timers (semicolon-separated)</span><input data-setup-timers maxlength="800" value="${esc((rule.defaultOthers || []).join('; '))}" placeholder="Bidding; Upkeep; Scoring"></label>
-        <p class="setting-note">Other timers are added to Play setup automatically. Instructions appear with the turn-order symbol.</p>
-      </section></div>
-      <div class="game-setup-actions"><button type="button" class="button" data-reset-game-setup>Reset to game defaults</button><span class="setting-note" role="status" data-setup-status></span><button type="button" class="button primary" data-save-game-setup>Save setup</button></div>`;
+        <p class="setting-note">Edits save automatically. Other timers are added to Play setup.</p>
+        <button type="button" class="button" data-reset-game-setup>Reset to game defaults</button>
+        <span class="setting-note" role="status" data-setup-status></span>
+      </section></div>`;
+  }
+  function syncSetupControls() {
+    const panel = document.querySelector("#game-panel-setup");
+    if (!panel) return;
+    const standard = panel.querySelector("[data-pool-mode]").dataset.poolMode === "all";
+    const factions = panel.querySelector("[data-setup-factions]").checked;
+    panel.querySelectorAll("[data-setup-color]").forEach(input => { input.disabled = standard; });
+    panel.querySelectorAll("[data-color-name]").forEach(input => { input.hidden = !factions; input.disabled = standard || !factions; });
+    panel.querySelectorAll("[data-color-label]").forEach(label => { label.hidden = factions; });
   }
   function saveGameSetup(reset) {
     if (reset) {
       mutateLibrary(openGameId, entry => { if (entry.metadata) delete entry.metadata.setup; });
-    } else {
-      const panel = document.querySelector("#game-panel-setup");
-      const value = key => panel.querySelector(`[data-setup-${key}]`).value.trim();
-      const checked = key => panel.querySelector(`[data-setup-${key}]`).checked;
-      const colors = setupColorOptions(play.gameById(openGameId));
-      const chosen = Array.from(panel.querySelectorAll("[data-setup-color]:checked")).map(input => colors[Number(input.dataset.setupColor)]).map(color => ({ name: color.name, value: color.value }));
-      if (value("pool") === "selected" && !chosen.length) { panel.querySelector("[data-setup-status]").textContent = "Select at least one available color."; return; }
-      const firstMode = value("first");
-      const timers = value("timers").split(";").map(name => name.trim()).filter(Boolean);
-      const setup = { openColorPool: value("pool") === "all", colors: chosen, verified: checked("verified"), turnOrder: firstMode || value("note") || timers.length || checked("sort") ? { firstMode: firstMode || "current-order", label: value("label") || "First player", note: value("note"), autoSortFactions: checked("sort"), defaultOthers: timers } : null };
-      mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { setup }); });
+      refreshAfterLibraryChange();
+      document.querySelector("[data-setup-status]").textContent = "Game defaults restored.";
+      return;
     }
-    refreshAfterLibraryChange();
-    document.querySelector("[data-setup-status]").textContent = reset ? "Game defaults restored." : "Setup saved.";
+    const panel = document.querySelector("#game-panel-setup");
+    const value = key => panel.querySelector(`[data-setup-${key}]`).value.trim();
+    const checked = key => panel.querySelector(`[data-setup-${key}]`).checked;
+    const options = Array.from(panel.querySelectorAll("[data-setup-value]"));
+    const colorValue = row => ({ name: row.querySelector("[data-color-name]").value.trim() || row.dataset.setupName, value: row.dataset.setupValue });
+    const palette = options.map(colorValue);
+    const colors = options.filter(row => row.querySelector("[data-setup-color]").checked).map(colorValue);
+    const firstMode = panel.querySelector("[data-first-mode]").dataset.firstMode;
+    const timers = value("timers").split(";").map(name => name.trim()).filter(Boolean);
+    const setup = { openColorPool: panel.querySelector("[data-pool-mode]").dataset.poolMode === "all", colors, palette, factions: checked("factions"), verified: checked("verified"), turnOrder: firstMode || value("label") || value("note") || timers.length || checked("sort") ? { firstMode, label: value("label") || "First player", note: value("note"), autoSortFactions: checked("sort"), defaultOthers: timers } : null };
+    mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { setup }); });
+    if (appState().ui.view === "library") renderLibrary();
+    panel.querySelector("[data-setup-status]").textContent = "Saved automatically.";
+  }
+  function handleSetupClick(event) {
+    const panel = event.target.closest("#game-panel-setup");
+    if (!panel) return false;
+    const pool = event.target.closest("[data-setup-pool]");
+    const first = event.target.closest("[data-setup-first]");
+    if (pool) {
+      panel.querySelector("[data-pool-mode]").dataset.poolMode = pool.dataset.setupPool;
+      panel.querySelectorAll("[data-setup-pool]").forEach(button => button.setAttribute("aria-pressed", button === pool));
+      panel.querySelectorAll("[data-setup-color]").forEach(input => { input.checked = false; });
+      syncSetupControls(); saveGameSetup(false); return true;
+    }
+    if (first) {
+      panel.querySelector("[data-first-mode]").dataset.firstMode = first.dataset.setupFirst;
+      panel.querySelectorAll("[data-setup-first]").forEach(button => button.setAttribute("aria-pressed", button === first));
+      saveGameSetup(false); return true;
+    }
+    if (event.target.closest("[data-add-game-color]")) {
+      const hex = panel.querySelector("[data-new-color-hex]");
+      const name = panel.querySelector("[data-new-color-name]");
+      if (!/^#[0-9a-f]{6}$/i.test(hex.value.trim())) { hex.setCustomValidity("Enter a six-digit hex color, such as #12ab34."); hex.reportValidity(); return true; }
+      hex.setCustomValidity("");
+      const color = {name: name.value.trim() || "Custom " + hex.value.trim(), value: hex.value.trim().toLowerCase()};
+      if (panel.querySelectorAll("[data-setup-value]").length >= 64) { panel.querySelector("[data-setup-status]").textContent = "Up to 64 colors can be stored."; return true; }
+      panel.querySelector(".game-color-picker").insertAdjacentHTML("beforeend", setupColorRow(color, true, panel.querySelector("[data-setup-factions]").checked));
+      panel.querySelector("[data-pool-mode]").dataset.poolMode = "selected";
+      panel.querySelectorAll("[data-setup-pool]").forEach(button => button.setAttribute("aria-pressed", button.dataset.setupPool === "selected"));
+      hex.value = ""; name.value = ""; syncSetupControls(); saveGameSetup(false); return true;
+    }
+    return false;
   }
 
   let gameDetailTab = "details";
@@ -1009,6 +1086,7 @@
     document.querySelector("[data-game-dialog-eyebrow]").textContent = game.custom ? "Added game" : game.verified ? "Game · verified colors" : "Game";
     document.querySelector("#gameDialogBody").innerHTML = gameDialogMarkup(game);
     document.querySelector("#gameDialogFooter").innerHTML = `${game.custom ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button><button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`;
+    syncSetupControls();
     icons.mount(document.querySelector("#gameDialog"));
   }
 
@@ -1023,8 +1101,8 @@
   function handleGameDialogClick(event) {
     const tab = event.target.closest("[data-detail-tab]");
     if (tab) { gameDetailTab = tab.dataset.detailTab; renderGameDialog(); document.querySelector(`[data-detail-tab="${gameDetailTab}"]`).focus(); return; }
-    const setupAction = event.target.closest("[data-save-game-setup], [data-reset-game-setup]");
-    if (setupAction) { saveGameSetup(Boolean(setupAction.hasAttribute("data-reset-game-setup"))); return; }
+    if (handleSetupClick(event)) return;
+    if (event.target.closest("[data-reset-game-setup]")) { saveGameSetup(true); return; }
     const paste = event.target.closest("[data-open-game-paste]");
     if (paste) { openGamePaste(paste.dataset.openGamePaste, false, paste); return; }
     const game = play.gameById(openGameId);
@@ -1085,6 +1163,8 @@
     form.reset();
     document.querySelector("#customGameTitle").textContent = game ? "Edit game" : "Add a game";
     document.querySelector("#customGameDelete").hidden = !game;
+    document.querySelector("#customGameSave").hidden = Boolean(game);
+    form.querySelector(".dialog-footer [data-close-dialog]").textContent = game ? "Close" : "Cancel";
     document.querySelector("#customGameValidation").hidden = true;
     if (game) ["name", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "complexityWeight", "minMinutes", "maxMinutes"].forEach(key => {
       const value = game[key];
@@ -1104,10 +1184,10 @@
     components.openDialog("#customGameDialog", { focus: "#customGameName" });
   }
 
-  function saveCustomGame(event) {
+  function saveCustomGame(event, autosave) {
     event.preventDefault();
     const form = event.currentTarget;
-    if (!form.reportValidity()) return;
+    if (!(autosave ? form.checkValidity() : form.reportValidity())) return;
     const values = Object.fromEntries(new FormData(form).entries());
     const validation = document.querySelector("#customGameValidation");
     const name = u.cleanLine(values.name, 100);
@@ -1150,6 +1230,7 @@
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
+    if (autosave) { renderLibrary(); return; }
     components.closeDialog("#customGameDialog", "saved");
     components.toast(isNew ? name + " was added to your library as owned." : name + " was updated.", { title: isNew ? "Game added" : "Game saved", kind: "success" });
     renderLibrary();
@@ -1457,8 +1538,14 @@
       libraryRoot.querySelector(`[data-sheet-sort="${key}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const host = event.target.closest("[data-host]");
+    if (host) {
+      const name = host.dataset.host;
+      updateLibraryUi(ui => { ui.hosts = !name ? [] : ui.hosts.includes(name) ? ui.hosts.filter(value => value !== name) : ui.hosts.concat(name); ui.host = ui.hosts.length === 1 ? ui.hosts[0] : "all"; });
+      renderLibrary(); libraryRoot.querySelector(`[data-host="${CSS.escape(name)}"]`)?.focus({preventScroll:true}); return;
+    }
     if (event.target.closest("[data-library-direction]")) { updateLibraryUi(ui => { ui.sortDirection = ui.sortDirection === "desc" ? "asc" : "desc"; }); renderLibrary(); return; }
-    if (event.target.closest("[data-library-reset]")) { updateLibraryUi(ui => { ui.host = "all"; ui.category = "all"; ui.verified = "all"; ui.search = ""; ui.ownership = "all"; ui.sortBy = "fit"; ui.sortDirection = "asc"; ui.playerCount = 0; ui.present = []; }); renderLibrary(); return; }
+    if (event.target.closest("[data-library-reset]")) { updateLibraryUi(ui => { ui.host = "all"; ui.hosts = []; ui.category = "all"; ui.mechanism = "all"; ui.mainType = "all"; ui.verified = "all"; ui.search = ""; ui.ownership = "all"; ui.sortBy = "fit"; ui.sortDirection = "asc"; ui.playerCount = 0; ui.present = []; }); renderLibrary(); return; }
     const owned = event.target.closest("[data-toggle-owned]");
     if (owned) {
       mutateLibrary(owned.dataset.toggleOwned, entry => { entry.owned = !entry.owned; });
@@ -1487,14 +1574,8 @@
   }
 
   function handleLibraryChange(event) {
-    if (event.target.matches("[data-library-host]")) {
-      const name = event.target.value;
-      updateLibraryUi(ui => { ui.host = name; }); renderLibrary();
-      libraryRoot.querySelector("[data-library-host]")?.focus({ preventScroll: true });
-      return;
-    }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
-    else if (event.target.matches("[data-library-category], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
+    else if (event.target.matches("[data-library-category], [data-library-mechanism], [data-library-main-type], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : event.target.matches("[data-library-mechanism]") ? "mechanism" : event.target.matches("[data-library-main-type]") ? "mainType" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
     else if (event.target.matches("[data-person-name]")) renamePerson(event.target.dataset.personName, event.target.value);
     else if (event.target.matches("[data-person-color]")) {
@@ -1579,6 +1660,8 @@
       const options = libraryRoot.querySelector(".library-table-options[open]");
       if (options) { options.open = false; options.querySelector("summary").focus(); event.preventDefault(); }
     });
+    libraryRoot.addEventListener("toggle", event => { if (event.target.matches(".library-table-options")) positionTableMenu(); }, true);
+    window.addEventListener("resize", positionTableMenu);
     libraryRoot.addEventListener("input", handleLibraryInput);
     libraryRoot.addEventListener("change", handleLibraryChange);
     libraryRoot.addEventListener("submit", event => { if (event.target.matches("[data-add-person]")) addPerson(event); });
@@ -1593,6 +1676,7 @@
     document.querySelector("#gameDialogBody").addEventListener("input", updateBggSearch);
     document.querySelector("#customGameForm").addEventListener("input", event => {
       updateBggSearch(event);
+      if (editingCustomGameId && event.target.name) saveCustomGame(event, true);
       if (event.target.name === "name") {
         const query = event.currentTarget.querySelector("[data-bgg-query]");
         if (query) { query.value = event.target.value; updateBggSearch({ target: query }); }
@@ -1610,8 +1694,15 @@
       const index = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (tabs.indexOf(event.target) + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
       tabs[index].click();
     });
+    document.querySelector("#gameDialogBody").addEventListener("input", event => {
+      if (event.target.matches("[data-new-color-hex]")) event.target.setCustomValidity("");
+      if (event.target.matches("[data-bgg-link]")) { const raw = event.target.value.trim(); const bggId = bggIdFromInput(raw); if (!raw || bggId) { mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { bggId }); }); if (appState().ui.view === "library") renderLibrary(); } }
+      if (event.target.matches("[data-color-name], [data-setup-label], [data-setup-note], [data-setup-timers]")) saveGameSetup(false);
+      if (event.target.matches("[data-detail-note]")) { const note = u.cleanText(event.target.value, 1000).trim(); mutateLibrary(openGameId, entry => { entry.note = note; }); if (appState().ui.view === "library") renderLibrary(); }
+      if (event.target.matches("[data-detail-metadata]") && event.target.checkValidity()) { const key = event.target.dataset.detailMetadata; const value = event.target.value.trim(); mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: value }); }); if (appState().ui.view === "library") renderLibrary(); }
+    });
     document.querySelector("#gameDialogBody").addEventListener("change", event => {
-      if (event.target.matches("[data-setup-color]")) document.querySelector("[data-setup-pool]").value = "selected";
+      if (event.target.closest("#game-panel-setup") && event.target.matches("[data-setup-color], [data-setup-factions], [data-setup-verified], [data-setup-sort]")) { syncSetupControls(); saveGameSetup(false); return; }
       if (event.target.matches("[data-detail-rating-select]")) {
         mutateLibrary(openGameId, entry => { entry.rating = Number(event.target.value); });
         refreshAfterLibraryChange();
@@ -1630,6 +1721,7 @@
         if (appState().ui.view === "library") renderLibrary();
       }
     });
+    document.querySelector("#customGameForm").addEventListener("change", event => { if (editingCustomGameId && event.target.name) saveCustomGame(event, true); });
     document.querySelector("#customGameForm").addEventListener("submit", saveCustomGame);
     document.querySelector("#customGameDelete").addEventListener("click", deleteCustomGame);
     document.querySelector("#historyDialogBody").addEventListener("change", event => {

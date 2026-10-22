@@ -324,7 +324,7 @@ test('main types, independent owned/wishlist flags and owner-based host filters 
   const reset = model.resetPreferences(state);
   assert.equal(reset.modules.library.host, 'all');
   assert.equal(reset.workspace.library.games.root.wishlist, true);
-  state.modules.library.host = 'Missing host';
+  state.modules.library.hosts = ['Missing host'];
   assert.equal(model.normalize(state).modules.library.host, 'all');
 });
 
@@ -362,7 +362,43 @@ test('setup normalization rejects unsafe colors and rules and allows clearing bu
   assert.equal(App.play.gameById('dune-2019').turnOrder, null);
   state.workspace.library.games['dune-2019'].metadata.setup = { openColorPool: false, colors: [], turnOrder: { firstMode:'arbitrary', defaultOthers:['', 'Bidding'], autoSortFactions:'yes' } };
   const invalid = App.stateModel.normalize(state).workspace.library.games['dune-2019'].metadata.setup;
-  assert.equal(invalid.openColorPool, undefined);
+  assert.equal(invalid.openColorPool, false);
   assert.equal(invalid.turnOrder.firstMode, 'current-order');
   assert.equal(invalid.turnOrder.autoSortFactions, false);
+});
+
+
+test('multiple hosts and separate type/category/mechanism filters normalize and migrate legacy hosts', () => {
+  const { App } = load();
+  const state = App.stateModel.normalize({workspace:{people:[{name:'Adam'},{name:'Bea'}]},modules:{library:{hosts:['Adam','Bea','Adam','Missing'],category:'Strategy',mechanism:'Drafting',mainType:'Cards'}}});
+  assert.deepEqual([...state.modules.library.hosts], ['Adam','Bea']);
+  assert.equal(state.modules.library.host,'all');
+  assert.equal(state.modules.library.category,'Strategy');
+  assert.equal(state.modules.library.mechanism,'Drafting');
+  assert.equal(state.modules.library.mainType,'Cards');
+  assert.deepEqual([...App.stateModel.normalize(state).modules.library.hosts],['Adam','Bea']);
+  const legacy = App.stateModel.normalize({workspace:{people:[{name:'Adam'}]},modules:{library:{host:'Adam'}}});
+  assert.deepEqual([...legacy.modules.library.hosts],['Adam']);
+  const legacyType = App.stateModel.normalize({modules:{library:{category:'Coop'}}});
+  assert.equal(legacyType.modules.library.mainType,'Coop');
+  assert.equal(legacyType.modules.library.category,'all');
+  legacy.modules.library.hosts=[];
+  assert.equal(App.stateModel.normalize(legacy).modules.library.host,'all');
+});
+
+test('custom palettes, named factions and an empty selected pool persist through sync', () => {
+  const { App } = load();
+  const state = App.stateModel.createDefaultState({demo:false});
+  state.workspace.library.games.root={metadata:{setup:{openColorPool:false,colors:[],palette:[{name:'Foxes',value:'#12AB34'},{name:'Invalid',value:'red'}],factions:true,turnOrder:{firstMode:'',label:'Setup',defaultOthers:['Auction']}}}};
+  const restored=App.stateModel.prepareSync(App.stateModel.syncPayload(App.stateModel.normalize(state))).state;
+  App.storage.mutate(next=>{next.workspace.library=restored.workspace.library;});
+  const game=App.play.gameById('root');
+  assert.deepEqual(plain(App.play.colorsForGame(game)),[]);
+  assert.equal(game.openColorPool,false);
+  assert.equal(game.turnOrder.firstMode,'');
+  assert.deepEqual(plain(game.palette),[{name:'Foxes',value:'#12ab34'}]);
+  App.storage.mutate(next=>{next.workspace.library.games.root.metadata.setup.colors=[{name:'Foxes',value:'#12ab34'}];});
+  assert.equal(App.play.colorsForGame(App.play.gameById('root'))[0].faction,true);
+  App.storage.mutate(next=>{next.workspace.library.games.root.metadata.setup.factions=false;});
+  assert.equal(App.play.colorsForGame(App.play.gameById('root'))[0].faction,false);
 });

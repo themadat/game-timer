@@ -19,7 +19,7 @@
   const VIEW_IDS = ["play", "library", "history"];
   const LIBRARY_TABS = ["games", "people"];
   const LIBRARY_OWNERSHIP = ["all", "owned", "available", "unowned", "wishlist", "played", "unplayed"];
-  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "note", "bggId", "turnStart", "factions", "verified", "colors", "owners"];
+  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "categories", "mechanisms", "note", "bggId", "turnStart", "factions", "verified", "colors", "owners"];
   const gameData = App.gameData || { QUICK_PLAYERS: [], NAMED_COLORS: {}, GAME_PRESETS: [] };
 
   function demoRecords(now) {
@@ -136,19 +136,20 @@
     const source = u.plainObject(value);
     const setup = {};
     if (typeof source.openColorPool === "boolean") setup.openColorPool = source.openColorPool;
-    if (Array.isArray(source.colors)) {
-      setup.colors = source.colors.slice(0, 40).map(item => {
+    ["colors", "palette"].forEach(key => {
+      if (!Array.isArray(source[key])) return;
+      setup[key] = source[key].slice(0, 64).map(item => {
         const color = u.plainObject(item);
         return { name: u.cleanLine(color.name, 60), value: /^#[0-9a-f]{6}$/i.test(color.value) ? color.value.toLowerCase() : "" };
-      }).filter((color, index, colors) => color.name && color.value && colors.findIndex(other => other.name.toLowerCase() === color.name.toLowerCase()) === index);
-      if (!setup.colors.length && setup.openColorPool === false) delete setup.openColorPool;
-    }
+      }).filter((color, index, colors) => color.name && color.value && colors.findIndex(other => other.name.toLowerCase() === color.name.toLowerCase() && (key === "colors" || other.value === color.value)) === index);
+    });
+    if (typeof source.factions === "boolean") setup.factions = source.factions;
     if (typeof source.verified === "boolean") setup.verified = source.verified;
     if (source.turnOrder === null) setup.turnOrder = null;
     else if (source.turnOrder && typeof source.turnOrder === "object") {
       const rule = source.turnOrder;
       setup.turnOrder = {
-        firstMode: ["random-all", "current-order", "faction-order"].includes(rule.firstMode) ? rule.firstMode : "current-order",
+        firstMode: ["", "random-all", "current-order", "faction-order"].includes(rule.firstMode) ? rule.firstMode : "current-order",
         autoSortFactions: rule.autoSortFactions === true,
         label: u.cleanLine(rule.label, 80) || "First player",
         note: u.cleanText(rule.note, 1000).trim(),
@@ -349,7 +350,7 @@
         supportTab: "settings"
       },
       modules: {
-        library: { tab: "games", search: "", host: "all", ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
+        library: { tab: "games", search: "", host: "all", hosts: [], category: "all", mechanism: "all", mainType: "all", ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
         history: { search: "", game: "all", person: "all" },
         play: { gameFilter: "all" },
         records: { showDemoFields: true },
@@ -608,6 +609,7 @@
     Object.values(u.plainObject(sourceLibrary.games)).forEach(function (entry) {
       (Array.isArray(entry?.owners) ? entry.owners : []).forEach(function (name) { hostNames.add(u.cleanLine(name, 60)); });
     });
+    const hosts = Array.from(new Set((Array.isArray(sourceLibraryUi.hosts) ? sourceLibraryUi.hosts : [sourceLibraryUi.host]).map(name => u.cleanLine(name, 60)).filter(name => hostNames.has(name)))).slice(0, 20);
     const sourceRoadmap = u.plainObject(sourceModules.roadmap);
     const sourceCloud = u.plainObject(sourceModules.cloudSync);
     const theme = defaultTheme();
@@ -729,9 +731,12 @@
         library: {
           tab: LIBRARY_TABS.includes(sourceLibraryUi.tab) ? sourceLibraryUi.tab : "games",
           search: u.cleanLine(sourceLibraryUi.search, 200),
-          category: u.cleanLine(sourceLibraryUi.category, 100) || "all",
+          category: !sourceLibraryUi.mainType && ["Board", "Cards", "Coop", "1v1", "Table"].includes(sourceLibraryUi.category) ? "all" : u.cleanLine(sourceLibraryUi.category, 100) || "all",
+          mechanism: u.cleanLine(sourceLibraryUi.mechanism, 150) || "all",
+          mainType: ["Board", "Cards", "Coop", "1v1", "Table"].includes(sourceLibraryUi.mainType || sourceLibraryUi.category) ? sourceLibraryUi.mainType || sourceLibraryUi.category : "all",
           verified: ["yes", "no"].includes(sourceLibraryUi.verified) ? sourceLibraryUi.verified : "all",
-          host: hostNames.has(u.cleanLine(sourceLibraryUi.host, 60)) ? u.cleanLine(sourceLibraryUi.host, 60) : "all",
+          host: hosts.length === 1 ? hosts[0] : "all",
+          hosts,
           ownership: LIBRARY_OWNERSHIP.includes(sourceLibraryUi.ownership) ? sourceLibraryUi.ownership : "all",
           present: Array.from(new Set((Array.isArray(sourceLibraryUi.present) ? sourceLibraryUi.present : []).map(function (name) { return u.cleanLine(name, 60); }).filter(function (name) { return people.some(function (person) { return person.name === name; }); }))),
           playerCount: Math.round(cleanNumber(sourceLibraryUi.playerCount, 0, 20, 0)),
