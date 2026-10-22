@@ -298,7 +298,7 @@
 
   function gameRangeText(game) {
     const playerRange = game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}-${game.maxPlayers}`;
-    const weightValue = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(1) : "??";
+    const weightValue = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "??";
     const timeValue = game.minMinutes === game.maxMinutes ? `${game.minMinutes} min` : `${game.minMinutes}-${game.maxMinutes} min`;
     const recommendedValue = game.recommendedPlayers || playerRange;
     const bestValue = game.bestPlayers || game.recommendedPlayers || playerRange;

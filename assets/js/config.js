@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.20";
+  const VERSION = "2.1.0.21";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T01:00:00.000Z",
+        title: "Two-decimal game weight",
+        summary: "Weight displays consistently with two decimal places in the library, Play, and paste preview.",
+        features: [], improvements: ["Show weight as 1.00 or 3.98"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.20",
         date: "2026-10-23T00:45:00.000Z",
         title: "Alternative game names and linked overview paste",
         summary: "Add searchable alternative names and fill game details from linked BGG overviews, including games without a year.",
