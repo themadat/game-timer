@@ -99,20 +99,21 @@
     return appState().workspace.library.customGames || [];
   }
 
-  function allGames() {
+  function allGames(includeExpansions) {
     return GAME_PRESETS.concat(customGames().map(game => Object.assign({ colors: [], custom: true }, game))).map(game => {
       const metadata = appState().workspace.library.games[game.id]?.metadata;
-      if (!metadata?.catalog && !metadata?.setup) return game;
+      if (!metadata?.catalog && !metadata?.setup && !metadata?.expansionOf) return game;
       const merged = Object.assign({}, game, metadata.catalog, metadata.setup);
+      if (metadata?.expansionOf) merged.expansionOf = metadata.expansionOf;
       if (typeof merged.factions === "boolean" && merged.colors) merged.colors = merged.colors.map(color => Object.assign({}, color, { faction: merged.factions }));
       merged.maxPlayers = Math.max(merged.minPlayers, merged.maxPlayers);
       merged.maxMinutes = Math.max(merged.minMinutes, merged.maxMinutes);
       return merged;
-    });
+    }).filter(game => includeExpansions || !game.expansionOf);
   }
 
   function gameById(id) {
-    return allGames().find(game => game.id === id) || null;
+    return allGames(true).find(game => game.id === id) || null;
   }
 
   function currentPreset() {

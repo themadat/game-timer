@@ -161,9 +161,10 @@
     return setup;
   }
 
-  function normalizeLibraryGames(value) {
+  function normalizeLibraryGames(value, customGames) {
     const source = u.plainObject(value);
     const games = {};
+    const gameIds = new Set(gameData.GAME_PRESETS.map(game => game.id).concat((Array.isArray(customGames) ? customGames : []).map(game => typeof game?.id === "string" ? (game.id.startsWith("custom-") ? game.id : "custom-" + game.id) : "")));
     Object.keys(source).slice(0, 2000).forEach(function (key) {
       const id = u.cleanLine(key, 100).replace(/[^a-z0-9_-]/gi, "-");
       if (!id) return;
@@ -188,6 +189,8 @@
         const tags = Array.from(new Set(list.map(function (tag) { return u.cleanLine(tag, 150); }).filter(Boolean))).slice(0, 100);
         if (tags.length) normalized.metadata[key] = tags;
       });
+      const expansionOf = u.cleanLine(entry.metadata?.expansionOf, 100);
+      if (expansionOf && expansionOf !== "custom" && expansionOf !== id && gameIds.has(expansionOf) && !source[expansionOf]?.metadata?.expansionOf) normalized.metadata.expansionOf = expansionOf;
       const additionalTypes = Array.from(new Set((Array.isArray(entry.metadata?.additionalTypes) ? entry.metadata.additionalTypes : []).filter(type => ADDITIONAL_GAME_TYPES.includes(type))));
       if (additionalTypes.length) normalized.metadata.additionalTypes = additionalTypes;
       const ownedExpansions = Array.from(new Set((Array.isArray(entry.metadata?.ownedExpansions) ? entry.metadata.ownedExpansions : []).map(name => u.cleanLine(name, 150)).filter(name => normalized.metadata.expansions?.includes(name))));
@@ -201,6 +204,19 @@
       const setup = normalizeGameSetup(entry.metadata?.setup);
       if (Object.keys(setup).length) normalized.metadata.setup = setup;
       if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
+    });
+    Object.entries(games).forEach(function ([id, entry]) {
+      const parentId = entry.metadata.expansionOf;
+      if (!parentId) return;
+      const record = (Array.isArray(customGames) ? customGames : []).find(game => (String(game?.id || "").startsWith("custom-") ? game.id : "custom-" + game?.id) === id) || gameData.GAME_PRESETS.find(game => game.id === id);
+      const name = u.cleanLine(entry.metadata.catalog?.name || record?.name, 150);
+      if (!name) { delete entry.metadata.expansionOf; return; }
+      const parent = games[parentId] || {owned:false, owners:[], wishlist:false, rating:0, note:"", metadata:{year:null,bggRating:null,category:"",bggId:""}};
+      parent.metadata.expansions = Array.from(new Set((parent.metadata.expansions || []).concat(name)));
+      const owned = parent.metadata.ownedExpansions || [];
+      if (entry.owned) parent.metadata.ownedExpansions = Array.from(new Set(owned.concat(name)));
+      else if (owned.length) parent.metadata.ownedExpansions = owned.filter(value => value !== name);
+      games[parentId] = parent;
     });
     return games;
   }
@@ -355,7 +371,7 @@
         supportTab: "settings"
       },
       modules: {
-        library: { tab: "games", search: "", host: "all", hosts: [], category: "all", mechanism: "all", mainType: "all", showExpansions: false, ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
+        library: { tab: "games", search: "", host: "all", hosts: [], category: "all", mechanism: "all", mainType: "all", showExpansions: false, expansionDisclosure: {}, ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
         history: { search: "", game: "all", person: "all" },
         play: { gameFilter: "all" },
         records: { showDemoFields: true },
@@ -655,7 +671,7 @@
         documents: documents,
         people: people,
         library: {
-          games: normalizeLibraryGames(sourceLibrary.games),
+          games: normalizeLibraryGames(sourceLibrary.games, sourceLibrary.customGames),
           customGames: normalizeCustomGames(sourceLibrary.customGames)
         },
         history: normalizeHistory(sourceWorkspace.history)
@@ -740,6 +756,7 @@
           mechanism: u.cleanLine(sourceLibraryUi.mechanism, 150) || "all",
           mainType: ["Board", "Cards", "Coop", "1v1", "Table", ...ADDITIONAL_GAME_TYPES.map(type => "additional:" + type)].includes(sourceLibraryUi.mainType || sourceLibraryUi.category) ? sourceLibraryUi.mainType || sourceLibraryUi.category : "all",
           showExpansions: sourceLibraryUi.showExpansions === true,
+          expansionDisclosure: Object.fromEntries(Object.entries(u.plainObject(sourceLibraryUi.expansionDisclosure)).filter(([id, value]) => /^[a-z0-9_-]{1,100}$/i.test(id) && typeof value === "boolean").slice(0, 2000)),
           verified: ["yes", "no"].includes(sourceLibraryUi.verified) ? sourceLibraryUi.verified : "all",
           host: hosts.length === 1 ? hosts[0] : "all",
           hosts,

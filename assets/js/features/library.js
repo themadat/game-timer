@@ -252,7 +252,7 @@
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
     ["rating", "Rate"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["category", "Main Type"], ["categories", "Category"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
+    ["length", "Time"], ["category", "Type"], ["categories", "Category"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
@@ -357,6 +357,19 @@
   function mainGameTag(game) {
     return libraryEntry(game.id).metadata?.mainType || "Board";
   }
+  function combinedGameType(game) {
+    const extra = libraryEntry(game.id).metadata?.additionalTypes || [];
+    return mainGameTag(game) + (extra.length ? " :: " + extra.join(", ") : "");
+  }
+  function expansionsExpanded(game) {
+    return moduleState().expansionDisclosure?.[game.id] ?? moduleState().showExpansions;
+  }
+  function unownedExpansionList(game) {
+    if (!expansionsExpanded(game)) return "";
+    const owned = libraryEntry(game.id).metadata?.ownedExpansions || [];
+    const names = gameTagGroups(game).Expansions.filter(name => !owned.includes(name));
+    return names.length ? `<div class="unowned-expansion-list"><span class="eyebrow">Other expansions</span>${names.map(name => { const child = play.allGames(true).find(child => child.expansionOf === game.id && child.name === name); return `<div>${expansionOwnershipMarkup(game, name)}${child ? `<button type="button" class="text-link" data-open-game="${esc(child.id)}">Edit</button>` : ''}</div>`; }).join("")}</div>` : "";
+  }
   function additionalTypesMarkup(game, custom) {
     const selected = game ? libraryEntry(game.id).metadata?.additionalTypes || [] : [];
     return `<fieldset class="additional-types"><legend>Additional Types</legend><div>${ADDITIONAL_GAME_TYPES.map(type => `<label><input type="checkbox" ${custom ? 'name="additionalTypes"' : ''} data-additional-type="${esc(type)}" data-type-game="${esc(game?.id || '')}" ${selected.includes(type) ? 'checked' : ''}>${esc(type)}</label>`).join("")}</div></fieldset>`;
@@ -384,6 +397,10 @@
       const value = kind === "expansions" ? input.dataset.expansionOwned : input.dataset.additionalType;
       const checked = input.checked;
       mutateLibrary(gameId, entry => { const values = entry.metadata?.[key] || []; entry.metadata = Object.assign({}, entry.metadata, {[key]: checked ? [...new Set(values.concat(value))] : values.filter(item => item !== value)}); });
+    }
+    if (kind === "expansions") {
+      const child = play.allGames(true).find(game => game.expansionOf === gameId && game.name === input.dataset.expansionOwned);
+      if (child) mutateLibrary(child.id, entry => { entry.owned = input.checked; });
     }
     if (appState().ui.view === "library") renderLibrary();
     if (inPopup) {
@@ -491,7 +508,7 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") ? `(${esc(sheetValue(game, "year"))})` : ''}</span></div></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${gameTagGroups(game).Expansions.length ? `<button type="button" class="expansion-count" data-expand-game="${id}" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${expansionsExpanded(game) ? 'Collapse' : 'Expand'} ${gameTagGroups(game).Expansions.length} expansions for ${esc(game.name)}">${symbol("chevronDown")}<span>[${gameTagGroups(game).Expansions.length}]</span></button>` : ''}</span></div>${unownedExpansionList(game)}</th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
@@ -502,10 +519,7 @@
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "owners") content = ownerPillsMarkup(game);
-      if (key === "category") {
-        const expansions = gameTagGroups(game).Expansions;
-        content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type" aria-expanded="false">${esc(mainGameTag(game))}${symbol("chevronDown")}</button>${expansions.length ? `<button class="text-link expansion-count" type="button" data-info-game="${id}" data-info-kind="expansions" data-info-label="Expansions" data-sheet-info="Expansions" aria-label="${expansions.length} expansions" aria-expanded="false">[${expansions.length}]</button>` : ''}`;
-      }
+      if (key === "category") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type and Additional Types" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type and Additional Types" aria-expanded="false">${esc(combinedGameType(game))}${symbol("chevronDown")}</button>`;
       if (key === "categories") content = gameListButton(game, key, "Category", gameTagGroups(game).Category);
       if (key === "mechanisms") content = gameListButton(game, key, "Mechanism", gameTagGroups(game).Mechanism);
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
@@ -521,8 +535,9 @@
   }
 
   function expansionRows(game) {
-    if (!moduleState().showExpansions) return "";
-    return gameTagGroups(game).Expansions.map(name => `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "category" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`).join("");
+    if (!expansionsExpanded(game)) return "";
+    const owned = libraryEntry(game.id).metadata?.ownedExpansions || [];
+    return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${play.allGames(true).some(child => child.expansionOf === game.id && child.name === name) ? `<button type="button" class="text-link" data-open-game="${esc(play.allGames(true).find(child => child.expansionOf === game.id && child.name === name).id)}">${esc(name)}</button>` : esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "category" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`).join("");
   }
 
   function gameSheet(games) {
@@ -723,7 +738,7 @@
       else if (ui.sortBy === "length") compared = averageMinutes(a) - averageMinutes(b);
       else if (ui.sortBy === "weight") compared = (Number(a.complexityWeight) || 0) - (Number(b.complexityWeight) || 0);
       else if (ui.sortBy !== "name") {
-        const av = ui.sortBy === "category" ? mainGameTag(a) : sheetValue(a, ui.sortBy), bv = ui.sortBy === "category" ? mainGameTag(b) : sheetValue(b, ui.sortBy);
+        const av = ui.sortBy === "category" ? combinedGameType(a) : sheetValue(a, ui.sortBy), bv = ui.sortBy === "category" ? combinedGameType(b) : sheetValue(b, ui.sortBy);
         if (av === null || av === "" || av === "--") return bv === null || bv === "" || bv === "--" ? byName(a, b) : 1;
         if (bv === null || bv === "" || bv === "--") return -1;
         compared = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
@@ -823,7 +838,7 @@
     const ui = moduleState();
     return `
       <div class="present-picker">
-        <div><span class="eyebrow">Who’s hosting?</span><div class="chip-grid host-picker"><button type="button" class="chip-btn" data-host="" aria-pressed="${!ui.hosts?.length}">Any host</button>${hostNames().map(name => `<button type="button" class="chip-btn" data-host="${esc(name)}" aria-pressed="${Boolean(ui.hosts?.includes(name))}">${esc(name)}</button>`).join("")}</div></div>
+        <div><span class="eyebrow">Who’s hosting?</span><div class="chip-grid host-picker"><button type="button" class="chip-btn" data-host="" aria-pressed="${!ui.hosts?.length}">Any host</button>${hostNames().map(name => { const person = people().find(person => sameName(person.name, name)); return `<button type="button" class="chip-btn" data-host="${esc(name)}" aria-pressed="${Boolean(ui.hosts?.includes(name))}" style="--accent:${esc(u.normalizeColor(person?.color, '#94a3b8'))}"><span class="dot" aria-hidden="true"></span><span>${esc(name)}</span></button>`; }).join("")}</div></div>
         <div class="present-heading"><span class="eyebrow">Who’s playing?</span><div class="count-stepper" ${ui.present.length ? "hidden" : ""}>
           <span class="eyebrow">or player count</span>
           <button class="icon-button" type="button" data-player-count="-1" aria-label="Fewer players">−</button>
@@ -951,6 +966,11 @@
       const entry = Object.assign({ owned: false, owners: [], wishlist: false, rating: 0, note: "" }, games[gameId] || {});
       update(entry);
       if (!entry.owned) entry.owners = [];
+      if (entry.metadata?.expansionOf) {
+        const parent = games[entry.metadata.expansionOf];
+        const child = next.workspace.library.customGames.find(game => game.id === gameId);
+        if (parent?.metadata && child) { const owned = parent.metadata.ownedExpansions || []; parent.metadata.ownedExpansions = entry.owned ? [...new Set(owned.concat(child.name))] : owned.filter(name => name !== child.name); }
+      }
       if (entry.owned || entry.wishlist || entry.rating || entry.note || Object.values(entry.metadata || {}).some(Boolean)) games[gameId] = entry;
       else delete games[gameId];
     }, { reason: reason || "library-edit" });
@@ -1118,7 +1138,7 @@
     document.querySelector("#gameDialogTitle").innerHTML = play.gameTitleMarkup(game.name);
     document.querySelector("[data-game-dialog-eyebrow]").textContent = game.custom ? "Added game" : game.verified ? "Game · verified colors" : "Game";
     document.querySelector("#gameDialogBody").innerHTML = gameDialogMarkup(game);
-    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>${game.custom ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button><button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`;
+    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>${game.custom ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button>${libraryEntry(game.id).metadata?.expansionOf ? `<button class="button primary" type="button" data-open-base="${esc(libraryEntry(game.id).metadata.expansionOf)}">Open base game</button>` : `<button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`}`;
     syncSetupControls();
     icons.mount(document.querySelector("#gameDialog"));
   }
@@ -1136,6 +1156,8 @@
     if (tab) { gameDetailTab = tab.dataset.detailTab; renderGameDialog(); document.querySelector(`[data-detail-tab="${gameDetailTab}"]`).focus(); return; }
     if (handleSetupClick(event)) return;
     if (event.target.closest("[data-reset-game-setup]")) { saveGameSetup(true); return; }
+    const base = event.target.closest("[data-open-base]");
+    if (base) { openGameId = base.dataset.openBase; gameDetailTab = "details"; renderGameDialog(); return; }
     const paste = event.target.closest("[data-open-game-paste]");
     if (paste) { openGamePaste(paste.dataset.openGamePaste, false, paste); return; }
     const game = play.gameById(openGameId);
@@ -1203,6 +1225,9 @@
       const value = game[key];
       form.elements[key].value = value === null || value === undefined || value === "--" ? "" : value;
     });
+    form.querySelector("[data-game-kind-fields]")?.remove();
+    const parentId = game ? libraryEntry(game.id).metadata?.expansionOf || "" : "";
+    form.querySelector("#customGameName").closest("label").insertAdjacentHTML("afterend", `<div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${allGames().filter(parent => parent.id !== "custom" && parent.id !== gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>`);
     let extra = form.querySelector("[data-custom-paste-fields]");
     if (extra) extra.remove();
     form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
@@ -1234,7 +1259,9 @@
     else if (values.bggLink?.trim() && !bggIdFromInput(values.bggLink)) error = "Paste a valid HTTPS BoardGameGeek game link or numeric game ID.";
     else if (!(minPlayers >= 1 && maxPlayers >= minPlayers)) error = "Max players must be at least min players.";
     else if (!(minMinutes >= 1 && maxMinutes >= minMinutes)) error = "Max minutes must be at least min minutes.";
-    else if (play.allGames().some(game => game.id !== editingCustomGameId && sameName(game.name, name))) error = "A game with that name is already in the library.";
+    else if (values.gameKind === "expansion" && !allGames().some(parent => parent.id === values.expansionOf && parent.id !== "custom" && parent.id !== editingCustomGameId)) error = "Choose a standalone base game for this expansion.";
+    else if (values.gameKind === "expansion" && editingCustomGameId && play.allGames(true).some(child => child.expansionOf === editingCustomGameId)) error = "A game with linked expansions must stay standalone.";
+    else if (play.allGames(true).some(game => game.id !== editingCustomGameId && sameName(game.name, name))) error = "A game with that name is already in the library.";
     validation.hidden = !error;
     validation.textContent = error;
     if (error) return;
@@ -1253,6 +1280,7 @@
       createdAt: u.isoNow()
     };
     const isNew = !editingCustomGameId;
+    const previousName = editingCustomGameId ? play.gameById(editingCustomGameId)?.name : "";
     storage.mutate(next => {
       const list = next.workspace.library.customGames;
       const index = list.findIndex(item => item.id === id);
@@ -1260,7 +1288,21 @@
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
+      const oldParent = entry.metadata?.expansionOf;
+      const newParent = values.gameKind === "expansion" ? values.expansionOf : "";
+      if (oldParent && (oldParent !== newParent || previousName !== name)) {
+        const parentEntry = next.workspace.library.games[oldParent];
+        if (parentEntry?.metadata) { parentEntry.metadata.expansions = (parentEntry.metadata.expansions || []).filter(value => value !== previousName); parentEntry.metadata.ownedExpansions = (parentEntry.metadata.ownedExpansions || []).filter(value => value !== previousName); }
+      }
+      if (newParent) {
+        const parentEntry = next.workspace.library.games[newParent] || {owned:false,owners:[],wishlist:false,rating:0,note:""};
+        parentEntry.metadata = Object.assign({}, parentEntry.metadata);
+        parentEntry.metadata.expansions = [...new Set((parentEntry.metadata.expansions || []).concat(name))];
+        parentEntry.metadata.ownedExpansions = entry.owned ? [...new Set((parentEntry.metadata.ownedExpansions || []).concat(name))] : (parentEntry.metadata.ownedExpansions || []).filter(value => value !== name);
+        next.workspace.library.games[newParent] = parentEntry;
+      }
       entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
+      if (newParent) entry.metadata.expansionOf = newParent; else delete entry.metadata.expansionOf;
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
@@ -1276,6 +1318,8 @@
     const accepted = await components.confirm({ title: "Delete " + game.name + "?", message: "The game is removed from your library. Saved history for it is kept.", confirmLabel: "Delete game", danger: true });
     if (!accepted) return;
     storage.mutate(next => {
+      const parent = next.workspace.library.games[next.workspace.library.games[game.id]?.metadata?.expansionOf];
+      if (parent?.metadata) { parent.metadata.expansions = (parent.metadata.expansions || []).filter(name => name !== game.name); parent.metadata.ownedExpansions = (parent.metadata.ownedExpansions || []).filter(name => name !== game.name); }
       next.workspace.library.customGames = next.workspace.library.customGames.filter(item => item.id !== game.id);
       delete next.workspace.library.games[game.id];
     }, { reason: "custom-game-delete" });
@@ -1572,6 +1616,8 @@
       libraryRoot.querySelector(`[data-sheet-sort="${key}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const disclosure = event.target.closest("[data-expand-game]");
+    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); return; }
     const host = event.target.closest("[data-host]");
     if (host) {
       const name = host.dataset.host;
@@ -1609,7 +1655,7 @@
 
   function handleLibraryChange(event) {
     if (handleMetadataChoice(event)) return;
-    if (event.target.matches("[data-show-expansions]")) { const checked = event.target.checked; updateLibraryUi(ui => { ui.showExpansions = checked; }); renderLibrary(); libraryRoot.querySelector("[data-show-expansions]")?.focus({preventScroll:true}); return; }
+    if (event.target.matches("[data-show-expansions]")) { const checked = event.target.checked; updateLibraryUi(ui => { ui.showExpansions = checked; ui.expansionDisclosure = {}; }); renderLibrary(); libraryRoot.querySelector("[data-show-expansions]")?.focus({preventScroll:true}); return; }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-category], [data-library-mechanism], [data-library-main-type], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : event.target.matches("[data-library-mechanism]") ? "mechanism" : event.target.matches("[data-library-main-type]") ? "mainType" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
@@ -1711,6 +1757,7 @@
     document.querySelector("#gameDialogFooter").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogBody").addEventListener("input", updateBggSearch);
     document.querySelector("#customGameForm").addEventListener("input", event => {
+      if (event.target.name === "gameKind") { const expansion = event.target.value === "expansion"; const field = event.currentTarget.querySelector("[data-expansion-parent-field]"); field.hidden = !expansion; field.querySelector("select").required = expansion; }
       updateBggSearch(event);
       if (editingCustomGameId && event.target.name) saveCustomGame(event, true);
       if (event.target.name === "name") {

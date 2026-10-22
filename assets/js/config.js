@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.13";
+  const VERSION = "2.1.0.14";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-22T22:00:00.000Z",
+        title: "Linked expansions and colored hosts",
+        summary: "Host pills use player colors, expansion disclosures sit beside the year, and new games can be linked as expansions.",
+        features: ["Add a custom game as an expansion of a base game", "Expand owned expansion rows and list unowned expansions within the name column"],
+        improvements: ["Host pills match player colors", "Combined type labels such as Board :: Party"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.13",
         date: "2026-10-22T20:00:00.000Z",
         title: "Expansion ownership and combined game details",
         summary: "Details include colors and timing alongside personal ownership, while expansions can be checked off and shown as rows.",

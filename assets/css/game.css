@@ -810,3 +810,19 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .game-overview .game-color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #gameDialogFooter { flex-wrap: wrap; }
 }
+
+/* Expansion disclosures follow the year; unowned expansions remain a compact list. */
+.library-sheet .sheet-name-cell { width: 680px; min-width: 680px; max-width: 680px; }
+.sheet-expansion-slot { display: inline-flex; flex: 0 0 48px; justify-content: flex-end; }
+.sheet-expansion-slot .expansion-count { display: inline-flex; align-items: center; justify-content: center; gap: .15rem; min-height: 28px; margin: 0; padding: .1rem; border: 0; border-radius: 5px; background: transparent; color: var(--text); font: inherit; font-size: .75rem; cursor: pointer; }
+.expansion-count .glyph { width: 12px; height: 12px; transform: rotate(-90deg); transition: transform .15s; }
+.expansion-count[aria-expanded="true"] .glyph { transform: rotate(0); }
+.expansion-count:hover { background: var(--surface-2); }
+.unowned-expansion-list { display: grid; gap: .4rem; padding: .5rem 0 .4rem 1rem; font-weight: 400; white-space: normal; }
+.unowned-expansion-list > div { display: flex; align-items: center; gap: .7rem; }
+.unowned-expansion-list .expansion-ownership { flex: 1; }
+.unowned-expansion-list .text-link { flex: 0 0 auto; font-size: .75rem; }
+[data-game-kind-fields] [hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .expansion-count .glyph { transition: none; } }
+
+.library-sheet .sheet-category .main-game-tag { white-space: nowrap; max-width: none; }

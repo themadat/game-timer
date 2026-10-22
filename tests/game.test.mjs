@@ -435,3 +435,47 @@ test('expansion and type normalization rejects unknown data without creating gam
   assert.equal(state.modules.library.showExpansions,false);
   assert.equal(state.modules.library.mainType,'all');
 });
+
+test('linked custom expansions survive sync and remain editable without standalone Play entries', () => {
+  const { App } = load();
+  const state=App.stateModel.createDefaultState({demo:false});
+  state.workspace.library.customGames=[{id:'custom-root-pack',name:'Root Pack',minPlayers:2,maxPlayers:4,minMinutes:30,maxMinutes:60}];
+  state.workspace.library.games.root={owned:true,wishlist:true,metadata:{expansions:['Root Pack'],ownedExpansions:['Root Pack']}};
+  state.workspace.library.games['custom-root-pack']={owned:true,note:'Pack note',metadata:{expansionOf:'root'}};
+  state.modules.library.expansionDisclosure={root:true, invalid:'yes'};
+  const normalized=App.stateModel.normalize(state);
+  assert.deepEqual(plain(normalized.modules.library.expansionDisclosure),{root:true});
+  const restored=App.stateModel.prepareSync(App.stateModel.syncPayload(normalized)).state;
+  App.storage.mutate(next=>{next.workspace.library=restored.workspace.library;});
+  assert.equal(App.play.allGames().some(game=>game.id==='custom-root-pack'),false);
+  assert.equal(App.play.allGames(true).some(game=>game.id==='custom-root-pack'),true);
+  assert.equal(App.play.gameById('custom-root-pack').expansionOf,'root');
+  assert.equal(restored.workspace.library.games['custom-root-pack'].note,'Pack note');
+  assert.equal(restored.workspace.library.games.root.wishlist,true);
+  assert.deepEqual(plain(restored.workspace.history),plain(state.workspace.history));
+});
+
+test('invalid, cyclic and missing expansion parents cannot hide standalone games', () => {
+  const { App }=load();
+  const state=App.stateModel.normalize({workspace:{library:{customGames:[{id:'custom-pack',name:'Pack'}],games:{'custom-pack':{owned:true,metadata:{expansionOf:'missing'}},root:{owned:true,metadata:{expansionOf:'root'}}}}}});
+  assert.equal(state.workspace.library.games['custom-pack'].metadata.expansionOf,undefined);
+  assert.equal(state.workspace.library.games.root.metadata.expansionOf,undefined);
+  state.workspace.library.games.root.metadata.expansionOf='custom-pack';
+  state.workspace.library.games['custom-pack'].metadata.expansionOf='root';
+  const normalized=App.stateModel.normalize(state);
+  assert.equal(normalized.workspace.library.games.root.metadata.expansionOf,undefined);
+  assert.equal(normalized.workspace.library.games['custom-pack'].metadata.expansionOf,undefined);
+  App.storage.mutate(next=>{next.workspace.library=normalized.workspace.library;});
+  assert.equal(App.play.allGames().some(game=>game.id==='custom-pack'),true);
+});
+
+
+test('normalization reconnects linked expansions to a missing parent expansion list', () => {
+  const { App }=load();
+  const state=App.stateModel.normalize({workspace:{library:{customGames:[{id:'custom-pack',name:'Pack'}],games:{'custom-pack':{owned:true,metadata:{expansionOf:'root'}}}}}});
+  assert.deepEqual([...state.workspace.library.games.root.metadata.expansions],['Pack']);
+  assert.deepEqual([...state.workspace.library.games.root.metadata.ownedExpansions],['Pack']);
+  assert.equal(state.workspace.library.games.root.owned,false);
+  const normalized=App.stateModel.normalize(state);
+  assert.deepEqual(plain(normalized.workspace.library),plain(state.workspace.library));
+});
