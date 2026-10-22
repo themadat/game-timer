@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.22";
+  const VERSION = "2.1.0.23";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T01:30:00.000Z",
+        title: "Alternative names beside game names",
+        summary: "Library rows show alternative names beside the main name, with the full list available on hover.",
+        features: [], improvements: ["Display alternative names inline while keeping compact rows"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.22",
         date: "2026-10-23T01:15:00.000Z",
         title: "Whole-page correction paste",
         summary: "Read BGG correction pages even when copied without Edit and Remove controls.",

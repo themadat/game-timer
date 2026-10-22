@@ -889,3 +889,5 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .custom-ownership .chip-grid { margin-top: .3rem; }
 
 .custom-other-owners { margin-top: .5rem; }
+
+.sheet-alternative-names { color: var(--muted); font-size: .85em; font-weight: 400; }
