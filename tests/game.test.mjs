@@ -515,3 +515,48 @@ test('legacy category data remains backed up while category filters and sorts ar
   assert.equal(restored.workspace.library.games.root.metadata.category,'RetiredCategoryOnly');
   assert.equal(App.stateModel.normalize({modules:{library:{sortBy:'category'}}}).modules.library.sortBy,'mainType');
 });
+
+test('yearless BGG overview reads the title hyperlink and rating rather than ranks or vote counts', () => {
+  const { App } = load();
+  const overview = `RANK:
+- OVERALL [31,090](https://boardgamegeek.com/browse/boardgame?rank=31090)
+* PARTY [941](https://boardgamegeek.com/partygames/browse/boardgame?rank=941)
+[**5.2&#xA0;**](https://boardgamegeek.com/boardgame/15832/cheat/ratings?rated=1\\&comment=1)
+# [Cheat](https://boardgamegeek.com/boardgame/15832/cheat)
+Empty your hand of cards by lying about them without being caught out.
+[**449 Ratings**](https://boardgamegeek.com/boardgame/15832/cheat/ratings?rated=1)
+## Game Information
+### Number of Players
+**3–10 Players&#xA0;**
+### Play Time
+**10 Min&#xA0;**
+### Complexity
+**Weight: 1.12 / 5**`;
+  const fields = App.library.parseBggPaste(overview).fields;
+  assert.equal(fields.name, 'Cheat');
+  assert.equal(fields.bggId, '15832');
+  assert.equal(fields.bggRating, 5.2);
+  assert.equal(fields.year, undefined);
+  assert.equal(fields.minPlayers, 3);
+  assert.equal(fields.maxPlayers, 10);
+  assert.equal(fields.minMinutes, 10);
+  assert.equal(fields.maxMinutes, 10);
+  assert.equal(fields.complexityWeight, 1.12);
+  const plain = App.library.parseBggPaste('5.2\n\n# Cheat\n449 Ratings').fields;
+  assert.equal(plain.name, 'Cheat');
+  assert.equal(plain.bggRating, 5.2);
+  assert.equal(App.library.parseBggPaste('[Cheat](https://boardgamegeek.com/boardgame/15832/cheat)').fields.name, 'Cheat');
+});
+
+test('alternative names normalize, survive sync and participate in library search', () => {
+  const { App, setState } = load();
+  const state = App.stateModel.normalize({ workspace: { library: { games: {
+    root: { metadata: { alternativeNames: 'Дюна; Dune: Der Wüstenplanet; Дюна\n沙丘' } }
+  } } } });
+  const restored = App.stateModel.prepareSync(App.stateModel.syncPayload(state)).state;
+  assert.deepEqual([...restored.workspace.library.games.root.metadata.alternativeNames], ['Дюна', 'Dune: Der Wüstenplanet', '沙丘']);
+  setState(restored);
+  assert.ok(App.library.gameSearchText(App.play.gameById('root')).includes('wüstenplanet'));
+  const parsed = App.library.parseBggPaste('Edit Name Dune\nEdit Name  Set as Primary Name  Remove Name\tДюна (alternate)').fields;
+  assert.deepEqual([...parsed.alternativeNames], ['Дюна']);
+});

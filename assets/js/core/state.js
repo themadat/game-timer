@@ -183,7 +183,7 @@
           bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
         }
       };
-      ["mechanisms", "expansions"].forEach(function (key) {
+      ["alternativeNames", "mechanisms", "expansions"].forEach(function (key) {
         const raw = entry.metadata?.[key];
         const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[;\n]/) : [];
         const tags = Array.from(new Set(list.map(function (tag) { return u.cleanLine(tag, 150); }).filter(Boolean))).slice(0, 100);

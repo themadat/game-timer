@@ -25,9 +25,9 @@
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
-  const PASTE_LABELS = { name: "Name", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
+  const PASTE_LABELS = { name: "Name", alternativeNames: "Alternative names", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
 
-  // Plain clipboard text only: never interpret pasted HTML or execute markup.
+  // Parse text and Markdown links; clipboard HTML is converted to inert text separately.
   function parseBggPaste(value) {
     const warnings = [];
     if (String(value || "").length > 50000) warnings.push("Only the first 50,000 characters were read.");
@@ -46,13 +46,19 @@
     };
     const editName = text.match(/^Edit Name[\t ]+(?!Set as Primary Name\b)([^\n]+)/mi) || text.match(/^Edit Name[\t ]*\n([^\n]+)/mi);
     if (editName && !/\(alternate\)/i.test(editName[1])) fields.name = editName[1].trim().slice(0, 100);
-    const heading = raw.match(/^\s*#{1,6}\s*\[([^\]]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})\/[^\n)]*\)\s*\((-?\d{1,4})\)/mi);
-    const plainHeading = text.match(/^(?:#{1,6}\s*)?([^\n|]+?)\s*\((-?\d{1,4})\)\s*$/m);
+    const heading = raw.match(/^\s*#{1,6}\s*\[([^\]]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})\/[^\n)]*\)(?:[^\S\n]*\((-?\d{1,4})\))?/mi);
+    const plainHeading = text.match(/^#\s+([^\n|]+?)(?:[ \t]+\((-?\d{1,4})\))?\s*$/m) || text.match(/^([^\n|]+?)\s*\((-?\d{1,4})\)\s*$/m);
     if (heading) {
-      fields.name = heading[1].trim().slice(0, 100); fields.bggId = heading[2]; fields.year = Number(heading[3]);
+      fields.name = heading[1].trim().slice(0, 100); fields.bggId = heading[2]; if (heading[3] !== undefined) fields.year = Number(heading[3]);
     } else if (plainHeading && !/alternate/i.test(plainHeading[1])) {
-      fields.name = plainHeading[1].trim().slice(0, 100); fields.year = Number(plainHeading[2]);
+      fields.name = plainHeading[1].trim().slice(0, 100); if (plainHeading[2] !== undefined) fields.year = Number(plainHeading[2]);
     }
+    if (!fields.name) {
+      const titleLink = raw.match(/^\s*\[([^\]\n]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})(?:\/[^\s/)]*)?\)\s*$/mi);
+      if (titleLink && !/^[\d.*\s]+$/.test(titleLink[1])) { fields.name = titleLink[1].trim().slice(0, 100); fields.bggId = titleLink[2]; }
+    }
+    const alternatives = [...text.matchAll(/^Edit Name[^\n]*?Remove Name[\t ]+([^\n]+?)\s*\(alternate\)\s*$/gmi)].map(match => match[1].trim());
+    if (alternatives.length) fields.alternativeNames = [...new Set(alternatives)].slice(0, 100);
     number("year", /(?:Edit\s+)?Year Released(?:\s+more information)?\s*[:\t ]*\n?\s*(-?\d{1,4})\b/i, -9999, 9999);
     number("minPlayers", /(?:Edit\s+)?Minimum Players(?:\s+more information)?\s*[:\t ]*\n?\s*(\d+)\b/i, 1, 20);
     number("maxPlayers", /(?:Edit\s+)?Maximum Players(?:\s+more information)?\s*[:\t ]*\n?\s*(\d+)\b/i, 1, 20);
@@ -151,7 +157,7 @@
     const byId = fields.bggId ? games.filter(game => sheetValue(game, "bggId") === fields.bggId) : [];
     if (byId.length === 1) return byId[0];
     if (!fields.name) return null;
-    let matches = games.filter(game => pasteNameKey(sheetValue(game, "name")) === pasteNameKey(fields.name));
+    let matches = games.filter(game => [sheetValue(game, "name"), ...(libraryEntry(game.id).metadata?.alternativeNames || [])].some(name => pasteNameKey(name) === pasteNameKey(fields.name)));
     if (fields.year && matches.length > 1) matches = matches.filter(game => sheetValue(game, "year") === fields.year);
     return matches.length === 1 ? matches[0] : null;
   }
@@ -176,7 +182,7 @@
     const current = key => {
       if (pasteContext === "custom") {
         const form = document.querySelector("#customGameForm");
-        const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
+        const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", alternativeNames: "alternativeNames", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
         return form.elements[inputName]?.value || "—";
       }
       if (!game) return "—";
@@ -210,7 +216,7 @@
   function fillCustomGameFromPaste(fields) {
     const form = document.querySelector("#customGameForm");
     Object.entries(fields).forEach(([key, value]) => {
-      const name = ({ year: "pasteYear", bggRating: "pasteBggRating", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
+      const name = ({ year: "pasteYear", bggRating: "pasteBggRating", alternativeNames: "alternativeNames", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
       if (form.elements[name]) { form.elements[name].value = Array.isArray(value) ? value.join("; ") : value; form.elements[name].dataset.fieldKnown = "true"; }
     });
     Object.keys(PASTE_LABELS).forEach(key => {
@@ -357,7 +363,7 @@
     if (key === "rating") return entry.rating || null;
     if (key === "owners") return entry.owned ? (entry.owners.join(", ") || "Shared") : entry.wishlist ? "Wishlist" : "Not owned";
     if (key === "note") return entry.note;
-    if (["mechanisms", "expansions"].includes(key)) return (metadata[key] || []).join("; ");
+    if (["alternativeNames", "mechanisms", "expansions"].includes(key)) return (metadata[key] || []).join("; ");
     if (["bggRating", "bggId"].includes(key)) return metadata[key] || null;
     if (key === "mainType") return combinedGameType(game);
     if (key === "weight") return game.complexityWeight;
@@ -734,7 +740,7 @@
 
   function gameSearchText(game) {
     const entry = libraryEntry(game.id);
-    return [play.gameSearchText(game), entry.note, ...SHEET_COLUMNS.map(([key]) => sheetValue(game, key)), ...gameTags(game), entry.wishlist ? "wishlist wish" : "", entry.owned ? "" : "not owned unowned"].filter(Boolean).join(" ").toLowerCase();
+    return [play.gameSearchText(game), ...(entry.metadata?.alternativeNames || []), entry.note, ...SHEET_COLUMNS.map(([key]) => sheetValue(game, key)), ...gameTags(game), entry.wishlist ? "wishlist wish" : "", entry.owned ? "" : "not owned unowned"].filter(Boolean).join(" ").toLowerCase();
   }
 
   function gameSearchMeta(game) {
@@ -1196,7 +1202,7 @@
         </div>
         <div role="tabpanel" id="game-panel-catalog" aria-labelledby="game-tab-catalog" ${gameDetailTab !== "catalog" ? 'hidden' : ''} class="game-details-grid">
         <div class="game-linking-panel">${bggLookupMarkup(game, false)}${expansionParentMarkup(game)}</div>
-        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"-9999\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) ?? '')}"></label>`).join("")}</div></section>
+        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["alternativeNames", "Alternative names (semicolon-separated)", "text", "maxlength=\"10000\""], ["year", "Published year", "number", "min=\"-9999\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) ?? '')}"></label>`).join("")}</div></section>
         </div>
         <section class="detail-section" role="tabpanel" id="game-panel-plays" aria-labelledby="game-tab-plays" ${gameDetailTab !== "plays" ? 'hidden' : ''}>
           <h3>Your plays</h3>
@@ -1316,7 +1322,7 @@
       <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1" required',2], ["maxPlayers","Max players","number",'min="1" max="20" step="1" required',4], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
       <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1" required',value("minMinutes",30))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1" required',value("maxMinutes",60))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',value("complexityWeight",""),"Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
       <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
-      <div class="wide custom-catalog-fields">${[["pasteMechanisms","Mechanisms (semicolon-separated)","mechanisms"],["pasteExpansions","Expansions (semicolon-separated)","expansions"]].map(([name,label,key]) => field(name,label,"text",'maxlength="10000"',game ? sheetValue(game,key) : "")).join("")}</div>
+      <div class="wide custom-catalog-fields">${[["alternativeNames","Alternative names (semicolon-separated)","alternativeNames"],["pasteMechanisms","Mechanisms (semicolon-separated)","mechanisms"],["pasteExpansions","Expansions (semicolon-separated)","expansions"]].map(([name,label,key]) => field(name,label,"text",'maxlength="10000"',game ? sheetValue(game,key) : "")).join("")}</div>
       ${bggLookupMarkup(game,true)}
       <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields were not supplied in the paste. Review or fill them in; numeric defaults are suggestions.</p>
       <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>`;
@@ -1386,7 +1392,7 @@
         parentEntry.metadata.ownedExpansions = entry.owned ? [...new Set((parentEntry.metadata.ownedExpansions || []).concat(name))] : (parentEntry.metadata.ownedExpansions || []).filter(value => value !== name);
         next.workspace.library.games[newParent] = parentEntry;
       }
-      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), alternativeNames: values.alternativeNames || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
       if (newParent) entry.metadata.expansionOf = newParent; else delete entry.metadata.expansionOf;
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
@@ -1806,7 +1812,37 @@
       [".app-header", "#whatsNewBanner", "#contextHint"].forEach(selector => { const node = document.querySelector(selector); if (node) observer.observe(node); });
     }
     document.querySelector("#gamePasteForm").addEventListener("submit", applyGamePaste);
-    document.querySelectorAll("[data-game-paste-input]").forEach(input => input.addEventListener("input", updateGamePaste));
+    document.querySelectorAll("[data-game-paste-input]").forEach(input => {
+      input.addEventListener("input", updateGamePaste);
+      input.addEventListener("paste", event => {
+        const html = event.clipboardData?.getData("text/html");
+        if (!html) return;
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        // Never attach clipboard markup to the document or load its resources.
+        const walk = node => {
+          if (node.nodeType === 3) return node.textContent;
+          if (node.nodeType !== 1 && node.nodeType !== 11) return "";
+          const tag = node.nodeName.toLowerCase();
+          if (["script", "style", "iframe", "object", "img", "svg", "link", "meta"].includes(tag)) return "";
+          const content = Array.from(node.childNodes).map(walk).join("");
+          if (tag === "a") {
+            const href = node.getAttribute("href") || "";
+            if (/^https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/\d+(?:[/?#]|$)/i.test(href)) return `[${content.replace(/[\[\]\n]/g, " ")}](${href.replace(/[\s()]/g, char => encodeURIComponent(char))})`;
+          }
+          if (/^h[1-6]$/.test(tag)) return "\n" + "#".repeat(Number(tag[1])) + " " + content + "\n";
+          if (tag === "br") return "\n";
+          if (["td", "th"].includes(tag)) return content + "\t";
+          return ["p", "div", "li", "tr", "table", "section"].includes(tag) ? "\n" + content + "\n" : content;
+        };
+        const text = walk(template.content);
+        if (!/\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\//i.test(text)) return;
+        event.preventDefault();
+        const available = Math.max(0, input.maxLength - (input.value.length - (input.selectionEnd - input.selectionStart)));
+        input.setRangeText(text.slice(0, available), input.selectionStart, input.selectionEnd, "end");
+        updateGamePaste({ target: input });
+      });
+    });
     document.querySelector("#gamePasteTarget").addEventListener("input", updateGamePaste);
     document.querySelector("#customGameForm").addEventListener("click", event => {
       const trigger = event.target.closest("[data-custom-game-paste]");

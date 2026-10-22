@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.19";
+  const VERSION = "2.1.0.20";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,14 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T00:45:00.000Z",
+        title: "Alternative game names and linked overview paste",
+        summary: "Add searchable alternative names and fill game details from linked BGG overviews, including games without a year.",
+        features: ["Alternative names in Add/Edit game and catalog details", "Keep BGG hyperlinks when pasting copied page content"],
+        improvements: [], fixes: ["Read overview names and ratings without a published year"], knownIssues: []
+      },
+      {
+        version: "2.1.0.19",
         date: "2026-10-23T00:30:00.000Z",
         title: "Visible owner selection when adding games",
         summary: "Owner selection sits directly below the game name, with an option to enter other owners.",
