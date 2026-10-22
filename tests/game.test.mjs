@@ -560,3 +560,26 @@ test('alternative names normalize, survive sync and participate in library searc
   const parsed = App.library.parseBggPaste('Edit Name Dune\nEdit Name  Set as Primary Name  Remove Name\tДюна (alternate)').fields;
   assert.deepEqual([...parsed.alternativeNames], ['Дюна']);
 });
+
+test('whole correction page ignores navigation and reads rows without edit controls', () => {
+  const { App } = load();
+  const paste = readFileSync(new URL('fixtures/bgg-correction-page.md', import.meta.url), 'utf8');
+  const fields = App.library.parseBggPaste(paste).fields;
+  assert.equal(fields.name, 'Codenames: Pictures');
+  assert.equal(fields.bggId, '198773');
+  assert.equal(fields.year, 2016);
+  assert.equal(fields.minPlayers, 2);
+  assert.equal(fields.maxPlayers, 8);
+  assert.equal(fields.minMinutes, 15);
+  assert.equal(fields.maxMinutes, 15);
+  assert.equal(fields.bggRating, undefined);
+  assert.equal(fields.alternativeNames.length, 23);
+  assert.ok(fields.alternativeNames.includes('Codenames: Images'));
+  assert.deepEqual([...fields.mechanisms], ['Communication Limits', 'Memory', 'Team-Based Game']);
+  assert.equal(fields.expansions.length, 9);
+  assert.ok(!fields.expansions.includes('Codenames: Duet'));
+  assert.ok(!fields.alternativeNames.includes('boardgame geek'));
+  const combined = App.library.parseBggPaste('[**7.1**](https://boardgamegeek.com/boardgame/198773/codenames-pictures/ratings)\n' + paste).fields;
+  assert.equal(combined.bggRating, 7.1);
+  assert.equal(combined.name, 'Codenames: Pictures');
+});

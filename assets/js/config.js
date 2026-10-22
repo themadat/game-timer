@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.21";
+  const VERSION = "2.1.0.22";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T01:15:00.000Z",
+        title: "Whole-page correction paste",
+        summary: "Read BGG correction pages even when copied without Edit and Remove controls.",
+        features: [], improvements: [], fixes: ["Ignore BGG navigation when reading correction identity", "Read alternative names, mechanisms, and expansions from unlabeled rows"], knownIssues: []
+      },
+      {
+        version: "2.1.0.21",
         date: "2026-10-23T01:00:00.000Z",
         title: "Two-decimal game weight",
         summary: "Weight displays consistently with two decimal places in the library, Play, and paste preview.",

@@ -31,8 +31,15 @@
   function parseBggPaste(value) {
     const warnings = [];
     if (String(value || "").length > 50000) warnings.push("Only the first 50,000 characters were read.");
-    const raw = String(value || "").slice(0, 50000).replace(/\r\n?/g, "\n").replace(/\\\s*\n/g, "\n")
+    let raw = String(value || "").slice(0, 50000).replace(/\r\n?/g, "\n").replace(/\\\s*\n/g, "\n")
       .replace(/&(?:nbsp|#160|#x0*a0);/gi, " ").replace(/\u00a0/g, " ").replace(/&amp;/g, "&");
+    // A whole-page copy includes navigation and unrelated game links before the form.
+    const correctionHeading = raw.match(/^\s*#{1,6}\s+Correction for\s+/mi);
+    if (correctionHeading) {
+      const before = raw.slice(0, correctionHeading.index);
+      const siteHeading = before.match(/^\s*#\s+boardgame geek\s*$/mi);
+      raw = before.slice(0, siteHeading ? siteHeading.index : before.length) + "\n# " + raw.slice(correctionHeading.index + correctionHeading[0].length);
+    }
     const plain = raw.replace(/\[([^\]]+)\]\([^\n)]*\)/g, "$1").replace(/\*\*|__/g, "");
     const lines = plain.split("\n").map(line => line.trim());
     const text = lines.join("\n");
@@ -58,6 +65,14 @@
       if (titleLink && !/^[\d.*\s]+$/.test(titleLink[1])) { fields.name = titleLink[1].trim().slice(0, 100); fields.bggId = titleLink[2]; }
     }
     const alternatives = [...text.matchAll(/^Edit Name[^\n]*?Remove Name[\t ]+([^\n]+?)\s*\(alternate\)\s*$/gmi)].map(match => match[1].trim());
+    const namesSection = text.match(/^Names(?:\s+more information)?[ \t]*\n([\s\S]*?)(?=^Year Released(?:\s+more information)?[ \t]*$)/mi);
+    if (namesSection) {
+      for (const line of namesSection[1].split("\n").map(line => line.trim()).filter(Boolean)) {
+        if (/^(?:Edit Name|Add Alternate Name)\b/i.test(line)) continue;
+        if (/\(alternate\)\s*$/i.test(line)) alternatives.push(line.replace(/\s*\(alternate\)\s*$/i, "").trim());
+        else if (!fields.name) fields.name = line.slice(0, 100);
+      }
+    }
     if (alternatives.length) fields.alternativeNames = [...new Set(alternatives)].slice(0, 100);
     number("year", /(?:Edit\s+)?Year Released(?:\s+more information)?\s*[:\t ]*\n?\s*(-?\d{1,4})\b/i, -9999, 9999);
     number("minPlayers", /(?:Edit\s+)?Minimum Players(?:\s+more information)?\s*[:\t ]*\n?\s*(\d+)\b/i, 1, 20);
@@ -102,6 +117,16 @@
         if (tag) tagSections[tagSection].push(tag[1].trim());
         else if (line && !/^Remove\s*$/i.test(line)) tagSection = "";
       }
+    }
+    // Some browser copies omit the Edit/Remove/Add controls entirely.
+    const formSections = /^(?:Names|Year Released|Minimum Players|Maximum Players|Mfg Suggested Ages|Minimum Playing Time|Maximum Playing Time|Designer|Solo Designer|Artist|Developer|Graphic Designer|Sculptor|Editor|Writer|Insert Designer|Publisher|Category|Mechanism|Expansion|Expands|Integrates With|Contains|Contained in|Reimplemented By|Reimplements|Family|Video Game Adaptation|Note(?:s)? to Admin)(?:\s+more information)?$/i;
+    let bareSection = "";
+    for (const line of lines) {
+      if (formSections.test(line)) {
+        bareSection = ({ category: "category", mechanism: "mechanisms", expansion: "expansions" })[line.toLowerCase().replace(/\s+more information$/i, "")] || "";
+        continue;
+      }
+      if (bareSection && line && !/^(?:Remove|Add)\b/i.test(line)) tagSections[bareSection].push(line);
     }
     if (tagSections.category.length) fields.category = [...new Set(tagSections.category)].join(", ").slice(0, 1000);
     ["mechanisms", "expansions"].forEach(key => { if (tagSections[key].length) fields[key] = [...new Set(tagSections[key])].slice(0, 100); });
