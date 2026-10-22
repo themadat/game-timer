@@ -876,3 +876,14 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .sheet-mechanisms .game-tag { display: inline-flex; align-items: center; vertical-align: middle; gap: .3rem; line-height: 1.25; }
 .game-tag-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .library-sheet .sheet-mechanisms .game-tag .glyph { display: inline-flex; align-self: center; flex-shrink: 0; }
+
+.additional-types:not(:has(input:checked)) { border-color: #d29b00; box-shadow: inset 0 0 0 1px #d29b00; }
+.sheet-expansion-slot { flex-basis: 42px; }
+.custom-ownership { min-width: 0; margin: 0; padding: .65rem; border: 1px solid var(--line); border-radius: 8px; }
+.custom-ownership legend { padding-inline: .25rem; font-size: .85rem; font-weight: 700; }
+.custom-owned-status { display: flex; gap: 1rem; margin-bottom: .55rem; }
+.custom-owned-status label, .custom-owner-choice { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; }
+.custom-owner-choice { padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.custom-owner-choice:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb,var(--accent) 15%,var(--surface)); }
+.custom-ownership input { width: 16px; height: 16px; min-height: 16px; margin: 0; accent-color: var(--accent); }
+.custom-ownership .chip-grid { margin-top: .3rem; }

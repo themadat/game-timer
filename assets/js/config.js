@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.17";
+  const VERSION = "2.1.0.18";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T00:20:00.000Z",
+        title: "Expansion editing and game owners",
+        summary: "Owned expansion names open an editor, and game forms include ownership and owner selection.",
+        features: ["Edit owned expansions from their names, including name-only entries", "Set owners and independent wishlist status in Add/Edit game"],
+        improvements: ["Partial expansion counts show owned/total", "Alphabetical Expansion of choices", "Yellow border when no Additional Types are selected"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.17",
         date: "2026-10-23T00:10:00.000Z",
         title: "Complete expansion rows",
         summary: "Linked expansions show their saved game details in every column, with cleaner disclosure behavior.",

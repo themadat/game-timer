@@ -236,7 +236,7 @@
     if (pasteContext === "custom") {
       fillCustomGameFromPaste(fields);
       components.closeDialog("#gamePasteDialog", "filled");
-      if (editingCustomGameId) saveCustomGame({preventDefault() {}, currentTarget: document.querySelector("#customGameForm")}, true);
+      if (editingCustomGameId || editingExpansionDraft) saveCustomGame({preventDefault() {}, currentTarget: document.querySelector("#customGameForm")}, true);
       components.toast(editingCustomGameId ? "Game details saved automatically." : "Fields filled. Review them and save the game.", { title: "Paste applied", kind: "success" });
     } else if (game) {
       mutateLibrary(game.id, entry => {
@@ -285,18 +285,25 @@
 
   let infoAnchor = null;
   let infoPinned = false;
+  let infoHideTimer = null;
+  function scheduleSheetInfoHide() {
+    clearTimeout(infoHideTimer);
+    if (!infoPinned) infoHideTimer = setTimeout(hideSheetInfo,160);
+  }
   function resetInfoExpanded(button) {
     if (!button) return;
     const game = button.dataset.expandGame ? play.gameById(button.dataset.expandGame) : null;
     button.setAttribute("aria-expanded", game ? Boolean(expansionsExpanded(game)) : false);
   }
   function hideSheetInfo() {
+    clearTimeout(infoHideTimer);
     document.querySelector("#libraryInfoPopover")?.hidePopover();
     resetInfoExpanded(infoAnchor);
     infoAnchor = null;
     infoPinned = false;
   }
   function showSheetInfo(button, pin) {
+    clearTimeout(infoHideTimer);
     if (button.dataset.expandGame && expansionsExpanded(play.gameById(button.dataset.expandGame))) {
       if (infoAnchor?.dataset.expandGame === button.dataset.expandGame) hideSheetInfo();
       return;
@@ -311,8 +318,11 @@
       popup.setAttribute("popover", "auto");
       document.body.appendChild(popup);
       popup.addEventListener("change", handleMetadataChoice);
-      popup.addEventListener("click", event => { const button = event.target.closest("[data-open-game]"); if (button) { hideSheetInfo(); openGame(button.dataset.openGame, button); } });
-      popup.addEventListener("mouseleave", () => { if (!infoPinned) hideSheetInfo(); });
+      popup.addEventListener("click", event => { const edit = event.target.closest("[data-edit-expansion]"); if (edit) { hideSheetInfo(); openExpansionEditor(edit.dataset.editExpansion,edit.dataset.expansionName,edit); return; } const button = event.target.closest("[data-open-game]"); if (button) { hideSheetInfo(); openGame(button.dataset.openGame, button); } });
+      popup.addEventListener("mouseenter", () => clearTimeout(infoHideTimer));
+      popup.addEventListener("focusin", () => clearTimeout(infoHideTimer));
+      popup.addEventListener("mouseleave", scheduleSheetInfoHide);
+      popup.addEventListener("focusout", event => { if (!popup.contains(event.relatedTarget)) scheduleSheetInfoHide(); });
       popup.addEventListener("toggle", event => { if (event.newState === "closed") { resetInfoExpanded(infoAnchor); infoAnchor = null; infoPinned = false; } });
     }
     resetInfoExpanded(infoAnchor);
@@ -386,7 +396,7 @@
     if (!expansions.length) return "";
     const owned = expansions.filter(name => libraryEntry(game.id).metadata?.ownedExpansions?.includes(name)).length;
     const state = owned === expansions.length ? "all" : owned ? "some" : "none";
-    return `<button type="button" class="expansion-count expansion-owned-${state}" data-expand-game="${esc(game.id)}" data-sheet-info="Expansions" data-info-game="${esc(game.id)}" data-info-kind="expansions" data-info-label="Expansions" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${owned} of ${expansions.length} expansions owned; ${expansionsExpanded(game) ? 'collapse' : 'expand'} ${esc(game.name)}"><span>${expansions.length}</span>${symbol("chevronDown")}</button>`;
+    return `<button type="button" class="expansion-count expansion-owned-${state}" data-expand-game="${esc(game.id)}" data-sheet-info="Expansions" data-info-game="${esc(game.id)}" data-info-kind="expansions" data-info-label="Expansions" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${owned} of ${expansions.length} expansions owned; ${expansionsExpanded(game) ? 'collapse' : 'expand'} ${esc(game.name)}"><span>${state === "some" ? owned + "/" + expansions.length : expansions.length}</span>${symbol("chevronDown")}</button>`;
   }
   function expansionsExpanded(game) {
     return moduleState().expansionDisclosure?.[game.id] ?? moduleState().showExpansions;
@@ -410,6 +420,7 @@
   }
   function expansionOwnershipMarkup(game, name, compact) {
     const owned = libraryEntry(game.id).metadata?.ownedExpansions?.includes(name) || false;
+    if (owned && !compact) return `<div class="expansion-ownership"><input type="checkbox" data-expansion-game="${esc(game.id)}" data-expansion-owned="${esc(name)}" aria-label="I have ${esc(name)}" checked><button class="text-link" type="button" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></div>`;
     return `<label class="expansion-ownership"><input type="checkbox" data-expansion-game="${esc(game.id)}" data-expansion-owned="${esc(name)}" aria-label="I have ${esc(name)}" ${owned ? 'checked' : ''}><span>${compact ? 'Have' : esc(name)}</span></label>`;
   }
   function handleMetadataChoice(event) {
@@ -572,7 +583,7 @@
     return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => {
       const child = linked.find(child => child.name === name);
       if (child) return gameRow(child,game);
-      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
+      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ <button type="button" class="text-link" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
     }).join("");
   }
 
@@ -586,6 +597,7 @@
   let openGameId = "";
   let openHistoryId = "";
   let editingCustomGameId = "";
+  let editingExpansionDraft = null;
   let statsCache = null;
 
   function appState() {
@@ -1114,9 +1126,23 @@
 
   let gameDetailTab = "details";
 
+  function baseGameChoices(excludeId) {
+    return allGames().filter(game => game.id !== "custom" && game.id !== excludeId).sort((a,b) => sheetValue(a,"name").localeCompare(sheetValue(b,"name"),undefined,{sensitivity:"base",numeric:true}));
+  }
+  function customOwnershipMarkup(game, draft) {
+    const entry = game ? libraryEntry(game.id) : {owned:true,owners:[],wishlist:false};
+    const names = [...new Set(people().map(person => person.name).concat(entry.owners || []))].sort((a,b) => a.localeCompare(b));
+    return `<fieldset class="wide custom-ownership"><legend>Ownership</legend><div class="custom-owned-status"><label><input type="checkbox" name="customOwned" ${entry.owned || draft ? 'checked' : ''}> Owned</label><label><input type="checkbox" name="customWishlist" ${entry.wishlist ? 'checked' : ''}> On my wishlist</label></div><span class="eyebrow">Owners</span><div class="chip-grid">${names.map(name => { const person = people().find(person => sameName(person.name,name)); return `<label class="custom-owner-choice" style="--accent:${esc(u.normalizeColor(person?.color,'#94a3b8'))}"><input type="checkbox" name="gameOwners" value="${esc(name)}" ${(entry.owners || []).some(owner => sameName(owner,name)) ? 'checked' : ''}><span class="dot" aria-hidden="true"></span><span>${esc(name)}</span></label>`; }).join("")}</div><p class="setting-note">Select everyone who owns a copy. Wishlist stays independent.</p></fieldset>`;
+  }
+  function openExpansionEditor(parentId,name,trigger) {
+    const child = play.allGames(true).find(game => game.expansionOf === parentId && game.name === name);
+    if (child) { if (child.custom) openCustomGame(child.id); else openGame(child.id,trigger); return; }
+    openCustomGame("",{parentId,name});
+  }
+
   function expansionParentMarkup(game) {
     const parentId = libraryEntry(game.id).metadata?.expansionOf || "";
-    return `<label class="field"><span>Expansion of</span><select data-detail-expansion-parent="${esc(game.id)}"><option value="">Standalone game</option>${allGames().filter(parent => parent.id !== "custom" && parent.id !== game.id).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label>`;
+    return `<label class="field"><span>Expansion of</span><select data-detail-expansion-parent="${esc(game.id)}"><option value="">Standalone game</option>${baseGameChoices(game.id).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label>`;
   }
   function setExpansionParent(gameId, parentId) {
     const game = play.gameById(gameId);
@@ -1269,30 +1295,33 @@
 
   /* ---------- Custom games ---------- */
 
-  function openCustomGame(gameId) {
+  function openCustomGame(gameId, draft) {
     const form = document.querySelector("#customGameForm");
     const game = gameId ? play.gameById(gameId) : null;
     editingCustomGameId = game?.id || "";
-    document.querySelector("#customGameTitle").textContent = game ? "Edit game" : "Add a game";
+    editingExpansionDraft = draft || null;
+    document.querySelector("#customGameTitle").textContent = draft ? "Edit expansion" : game ? "Edit game" : "Add a game";
     document.querySelector("#customGameDelete").hidden = !game;
-    document.querySelector("#customGameSave").hidden = Boolean(game);
-    form.querySelector(".dialog-footer [data-close-dialog]").textContent = game ? "Close" : "Cancel";
-    const parentId = game ? libraryEntry(game.id).metadata?.expansionOf || "" : "";
+    document.querySelector("#customGameSave").hidden = Boolean(game || draft);
+    form.querySelector(".dialog-footer [data-close-dialog]").textContent = game || draft ? "Close" : "Cancel";
+    const parentId = draft?.parentId || (game ? libraryEntry(game.id).metadata?.expansionOf || "" : "");
     const field = (name, label, type, attrs, value, placeholder) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs || ''} value="${esc(value ?? '')}" ${placeholder ? `placeholder="${esc(placeholder)}"` : ''}></label>`;
     const value = (key, fallback) => game ? game[key] === "--" ? "" : game[key] ?? "" : fallback;
     const body = form.querySelector(".dialog-body");
     body.className = "dialog-body custom-game-fields custom-game-editor";
     body.innerHTML = `
-      <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Paste game info</button></div>
-      <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${allGames().filter(parent => parent.id !== "custom" && parent.id !== gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
+      <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || draft?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Paste game info</button></div>
+      <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${baseGameChoices(gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
       <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1" required',2], ["maxPlayers","Max players","number",'min="1" max="20" step="1" required',4], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
       <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1" required',value("minMinutes",30))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1" required',value("maxMinutes",60))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',value("complexityWeight",""),"Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
       <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
+      ${customOwnershipMarkup(game,draft)}
       <div class="wide custom-catalog-fields">${[["pasteMechanisms","Mechanisms (semicolon-separated)","mechanisms"],["pasteExpansions","Expansions (semicolon-separated)","expansions"]].map(([name,label,key]) => field(name,label,"text",'maxlength="10000"',game ? sheetValue(game,key) : "")).join("")}</div>
       ${bggLookupMarkup(game,true)}
       <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields were not supplied in the paste. Review or fill them in; numeric defaults are suggestions.</p>
       <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>`;
     body.querySelector("[data-bgg-lookup] [data-bgg-link]").closest(".bgg-lookup-row").remove();
+    if (draft) fillCustomGameFromPaste({name:draft.name});
     components.openDialog("#customGameDialog", { focus: "#customGameName" });
   }
 
@@ -1333,7 +1362,7 @@
       createdAt: u.isoNow()
     };
     const isNew = !editingCustomGameId;
-    const previousName = editingCustomGameId ? play.gameById(editingCustomGameId)?.name : "";
+    const previousName = editingCustomGameId ? play.gameById(editingCustomGameId)?.name : editingExpansionDraft?.name || "";
     storage.mutate(next => {
       const list = next.workspace.library.customGames;
       const index = list.findIndex(item => item.id === id);
@@ -1341,7 +1370,10 @@
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
-      const oldParent = entry.metadata?.expansionOf;
+      entry.owners = Array.from(form.querySelectorAll('[name="gameOwners"]:checked')).map(input => input.value);
+      entry.owned = form.elements.customOwned.checked || entry.owners.length > 0;
+      entry.wishlist = form.elements.customWishlist.checked;
+      const oldParent = entry.metadata?.expansionOf || editingExpansionDraft?.parentId;
       const newParent = values.gameKind === "expansion" ? values.expansionOf : "";
       if (oldParent && (oldParent !== newParent || previousName !== name)) {
         const parentEntry = next.workspace.library.games[oldParent];
@@ -1359,7 +1391,10 @@
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
-    if (autosave) { renderLibrary(); return; }
+    if (autosave) {
+      if (isNew) { editingCustomGameId = id; editingExpansionDraft = null; document.querySelector("#customGameDelete").hidden = false; document.querySelector("#customGameSave").hidden = true; }
+      renderLibrary(); return;
+    }
     components.closeDialog("#customGameDialog", "saved");
     components.toast(isNew ? name + " was added to your library as owned." : name + " was updated.", { title: isNew ? "Game added" : "Game saved", kind: "success" });
     renderLibrary();
@@ -1655,6 +1690,8 @@
     }
     const rate = event.target.closest("[data-sheet-rating]");
     if (rate) { openRatingPicker(rate); return; }
+    const editExpansion = event.target.closest("[data-edit-expansion]");
+    if (editExpansion) { openExpansionEditor(editExpansion.dataset.editExpansion,editExpansion.dataset.expansionName,editExpansion); return; }
     const disclosure = event.target.closest("[data-expand-game]");
     if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); return; }
     const info = event.target.closest("[data-sheet-info]");
@@ -1779,9 +1816,9 @@
     historyRoot = document.querySelector("#historyView");
     libraryRoot.addEventListener("click", handleLibraryClick);
     libraryRoot.addEventListener("mouseover", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags" && !button.contains(event.relatedTarget)) showSheetInfo(button, false); });
-    libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !document.querySelector("#libraryInfoPopover")?.contains(event.relatedTarget) && !infoPinned) hideSheetInfo(); });
+    libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !document.querySelector("#libraryInfoPopover")?.contains(event.relatedTarget) && !infoPinned) scheduleSheetInfoHide(); });
     libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags") showSheetInfo(button, false); });
-    libraryRoot.addEventListener("focusout", () => { if (!infoPinned) hideSheetInfo(); });
+    libraryRoot.addEventListener("focusout", scheduleSheetInfoHide);
     window.addEventListener("scroll", event => {
       if (!document.querySelector("#libraryInfoPopover")?.contains(event.target)) hideSheetInfo();
       if (!ratingPopup.contains(event.target)) hideRatingPicker();
@@ -1810,12 +1847,15 @@
     document.querySelector("#gameDialogFooter").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogBody").addEventListener("input", updateBggSearch);
     document.querySelector("#customGameForm").addEventListener("input", event => {
+      if (event.target.name === "gameOwners" && event.target.checked) event.currentTarget.elements.customOwned.checked = true;
+      if (event.target.name === "customOwned" && !event.target.checked) event.currentTarget.querySelectorAll('[name="gameOwners"]').forEach(input => { input.checked = false; });
+
       if (event.target.name) event.target.dataset.fieldKnown = event.target.value.trim() && event.target.checkValidity() ? "true" : "false";
       if (event.target.hasAttribute("data-paste-missing")) { const missing = !event.target.value.trim(); event.target.classList.toggle("paste-missing-field",missing); document.querySelector("#customGameMissingNote").hidden = !event.currentTarget.querySelector(".paste-missing-field"); }
 
       if (event.target.name === "gameKind") { const expansion = event.target.value === "expansion"; const field = event.currentTarget.querySelector("[data-expansion-parent-field]"); field.hidden = !expansion; field.querySelector("select").required = expansion; }
       updateBggSearch(event);
-      if (editingCustomGameId && event.target.name) saveCustomGame(event, true);
+      if ((editingCustomGameId || editingExpansionDraft) && event.target.name) saveCustomGame(event, true);
       if (event.target.name === "name") {
         const query = event.currentTarget.querySelector("[data-bgg-query]");
         if (query) { query.value = event.target.value; updateBggSearch({ target: query }); }
@@ -1862,7 +1902,7 @@
         if (appState().ui.view === "library") renderLibrary();
       }
     });
-    document.querySelector("#customGameForm").addEventListener("change", event => { if (editingCustomGameId && event.target.name) saveCustomGame(event, true); });
+    document.querySelector("#customGameForm").addEventListener("change", event => { if ((editingCustomGameId || editingExpansionDraft) && event.target.name) saveCustomGame(event, true); });
     document.querySelector("#customGameForm").addEventListener("submit", saveCustomGame);
     document.querySelector("#customGameDelete").addEventListener("click", deleteCustomGame);
     document.querySelector("#historyDialogBody").addEventListener("change", event => {
