@@ -826,3 +826,28 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .expansion-count .glyph { transition: none; } }
 
 .library-sheet .sheet-category .main-game-tag { white-space: nowrap; max-width: none; }
+
+/* Compact spreadsheet rows and a grouped game form. */
+#customGameDialog { width: min(1320px, calc(100vw - 2rem)); max-height: calc(100svh - 2rem); }
+.custom-game-editor { grid-template-columns: minmax(0, 1fr); gap: .65rem; }
+.custom-name-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr) auto; gap: .65rem; align-items: end; }
+.custom-player-fields, .custom-timing-fields { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .65rem; }
+.custom-types-row { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(0, 4fr); gap: .65rem; align-items: center; }
+.custom-types-row .additional-types { margin: 0; }
+.custom-types-row .additional-types > div { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.custom-catalog-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+#customGameDialog .field :is(input, select) { width: 100%; }
+#customGameDialog input.paste-missing-field { background: #fff1a6; color: #302400; border-color: #ba8800; box-shadow: inset 0 0 0 1px #ba8800; }
+#customGameDialog input.paste-missing-field::placeholder { color: #756100; }
+.library-sheet tbody > tr:not(.is-pinned-game) > :is(th,td) { white-space: nowrap; padding-block: .25rem; }
+.library-sheet tr:not(.is-pinned-game) .owner-pills { flex-wrap: nowrap; max-width: 220px; overflow-x: auto; scrollbar-width: none; }
+.library-sheet tr:not(.is-pinned-game) .owner-pill { flex-shrink: 0; }
+.library-sheet tr:not(.is-pinned-game) .player-count-badges { display: flex; flex-wrap: nowrap; width: max-content; max-width: 150px; overflow-x: auto; scrollbar-width: none; }
+.library-sheet tr:not(.is-pinned-game) .player-count-square { flex: 0 0 17px; }
+.library-sheet tr:not(.is-pinned-game) :is(.owner-pills,.player-count-badges)::-webkit-scrollbar { display: none; }
+#libraryInfoPopover .unowned-expansion-list { margin: 0; padding: 0; }
+@media (max-width: 760px) {
+  .custom-name-row, .custom-types-row { grid-template-columns: 1fr; }
+  .custom-player-fields, .custom-timing-fields, .custom-catalog-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .custom-types-row .additional-types > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

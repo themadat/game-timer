@@ -177,7 +177,7 @@
         rating: Math.round(cleanNumber(entry.rating, 0, 5, 0) * 2) / 2,
         note: u.cleanText(entry.note, 1000).trim(),
         metadata: {
-          year: /^\d{1,4}$/.test(String(entry.metadata?.year || "")) && Number(entry.metadata.year) > 0 ? Number(entry.metadata.year) : null,
+          year: /^-?\d{1,4}$/.test(String(entry.metadata?.year ?? "")) ? Number(entry.metadata.year) : null,
           bggRating: Number(entry.metadata?.bggRating) >= 1 && Number(entry.metadata?.bggRating) <= 10 ? Math.round(Number(entry.metadata.bggRating) * 100) / 100 : null,
           category: u.cleanLine(entry.metadata?.category, 1000),
           bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
@@ -203,7 +203,7 @@
       if (Object.keys(catalog).length) normalized.metadata.catalog = catalog;
       const setup = normalizeGameSetup(entry.metadata?.setup);
       if (Object.keys(setup).length) normalized.metadata.setup = setup;
-      if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
+      if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || normalized.metadata.year === 0 || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
     });
     Object.entries(games).forEach(function ([id, entry]) {
       const parentId = entry.metadata.expansionOf;

@@ -479,3 +479,26 @@ test('normalization reconnects linked expansions to a missing parent expansion l
   const normalized=App.stateModel.normalize(state);
   assert.deepEqual(plain(normalized.workspace.library),plain(state.workspace.library));
 });
+
+test('negative published years parse from correction and overview and survive sync', () => {
+  const { App }=load();
+  assert.equal(App.library.parseBggPaste('Edit Name Ancient Game\nEdit Year Released -500').fields.year,-500);
+  const overview=App.library.parseBggPaste('# [Ancient Game](https://boardgamegeek.com/boardgame/123/ancient-game)(-500)\n2–4 Players');
+  assert.equal(overview.fields.year,-500);
+  assert.equal(overview.fields.name,'Ancient Game');
+  const state=App.stateModel.createDefaultState({demo:false});
+  state.workspace.library.games.root={metadata:{year:-500}};
+  state.workspace.library.games.catan={metadata:{year:0}};
+  const restored=App.stateModel.prepareSync(App.stateModel.syncPayload(App.stateModel.normalize(state))).state;
+  assert.equal(restored.workspace.library.games.root.metadata.year,-500);
+  assert.equal(restored.workspace.library.games.catan.metadata.year,0);
+});
+
+test('overview, player poll and correction can be parsed together in form display order', () => {
+  const { App }=load();
+  const fields=App.library.parseBggPaste(['bgg-overview.md','bgg-poll.md','bgg-correction.txt'].map(pasteFixture).join('\n\n')).fields;
+  assert.equal(fields.name,'Dune');
+  assert.equal(fields.bggId,'283355');
+  assert.equal(fields.bestPlayers,'6');
+  assert.ok(fields.mechanisms.includes('Variable Player Powers'));
+});

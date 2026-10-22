@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.14";
+  const VERSION = "2.1.0.15";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-22T23:00:00.000Z",
+        title: "Grouped game form and compact library rows",
+        summary: "Game forms group identity, player counts, and types, and highlight fields missing from pasted information.",
+        features: ["Negative published years", "Yellow highlights for missing pasted fields"],
+        improvements: ["BGG ID beside the name; player fields on one desktop line", "Main Type and Additional Types grouped together", "Paste inputs ordered overview, player recommendations, correction", "Compact game rows with unowned expansion lists in a popup"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.14",
         date: "2026-10-22T22:00:00.000Z",
         title: "Linked expansions and colored hosts",
         summary: "Host pills use player colors, expansion disclosures sit beside the year, and new games can be linked as expansions.",

@@ -46,14 +46,14 @@
     };
     const editName = text.match(/^Edit Name[\t ]+(?!Set as Primary Name\b)([^\n]+)/mi) || text.match(/^Edit Name[\t ]*\n([^\n]+)/mi);
     if (editName && !/\(alternate\)/i.test(editName[1])) fields.name = editName[1].trim().slice(0, 100);
-    const heading = raw.match(/^\s*#{1,6}\s*\[([^\]]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})\/[^\n)]*\)\s*\((\d{4})\)/mi);
-    const plainHeading = text.match(/^(?:#{1,6}\s*)?([^\n|]+?)\s*\((\d{4})\)\s*$/m);
+    const heading = raw.match(/^\s*#{1,6}\s*\[([^\]]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})\/[^\n)]*\)\s*\((-?\d{1,4})\)/mi);
+    const plainHeading = text.match(/^(?:#{1,6}\s*)?([^\n|]+?)\s*\((-?\d{1,4})\)\s*$/m);
     if (heading) {
       fields.name = heading[1].trim().slice(0, 100); fields.bggId = heading[2]; fields.year = Number(heading[3]);
     } else if (plainHeading && !/alternate/i.test(plainHeading[1])) {
       fields.name = plainHeading[1].trim().slice(0, 100); fields.year = Number(plainHeading[2]);
     }
-    number("year", /(?:Edit\s+)?Year Released(?:\s+more information)?\s*[:\t ]*\n?\s*(\d{4})\b/i, 1, 9999);
+    number("year", /(?:Edit\s+)?Year Released(?:\s+more information)?\s*[:\t ]*\n?\s*(-?\d{1,4})\b/i, -9999, 9999);
     number("minPlayers", /(?:Edit\s+)?Minimum Players(?:\s+more information)?\s*[:\t ]*\n?\s*(\d+)\b/i, 1, 20);
     number("maxPlayers", /(?:Edit\s+)?Maximum Players(?:\s+more information)?\s*[:\t ]*\n?\s*(\d+)\b/i, 1, 20);
     number("minMinutes", /(?:Edit\s+)?Minimum Playing Time(?:\s+more information)?\s*[:\t ]*\n?\s*(\d+)\b/i, 1, 1440);
@@ -166,7 +166,7 @@
     document.querySelectorAll("[data-game-paste-input]").forEach(input => { input.value = ""; });
     pasteParsed = { fields: {}, warnings: [] };
     renderPastePreview();
-    components.openDialog("#gamePasteDialog", { trigger, focus: "#gamePasteText" });
+    components.openDialog("#gamePasteDialog", { trigger, focus: "#gamePasteOverview" });
   }
   function renderPastePreview() {
     const game = selectedPasteGame();
@@ -211,8 +211,18 @@
     const form = document.querySelector("#customGameForm");
     Object.entries(fields).forEach(([key, value]) => {
       const name = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
-      if (form.elements[name]) form.elements[name].value = Array.isArray(value) ? value.join("; ") : value;
+      if (form.elements[name]) { form.elements[name].value = Array.isArray(value) ? value.join("; ") : value; form.elements[name].dataset.fieldKnown = "true"; }
     });
+    Object.keys(PASTE_LABELS).forEach(key => {
+      const name = ({ year:"pasteYear",bggRating:"pasteBggRating",category:"pasteTags",mechanisms:"pasteMechanisms",expansions:"pasteExpansions",bggId:"bggLink" })[key] || key;
+      const input = form.elements[name];
+      if (!input) return;
+      const missing = !Object.prototype.hasOwnProperty.call(fields,key) && input.dataset.fieldKnown !== "true" && (!editingCustomGameId || !input.value.trim());
+      input.classList.toggle("paste-missing-field",missing);
+      if (missing) input.setAttribute("data-paste-missing", ""); else input.removeAttribute("data-paste-missing");
+      input.setAttribute("aria-describedby","customGameMissingNote");
+    });
+    document.querySelector("#customGameMissingNote").hidden = !form.querySelector(".paste-missing-field");
     const query = form.querySelector("[data-bgg-query]");
     query.value = form.elements.name.value;
     updateBggSearch({ target: query });
@@ -265,7 +275,7 @@
       const label = fit.key === "plays" ? `Neutral at ${count}` : fit.label || `${count} players`;
       badges.push(`<span class="player-count-square is-${fit.key}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${icons.markup(`number${count}SquareFill`)}</span>`);
     }
-    return `<span class="player-count-badges">${badges.join("")}</span>`;
+    return `<span class="player-count-badges" ${game.id !== "custom" && game.maxPlayers > 8 ? 'tabindex="0" aria-label="Player counts; scroll horizontally for more"' : ''}>${badges.join("")}</span>`;
   }
 
   function sheetInfoButton(game, key, icon, label) {
@@ -275,9 +285,14 @@
 
   let infoAnchor = null;
   let infoPinned = false;
+  function resetInfoExpanded(button) {
+    if (!button) return;
+    const game = button.dataset.expandGame ? play.gameById(button.dataset.expandGame) : null;
+    button.setAttribute("aria-expanded", game ? Boolean(expansionsExpanded(game)) : false);
+  }
   function hideSheetInfo() {
     document.querySelector("#libraryInfoPopover")?.hidePopover();
-    infoAnchor?.setAttribute("aria-expanded", "false");
+    resetInfoExpanded(infoAnchor);
     infoAnchor = null;
     infoPinned = false;
   }
@@ -292,10 +307,11 @@
       popup.setAttribute("popover", "auto");
       document.body.appendChild(popup);
       popup.addEventListener("change", handleMetadataChoice);
+      popup.addEventListener("click", event => { const button = event.target.closest("[data-open-game]"); if (button) { hideSheetInfo(); openGame(button.dataset.openGame, button); } });
       popup.addEventListener("mouseleave", () => { if (!infoPinned) hideSheetInfo(); });
-      popup.addEventListener("toggle", event => { if (event.newState === "closed") { infoAnchor?.setAttribute("aria-expanded", "false"); infoAnchor = null; infoPinned = false; } });
+      popup.addEventListener("toggle", event => { if (event.newState === "closed") { resetInfoExpanded(infoAnchor); infoAnchor = null; infoPinned = false; } });
     }
-    infoAnchor?.setAttribute("aria-expanded", "false");
+    resetInfoExpanded(infoAnchor);
     popup.dataset.kind = button.dataset.infoKind || "info";
     const game = button.dataset.infoGame ? play.gameById(button.dataset.infoGame) : null;
     const factions = game && button.dataset.infoKind === "factions" ? factionColors(game) : [];
@@ -306,6 +322,7 @@
       popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong><ul class="tag-values">${values.length ? values.map(value => `<li>${esc(value)}</li>`).join("") : '<li>None added</li>'}</ul>`;
     }
     if (game && button.dataset.infoKind === "expansions") popup.innerHTML = `<strong>Expansions I have</strong><div class="expansion-checklist">${gameTagGroups(game).Expansions.map(name => expansionOwnershipMarkup(game, name)).join("")}</div>`;
+    if (game && button.dataset.infoKind === "unownedExpansions") popup.innerHTML = unownedExpansionList(game);
     popup.showPopover();
     infoAnchor = button;
     infoPinned = Boolean(pin);
@@ -321,8 +338,8 @@
   function sheetValue(game, key) {
     const entry = libraryEntry(game.id);
     const metadata = entry.metadata || {};
-    if (key === "name") return game.name.replace(/\s*\(\d{4}\)$/, "");
-    if (key === "year") return metadata.year || Number(game.name.match(/\((\d{4})\)$/)?.[1]) || null;
+    if (key === "name") return game.name.replace(/\s*\(-?\d{1,4}\)$/, "");
+    if (key === "year") return metadata.year ?? (game.name.match(/\((-?\d{1,4})\)$/) ? Number(game.name.match(/\((-?\d{1,4})\)$/)[1]) : null);
     if (key === "rating") return entry.rating || null;
     if (key === "owners") return entry.owned ? (entry.owners.join(", ") || "Shared") : entry.wishlist ? "Wishlist" : "Not owned";
     if (key === "note") return entry.note;
@@ -364,6 +381,15 @@
   function expansionsExpanded(game) {
     return moduleState().expansionDisclosure?.[game.id] ?? moduleState().showExpansions;
   }
+  function showUnownedExpansions(gameId) {
+    const game = play.gameById(gameId);
+    const button = libraryRoot.querySelector(`[data-expand-game="${CSS.escape(gameId)}"]`);
+    if (!game || !button || !unownedExpansionList(game)) return;
+    button.dataset.infoGame = gameId;
+    button.dataset.infoKind = "unownedExpansions";
+    button.dataset.infoLabel = "Other expansions";
+    showSheetInfo(button, true);
+  }
   function unownedExpansionList(game) {
     if (!expansionsExpanded(game)) return "";
     const owned = libraryEntry(game.id).metadata?.ownedExpansions || [];
@@ -404,6 +430,7 @@
     }
     if (appState().ui.view === "library") renderLibrary();
     if (inPopup) {
+      if (kind === "expansions") { showUnownedExpansions(gameId); return true; }
       const anchor = libraryRoot.querySelector(`[data-info-kind="${kind}"][data-info-game="${CSS.escape(gameId)}"]`);
       if (anchor) {
         showSheetInfo(anchor, true);
@@ -508,7 +535,7 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${gameTagGroups(game).Expansions.length ? `<button type="button" class="expansion-count" data-expand-game="${id}" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${expansionsExpanded(game) ? 'Collapse' : 'Expand'} ${gameTagGroups(game).Expansions.length} expansions for ${esc(game.name)}">${symbol("chevronDown")}<span>[${gameTagGroups(game).Expansions.length}]</span></button>` : ''}</span></div>${unownedExpansionList(game)}</th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") !== null ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${gameTagGroups(game).Expansions.length ? `<button type="button" class="expansion-count" data-expand-game="${id}" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${expansionsExpanded(game) ? 'Collapse' : 'Expand'} ${gameTagGroups(game).Expansions.length} expansions for ${esc(game.name)}">${symbol("chevronDown")}<span>[${gameTagGroups(game).Expansions.length}]</span></button>` : ''}</span></div></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
@@ -771,7 +798,7 @@
   function bggLookupMarkup(game, customForm) {
     const name = game ? sheetValue(game, "name") : "";
     const bggId = game ? sheetValue(game, "bggId") : "";
-    return `<section class="bgg-lookup ${customForm ? 'wide' : 'detail-section'}" data-bgg-lookup><h3>BGG lookup</h3><p class="setting-note">Search BoardGameGeek, then paste the game’s page link below to connect it.</p><div class="bgg-lookup-row"><label class="field grow-control"><span>Game name</span><input type="search" data-bgg-query maxlength="100" value="${esc(name)}" autocomplete="off"></label><a class="button" data-bgg-search href="https://boardgamegeek.com/geeksearch.php?action=search&amp;objecttype=boardgame&amp;q=${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">${symbol("libraryWeb")}Search BGG</a></div><div class="bgg-lookup-row"><label class="field grow-control"><span>BGG game link or ID</span><input type="text" data-bgg-link ${customForm ? 'name="bggLink"' : ''} maxlength="500" value="${esc(bggId || '')}" placeholder="https://boardgamegeek.com/boardgame/…" autocomplete="off"></label>${customForm ? '' : '<button class="button" type="button" data-bgg-apply>Link game</button>'}</div><p class="setting-note" data-bgg-status role="status">${bggId ? `Linked to BGG #${esc(bggId)}.` : ''}</p></section>`;
+    return `<section class="bgg-lookup ${customForm ? 'wide' : 'detail-section'}" data-bgg-lookup><h3>BGG lookup</h3><p class="setting-note">${customForm ? 'Search BoardGameGeek, then paste its ID or link beside Name above.' : 'Search BoardGameGeek, then paste the game’s page link below to connect it.'}</p><div class="bgg-lookup-row"><label class="field grow-control"><span>Game name</span><input type="search" data-bgg-query maxlength="100" value="${esc(name)}" autocomplete="off"></label><a class="button" data-bgg-search href="https://boardgamegeek.com/geeksearch.php?action=search&amp;objecttype=boardgame&amp;q=${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">${symbol("libraryWeb")}Search BGG</a></div><div class="bgg-lookup-row"><label class="field grow-control"><span>BGG game link or ID</span><input type="text" data-bgg-link ${customForm ? 'name="bggLink"' : ''} maxlength="500" value="${esc(bggId || '')}" placeholder="https://boardgamegeek.com/boardgame/…" autocomplete="off"></label>${customForm ? '' : '<button class="button" type="button" data-bgg-apply>Link game</button>'}</div><p class="setting-note" data-bgg-status role="status">${bggId ? `Linked to BGG #${esc(bggId)}.` : ''}</p></section>`;
   }
 
   function bggIdFromInput(value) {
@@ -971,7 +998,7 @@
         const child = next.workspace.library.customGames.find(game => game.id === gameId);
         if (parent?.metadata && child) { const owned = parent.metadata.ownedExpansions || []; parent.metadata.ownedExpansions = entry.owned ? [...new Set(owned.concat(child.name))] : owned.filter(name => name !== child.name); }
       }
-      if (entry.owned || entry.wishlist || entry.rating || entry.note || Object.values(entry.metadata || {}).some(Boolean)) games[gameId] = entry;
+      if (entry.owned || entry.wishlist || entry.rating || entry.note || entry.metadata?.year === 0 || Object.values(entry.metadata || {}).some(Boolean)) games[gameId] = entry;
       else delete games[gameId];
     }, { reason: reason || "library-edit" });
   }
@@ -1112,7 +1139,7 @@
         </div>
         <div role="tabpanel" id="game-panel-catalog" aria-labelledby="game-tab-catalog" ${gameDetailTab !== "catalog" ? 'hidden' : ''} class="game-details-grid">
         ${bggLookupMarkup(game, false)}
-        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Categories (comma-separated)", "text", "maxlength=\"1000\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
+        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"-9999\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Categories (comma-separated)", "text", "maxlength=\"1000\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) ?? '')}"></label>`).join("")}</div></section>
         </div>
         <section class="detail-section" role="tabpanel" id="game-panel-plays" aria-labelledby="game-tab-plays" ${gameDetailTab !== "plays" ? 'hidden' : ''}>
           <h3>Your plays</h3>
@@ -1214,32 +1241,27 @@
   function openCustomGame(gameId) {
     const form = document.querySelector("#customGameForm");
     const game = gameId ? play.gameById(gameId) : null;
-    editingCustomGameId = game ? game.id : "";
-    form.reset();
+    editingCustomGameId = game?.id || "";
     document.querySelector("#customGameTitle").textContent = game ? "Edit game" : "Add a game";
     document.querySelector("#customGameDelete").hidden = !game;
     document.querySelector("#customGameSave").hidden = Boolean(game);
     form.querySelector(".dialog-footer [data-close-dialog]").textContent = game ? "Close" : "Cancel";
-    document.querySelector("#customGameValidation").hidden = true;
-    if (game) ["name", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "complexityWeight", "minMinutes", "maxMinutes"].forEach(key => {
-      const value = game[key];
-      form.elements[key].value = value === null || value === undefined || value === "--" ? "" : value;
-    });
-    form.querySelector("[data-game-kind-fields]")?.remove();
     const parentId = game ? libraryEntry(game.id).metadata?.expansionOf || "" : "";
-    form.querySelector("#customGameName").closest("label").insertAdjacentHTML("afterend", `<div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${allGames().filter(parent => parent.id !== "custom" && parent.id !== gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>`);
-    let extra = form.querySelector("[data-custom-paste-fields]");
-    if (extra) extra.remove();
-    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
-    form.querySelector("[data-custom-paste-fields]").insertAdjacentHTML("beforeend", `<div class="wide">${additionalTypesMarkup(game, true)}</div>`);
-    let lookup = form.querySelector("[data-bgg-lookup]");
-    if (lookup) lookup.remove();
-    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", bggLookupMarkup(game, true));
-    if (!game) {
-      const query = form.querySelector("[data-bgg-query]");
-      query.value = form.elements.name.value;
-      updateBggSearch({ target: query });
-    }
+    const field = (name, label, type, attrs, value, placeholder) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs || ''} value="${esc(value ?? '')}" ${placeholder ? `placeholder="${esc(placeholder)}"` : ''}></label>`;
+    const value = (key, fallback) => game ? game[key] === "--" ? "" : game[key] ?? "" : fallback;
+    const body = form.querySelector(".dialog-body");
+    body.className = "dialog-body custom-game-fields custom-game-editor";
+    body.innerHTML = `
+      <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Paste game info</button></div>
+      <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${allGames().filter(parent => parent.id !== "custom" && parent.id !== gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
+      <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1" required',2], ["maxPlayers","Max players","number",'min="1" max="20" step="1" required',4], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
+      <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1" required',value("minMinutes",30))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1" required',value("maxMinutes",60))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',value("complexityWeight",""),"Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
+      <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
+      <div class="wide custom-catalog-fields">${[["pasteTags","Categories (comma-separated)","category"],["pasteMechanisms","Mechanisms (semicolon-separated)","mechanisms"],["pasteExpansions","Expansions (semicolon-separated)","expansions"]].map(([name,label,key]) => field(name,label,"text",'maxlength="10000"',game ? sheetValue(game,key) : "")).join("")}</div>
+      ${bggLookupMarkup(game,true)}
+      <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields were not supplied in the paste. Review or fill them in; numeric defaults are suggestions.</p>
+      <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>`;
+    body.querySelector("[data-bgg-lookup] [data-bgg-link]").closest(".bgg-lookup-row").remove();
     components.openDialog("#customGameDialog", { focus: "#customGameName" });
   }
 
@@ -1617,7 +1639,7 @@
       return;
     }
     const disclosure = event.target.closest("[data-expand-game]");
-    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); return; }
+    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); if (!expanded) showUnownedExpansions(id); return; }
     const host = event.target.closest("[data-host]");
     if (host) {
       const name = host.dataset.host;
@@ -1757,6 +1779,9 @@
     document.querySelector("#gameDialogFooter").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogBody").addEventListener("input", updateBggSearch);
     document.querySelector("#customGameForm").addEventListener("input", event => {
+      if (event.target.name) event.target.dataset.fieldKnown = event.target.value.trim() && event.target.checkValidity() ? "true" : "false";
+      if (event.target.hasAttribute("data-paste-missing")) { const missing = !event.target.value.trim(); event.target.classList.toggle("paste-missing-field",missing); document.querySelector("#customGameMissingNote").hidden = !event.currentTarget.querySelector(".paste-missing-field"); }
+
       if (event.target.name === "gameKind") { const expansion = event.target.value === "expansion"; const field = event.currentTarget.querySelector("[data-expansion-parent-field]"); field.hidden = !expansion; field.querySelector("select").required = expansion; }
       updateBggSearch(event);
       if (editingCustomGameId && event.target.name) saveCustomGame(event, true);
