@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.16";
+  const VERSION = "2.1.0.17";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,14 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T00:10:00.000Z",
+        title: "Complete expansion rows",
+        summary: "Linked expansions show their saved game details in every column, with cleaner disclosure behavior.",
+        improvements: ["Hide expansion popups while their rows are expanded", "Display linked expansion ratings, players, timing, types, notes, and other saved fields", "Center the Mechanism dropdown arrow vertically"],
+        features: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.16",
         date: "2026-10-23T00:00:00.000Z",
         title: "Compact names and expansion ownership counts",
         summary: "Name columns use less space, expansion counts show ownership with color, and existing games can be linked to a base game.",

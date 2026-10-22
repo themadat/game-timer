@@ -297,6 +297,10 @@
     infoPinned = false;
   }
   function showSheetInfo(button, pin) {
+    if (button.dataset.expandGame && expansionsExpanded(play.gameById(button.dataset.expandGame))) {
+      if (infoAnchor?.dataset.expandGame === button.dataset.expandGame) hideSheetInfo();
+      return;
+    }
     if (pin && infoAnchor === button && infoPinned) { hideSheetInfo(); return; }
     if (!pin && infoPinned) return;
     let popup = document.querySelector("#libraryInfoPopover");
@@ -442,7 +446,7 @@
     return true;
   }
   function gameListButton(game, kind, label, values) {
-    return `<button class="game-tag" type="button" data-info-game="${esc(game.id)}" data-info-kind="${kind}" data-info-label="${label}" data-sheet-info="${esc(values.join('\n') || 'None added')}" aria-expanded="false">${esc(values[0] || '—')}${values.length > 1 ? ` +${values.length - 1}` : ''}${symbol("chevronDown")}</button>`;
+    return `<button class="game-tag" type="button" data-info-game="${esc(game.id)}" data-info-kind="${kind}" data-info-label="${label}" data-sheet-info="${esc(values.join('\n') || 'None added')}" aria-expanded="false"><span class="game-tag-label">${esc(values[0] || '—')}${values.length > 1 ? ` +${values.length - 1}` : ''}</span>${symbol("chevronDown")}</button>`;
   }
 
   function refreshSheetPosition(focusSelector) {
@@ -531,12 +535,12 @@
       : `<span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" title="${esc(color.name)}" role="img" aria-label="${esc(color.name)}"></span>`).join("")}</span>`;
   }
 
-  function gameRow(game) {
+  function gameRow(game, parent) {
     const id = esc(game.id);
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") !== null ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line">${parent ? '<span class="expansion-indent" aria-hidden="true">↳</span>' : ''}<button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") !== null ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
@@ -546,7 +550,7 @@
         content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average"><span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
       }
       if (key === "minPlayers") content = playerCountBadges(game);
-      if (key === "owners") content = ownerPillsMarkup(game);
+      if (key === "owners") content = parent ? `<span class="expansion-row-owners">${expansionOwnershipMarkup(parent,game.name,true)}${ownerPillsMarkup(game)}</span>` : ownerPillsMarkup(game);
       if (key === "mainType") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type and Additional Types" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type and Additional Types" aria-expanded="false">${esc(combinedGameType(game))}${symbol("chevronDown")}</button>`;
       if (key === "mechanisms") content = gameListButton(game, key, "Mechanism", gameTagGroups(game).Mechanism);
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
@@ -558,13 +562,18 @@
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
-    return `<tr${game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell"><button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button></td>${cells}</tr>`;
+    return `<tr${parent ? ` class="sheet-expansion-row" data-expansion-parent="${esc(parent.id)}"` : game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
   }
 
   function expansionRows(game) {
     if (!expansionsExpanded(game)) return "";
     const owned = libraryEntry(game.id).metadata?.ownedExpansions || [];
-    return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${play.allGames(true).some(child => child.expansionOf === game.id && child.name === name) ? `<button type="button" class="text-link" data-open-game="${esc(play.allGames(true).find(child => child.expansionOf === game.id && child.name === name).id)}">${esc(name)}</button>` : esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`).join("");
+    const linked = play.allGames(true).filter(child => child.expansionOf === game.id);
+    return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => {
+      const child = linked.find(child => child.name === name);
+      if (child) return gameRow(child,game);
+      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
+    }).join("");
   }
 
   function gameSheet(games) {
@@ -1647,7 +1656,7 @@
     const rate = event.target.closest("[data-sheet-rating]");
     if (rate) { openRatingPicker(rate); return; }
     const disclosure = event.target.closest("[data-expand-game]");
-    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); if (!expanded) showUnownedExpansions(id); return; }
+    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); return; }
     const info = event.target.closest("[data-sheet-info]");
     if (info) { showSheetInfo(info, true); return; }
     const heading = event.target.closest("[data-sheet-sort]");

@@ -869,3 +869,10 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .custom-catalog-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
 
 .game-linking-panel { display: grid; align-content: start; gap: .75rem; min-width: 0; }
+
+/* Detailed expansion rows reuse the normal cells and keep their disclosure separate. */
+.expansion-indent { flex: 0 0 auto; font-weight: 500; }
+.expansion-row-owners { display: inline-flex; align-items: center; gap: .4rem; }
+.library-sheet .sheet-mechanisms .game-tag { display: inline-flex; align-items: center; vertical-align: middle; gap: .3rem; line-height: 1.25; }
+.game-tag-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-sheet .sheet-mechanisms .game-tag .glyph { display: inline-flex; align-self: center; flex-shrink: 0; }
