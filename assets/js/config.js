@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.25";
+  const VERSION = "2.1.0.26";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T02:15:00.000Z",
+        title: "Expansion notes editing",
+        summary: "Double-click Notes on name-only expansion rows to add notes without opening the editor.",
+        features: [], improvements: [], fixes: ["Enable inline notes for name-only expansions; create their linked record only when a note is saved"], knownIssues: []
+      },
+      {
+        version: "2.1.0.25",
         date: "2026-10-23T02:00:00.000Z",
         title: "Edit notes in the library table",
         summary: "Double-click a Notes cell to edit it directly. Click away to save or press Escape to cancel.",

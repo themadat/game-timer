@@ -610,8 +610,8 @@
 
   function editSheetNote(cell) {
     if (!cell || cell.querySelector("textarea")) return;
-    const id = cell.dataset.editNote;
-    const original = libraryEntry(id).note || "";
+    let id = cell.dataset.editNote;
+    const original = id ? libraryEntry(id).note || "" : "";
     const input = document.createElement("textarea");
     input.className = "sheet-note-editor";
     input.maxLength = 1000;
@@ -624,7 +624,21 @@
       if (finished) return;
       finished = true;
       const note = save ? u.cleanText(input.value, 1000).trim() : original;
-      if (save && note !== original) mutateLibrary(id, entry => { entry.note = note; });
+      if (save && note !== original) {
+        if (!id) {
+          const parentId = cell.dataset.noteParent;
+          const name = cell.dataset.noteExpansion;
+          const existing = play.allGames(true).find(game => game.expansionOf === parentId && game.name === name);
+          id = existing?.id || u.uid("custom-game");
+          storage.mutate(next => {
+            if (!existing) next.workspace.library.customGames.push({id, name, createdAt: u.isoNow()});
+            const entry = next.workspace.library.games[id] || {owned:true, owners:[], wishlist:false, rating:0, metadata:{expansionOf:parentId}};
+            entry.note = note;
+            next.workspace.library.games[id] = entry;
+          }, {reason:"expansion-note"});
+          cell.dataset.editNote = id;
+        } else mutateLibrary(id, entry => { entry.note = note; });
+      }
       cell.title = note;
       cell.innerHTML = note ? `<span class="sheet-cell-text">${esc(note)}</span>` : '<span class="sheet-missing" aria-label="Not recorded">—</span>';
     };
@@ -648,7 +662,7 @@
     return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => {
       const child = linked.find(child => child.name === name);
       if (child) return gameRow(child,game);
-      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ <button type="button" class="text-link" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? '<span class="owner-pill">Owned</span>' : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
+      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ <button type="button" class="text-link" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="" data-note-parent="${esc(game.id)}" data-note-expansion="${esc(name)}" tabindex="0" aria-label="Notes for ${esc(name)}; double-click or press Enter to edit"` : ''}>${key === "owners" ? '<span class="owner-pill">Owned</span>' : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
     }).join("");
   }
 
