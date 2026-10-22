@@ -20,7 +20,7 @@
   const LIBRARY_TABS = ["games", "people"];
   const LIBRARY_OWNERSHIP = ["all", "owned", "available", "unowned", "wishlist", "played", "unplayed"];
   const ADDITIONAL_GAME_TYPES = ["Abstract", "Customizable", "Thematic", "Family", "Children's", "Party", "Strategy", "Wargames"];
-  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "categories", "mechanisms", "note", "bggId", "turnStart", "factions", "verified", "colors", "owners"];
+  const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "mainType", "mechanisms", "note", "bggId", "turnStart", "factions", "verified", "colors", "owners"];
   const gameData = App.gameData || { QUICK_PLAYERS: [], NAMED_COLORS: {}, GAME_PRESETS: [] };
 
   function demoRecords(now) {
@@ -752,7 +752,7 @@
         library: {
           tab: LIBRARY_TABS.includes(sourceLibraryUi.tab) ? sourceLibraryUi.tab : "games",
           search: u.cleanLine(sourceLibraryUi.search, 200),
-          category: !sourceLibraryUi.mainType && ["Board", "Cards", "Coop", "1v1", "Table"].includes(sourceLibraryUi.category) ? "all" : u.cleanLine(sourceLibraryUi.category, 100) || "all",
+          category: "all",
           mechanism: u.cleanLine(sourceLibraryUi.mechanism, 150) || "all",
           mainType: ["Board", "Cards", "Coop", "1v1", "Table", ...ADDITIONAL_GAME_TYPES.map(type => "additional:" + type)].includes(sourceLibraryUi.mainType || sourceLibraryUi.category) ? sourceLibraryUi.mainType || sourceLibraryUi.category : "all",
           showExpansions: sourceLibraryUi.showExpansions === true,
@@ -763,7 +763,7 @@
           ownership: LIBRARY_OWNERSHIP.includes(sourceLibraryUi.ownership) ? sourceLibraryUi.ownership : "all",
           present: Array.from(new Set((Array.isArray(sourceLibraryUi.present) ? sourceLibraryUi.present : []).map(function (name) { return u.cleanLine(name, 60); }).filter(function (name) { return people.some(function (person) { return person.name === name; }); }))),
           playerCount: Math.round(cleanNumber(sourceLibraryUi.playerCount, 0, 20, 0)),
-          sortBy: LIBRARY_SORTS.includes(sourceLibraryUi.sortBy) ? sourceLibraryUi.sortBy : "fit",
+          sortBy: sourceLibraryUi.sortBy === "category" ? "mainType" : LIBRARY_SORTS.includes(sourceLibraryUi.sortBy) ? sourceLibraryUi.sortBy : "fit",
           sortDirection: sourceLibraryUi.sortDirection === "desc" ? "desc" : "asc"
         },
         history: {

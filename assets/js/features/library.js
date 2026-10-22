@@ -25,7 +25,7 @@
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
-  const PASTE_LABELS = { name: "Name", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", category: "Categories", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
+  const PASTE_LABELS = { name: "Name", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
 
   // Plain clipboard text only: never interpret pasted HTML or execute markup.
   function parseBggPaste(value) {
@@ -171,12 +171,12 @@
   function renderPastePreview() {
     const game = selectedPasteGame();
     const fields = pasteParsed.fields;
-    const keys = Object.keys(fields);
+    const keys = Object.keys(fields).filter(key => key !== "category");
     const mismatch = game && fields.name && pasteNameKey(fields.name) !== pasteNameKey(game.name);
     const current = key => {
       if (pasteContext === "custom") {
         const form = document.querySelector("#customGameForm");
-        const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
+        const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
         return form.elements[inputName]?.value || "—";
       }
       if (!game) return "—";
@@ -210,11 +210,11 @@
   function fillCustomGameFromPaste(fields) {
     const form = document.querySelector("#customGameForm");
     Object.entries(fields).forEach(([key, value]) => {
-      const name = ({ year: "pasteYear", bggRating: "pasteBggRating", category: "pasteTags", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
+      const name = ({ year: "pasteYear", bggRating: "pasteBggRating", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
       if (form.elements[name]) { form.elements[name].value = Array.isArray(value) ? value.join("; ") : value; form.elements[name].dataset.fieldKnown = "true"; }
     });
     Object.keys(PASTE_LABELS).forEach(key => {
-      const name = ({ year:"pasteYear",bggRating:"pasteBggRating",category:"pasteTags",mechanisms:"pasteMechanisms",expansions:"pasteExpansions",bggId:"bggLink" })[key] || key;
+      const name = ({ year:"pasteYear",bggRating:"pasteBggRating",mechanisms:"pasteMechanisms",expansions:"pasteExpansions",bggId:"bggLink" })[key] || key;
       const input = form.elements[name];
       if (!input) return;
       const missing = !Object.prototype.hasOwnProperty.call(fields,key) && input.dataset.fieldKnown !== "true" && (!editingCustomGameId || !input.value.trim());
@@ -262,7 +262,7 @@
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
     ["rating", "Rate"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["category", "Type"], ["categories", "Category"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
+    ["length", "Time"], ["mainType", "Type"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
@@ -317,8 +317,8 @@
     const factions = game && button.dataset.infoKind === "factions" ? factionColors(game) : [];
     popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong>${factions.length ? `<ul class="faction-color-list">${factions.map(color => `<li><span class="sheet-color" style="--bubble:${esc(u.normalizeColor(color.value, '#94a3b8'))}" aria-hidden="true"></span><span>${esc(color.name)}</span></li>`).join("")}</ul>` : `<p>${esc(button.dataset.sheetInfo)}</p>`}`;
     if (game && button.dataset.infoKind === "tags") popup.innerHTML = tagSectionsMarkup(game);
-    if (game && ["categories", "mechanisms", "expansions"].includes(button.dataset.infoKind)) {
-      const values = gameTagGroups(game)[({categories:"Category",mechanisms:"Mechanism",expansions:"Expansions"})[button.dataset.infoKind]];
+    if (game && ["mechanisms", "expansions"].includes(button.dataset.infoKind)) {
+      const values = gameTagGroups(game)[({mechanisms:"Mechanism",expansions:"Expansions"})[button.dataset.infoKind]];
       popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong><ul class="tag-values">${values.length ? values.map(value => `<li>${esc(value)}</li>`).join("") : '<li>None added</li>'}</ul>`;
     }
     if (game && button.dataset.infoKind === "expansions") popup.innerHTML = `<strong>Expansions I have</strong><div class="expansion-checklist">${gameTagGroups(game).Expansions.map(name => expansionOwnershipMarkup(game, name)).join("")}</div>`;
@@ -326,7 +326,7 @@
     popup.showPopover();
     infoAnchor = button;
     infoPinned = Boolean(pin);
-    button.setAttribute("aria-expanded", "true");
+    button.setAttribute("aria-expanded", button.hasAttribute("data-expand-game") ? Boolean(expansionsExpanded(game)) : true);
     button.setAttribute("aria-controls", popup.id);
     const rect = button.getBoundingClientRect();
     const left = Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8));
@@ -344,8 +344,8 @@
     if (key === "owners") return entry.owned ? (entry.owners.join(", ") || "Shared") : entry.wishlist ? "Wishlist" : "Not owned";
     if (key === "note") return entry.note;
     if (["mechanisms", "expansions"].includes(key)) return (metadata[key] || []).join("; ");
-    if (["bggRating", "category", "bggId"].includes(key)) return metadata[key] || null;
-    if (key === "categories") return metadata.category || "";
+    if (["bggRating", "bggId"].includes(key)) return metadata[key] || null;
+    if (key === "mainType") return combinedGameType(game);
     if (key === "weight") return game.complexityWeight;
     if (key === "length") return averageMinutes(game);
     if (key === "turnStart") return game.turnOrder ? [game.turnOrder.label, game.turnOrder.note].filter(Boolean).join(" · ") : "";
@@ -363,7 +363,6 @@
   function gameTagGroups(game) {
     const metadata = libraryEntry(game.id).metadata || {};
     return {
-      Category: [...new Set(String(metadata.category || "").split(/[,;]/).map(tag => tag.trim()).filter(Boolean))],
       Mechanism: metadata.mechanisms || [],
       Expansions: metadata.expansions || []
     };
@@ -378,17 +377,19 @@
     const extra = libraryEntry(game.id).metadata?.additionalTypes || [];
     return mainGameTag(game) + (extra.length ? " :: " + extra.join(", ") : "");
   }
+  function expansionCountMarkup(game) {
+    const expansions = gameTagGroups(game).Expansions;
+    if (!expansions.length) return "";
+    const owned = expansions.filter(name => libraryEntry(game.id).metadata?.ownedExpansions?.includes(name)).length;
+    const state = owned === expansions.length ? "all" : owned ? "some" : "none";
+    return `<button type="button" class="expansion-count expansion-owned-${state}" data-expand-game="${esc(game.id)}" data-sheet-info="Expansions" data-info-game="${esc(game.id)}" data-info-kind="expansions" data-info-label="Expansions" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${owned} of ${expansions.length} expansions owned; ${expansionsExpanded(game) ? 'collapse' : 'expand'} ${esc(game.name)}"><span>${expansions.length}</span>${symbol("chevronDown")}</button>`;
+  }
   function expansionsExpanded(game) {
     return moduleState().expansionDisclosure?.[game.id] ?? moduleState().showExpansions;
   }
   function showUnownedExpansions(gameId) {
-    const game = play.gameById(gameId);
     const button = libraryRoot.querySelector(`[data-expand-game="${CSS.escape(gameId)}"]`);
-    if (!game || !button || !unownedExpansionList(game)) return;
-    button.dataset.infoGame = gameId;
-    button.dataset.infoKind = "unownedExpansions";
-    button.dataset.infoLabel = "Other expansions";
-    showSheetInfo(button, true);
+    if (button) showSheetInfo(button,true);
   }
   function unownedExpansionList(game) {
     if (!expansionsExpanded(game)) return "";
@@ -535,7 +536,7 @@
     const entry = libraryEntry(game.id);
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") !== null ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${gameTagGroups(game).Expansions.length ? `<button type="button" class="expansion-count" data-expand-game="${id}" aria-expanded="${Boolean(expansionsExpanded(game))}" aria-label="${expansionsExpanded(game) ? 'Collapse' : 'Expand'} ${gameTagGroups(game).Expansions.length} expansions for ${esc(game.name)}">${symbol("chevronDown")}<span>[${gameTagGroups(game).Expansions.length}]</span></button>` : ''}</span></div></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc(game.name)}"><span class="name-text">${esc(value)}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") !== null ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
@@ -546,8 +547,7 @@
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "owners") content = ownerPillsMarkup(game);
-      if (key === "category") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type and Additional Types" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type and Additional Types" aria-expanded="false">${esc(combinedGameType(game))}${symbol("chevronDown")}</button>`;
-      if (key === "categories") content = gameListButton(game, key, "Category", gameTagGroups(game).Category);
+      if (key === "mainType") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type and Additional Types" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type and Additional Types" aria-expanded="false">${esc(combinedGameType(game))}${symbol("chevronDown")}</button>`;
       if (key === "mechanisms") content = gameListButton(game, key, "Mechanism", gameTagGroups(game).Mechanism);
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
       if (key === "factions") content = sheetInfoButton(game, key, "libraryFactions", "Factions");
@@ -564,7 +564,7 @@
   function expansionRows(game) {
     if (!expansionsExpanded(game)) return "";
     const owned = libraryEntry(game.id).metadata?.ownedExpansions || [];
-    return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${play.allGames(true).some(child => child.expansionOf === game.id && child.name === name) ? `<button type="button" class="text-link" data-open-game="${esc(play.allGames(true).find(child => child.expansionOf === game.id && child.name === name).id)}">${esc(name)}</button>` : esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "category" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`).join("");
+    return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${play.allGames(true).some(child => child.expansionOf === game.id && child.name === name) ? `<button type="button" class="text-link" data-open-game="${esc(play.allGames(true).find(child => child.expansionOf === game.id && child.name === name).id)}">${esc(name)}</button>` : esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`).join("");
   }
 
   function gameSheet(games) {
@@ -740,7 +740,6 @@
       if (ui.ownership === "played" && !plays) return false;
       if (ui.ownership === "unplayed" && plays) return false;
       if (ui.ownership === "available" && count && play.playerCountFit(game, count).score < 0) return false;
-      if (ui.category && ui.category !== "all" && !gameTagGroups(game).Category.includes(ui.category)) return false;
       if (ui.mechanism && ui.mechanism !== "all" && !gameTagGroups(game).Mechanism.includes(ui.mechanism)) return false;
       if (ui.mainType && ui.mainType !== "all" && (ui.mainType.startsWith("additional:") ? !entry.metadata?.additionalTypes?.includes(ui.mainType.slice(11)) : mainGameTag(game) !== ui.mainType)) return false;
       if (ui.verified === "yes" && !game.verified || ui.verified === "no" && game.verified) return false;
@@ -765,7 +764,7 @@
       else if (ui.sortBy === "length") compared = averageMinutes(a) - averageMinutes(b);
       else if (ui.sortBy === "weight") compared = (Number(a.complexityWeight) || 0) - (Number(b.complexityWeight) || 0);
       else if (ui.sortBy !== "name") {
-        const av = ui.sortBy === "category" ? combinedGameType(a) : sheetValue(a, ui.sortBy), bv = ui.sortBy === "category" ? combinedGameType(b) : sheetValue(b, ui.sortBy);
+        const av = ui.sortBy === "mainType" ? combinedGameType(a) : sheetValue(a, ui.sortBy), bv = ui.sortBy === "mainType" ? combinedGameType(b) : sheetValue(b, ui.sortBy);
         if (av === null || av === "" || av === "--") return bv === null || bv === "" || bv === "--" ? byName(a, b) : 1;
         if (bv === null || bv === "" || bv === "--") return -1;
         compared = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
@@ -896,7 +895,7 @@
           <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
           <label class="select-field"><span class="visually-hidden">Main Type / Additional Types</span><select data-library-main-type><option value="all">All types</option>${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${ui.mainType === type ? 'selected' : ''}>${type}</option>`).join("")}<optgroup label="Additional Types">${ADDITIONAL_GAME_TYPES.map(type => `<option value="additional:${esc(type)}" ${ui.mainType === 'additional:' + type ? 'selected' : ''}>${esc(type)}</option>`).join("")}</optgroup></select></label>
-          ${[["category", "Category", "Category"], ["mechanism", "Mechanism", "Mechanism"]].map(([key, label, group]) => `<label class="select-field"><span class="visually-hidden">${label}</span><select data-library-${key}><option value="all">${label}</option>${[...new Set(allGames().flatMap(game => gameTagGroups(game)[group]))].sort().map(value => `<option value="${esc(value)}" ${ui[key] === value ? 'selected' : ''}>${esc(value)}</option>`).join("")}</select></label>`).join("")}
+          ${[["mechanism", "Mechanism", "Mechanism"]].map(([key, label, group]) => `<label class="select-field"><span class="visually-hidden">${label}</span><select data-library-${key}><option value="all">${label}</option>${[...new Set(allGames().flatMap(game => gameTagGroups(game)[group]))].sort().map(value => `<option value="${esc(value)}" ${ui[key] === value ? 'selected' : ''}>${esc(value)}</option>`).join("")}</select></label>`).join("")}
           <label class="select-field"><span class="visually-hidden">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
           <button class="button small" type="button" data-library-reset>Reset</button>
         </div>
@@ -1106,6 +1105,29 @@
 
   let gameDetailTab = "details";
 
+  function expansionParentMarkup(game) {
+    const parentId = libraryEntry(game.id).metadata?.expansionOf || "";
+    return `<label class="field"><span>Expansion of</span><select data-detail-expansion-parent="${esc(game.id)}"><option value="">Standalone game</option>${allGames().filter(parent => parent.id !== "custom" && parent.id !== game.id).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label>`;
+  }
+  function setExpansionParent(gameId, parentId) {
+    const game = play.gameById(gameId);
+    if (!game || game.id === "custom" || parentId === gameId) return;
+    if (parentId && (!allGames().some(parent => parent.id === parentId && parent.id !== "custom") || play.allGames(true).some(child => child.expansionOf === gameId))) { components.toast("Choose a standalone base game. Games with linked expansions must stay standalone.", {kind:"info"}); renderGameDialog(); return; }
+    storage.mutate(next => {
+      const entries = next.workspace.library.games;
+      const entry = entries[gameId] || {owned:false,owners:[],wishlist:false,rating:0,note:"",metadata:{}};
+      const oldParent = entries[entry.metadata?.expansionOf];
+      if (oldParent?.metadata) {
+        oldParent.metadata.expansions = (oldParent.metadata.expansions || []).filter(name => name !== game.name);
+        oldParent.metadata.ownedExpansions = (oldParent.metadata.ownedExpansions || []).filter(name => name !== game.name);
+      }
+      entry.metadata = Object.assign({},entry.metadata);
+      if (parentId) entry.metadata.expansionOf = parentId; else delete entry.metadata.expansionOf;
+      entries[gameId] = entry;
+    }, {reason:"expansion-link"});
+    refreshAfterLibraryChange();
+  }
+
   function gameDialogMarkup(game) {
     const entry = libraryEntry(game.id);
     const record = gameStats(game.id);
@@ -1138,8 +1160,8 @@
         </section>
         </div>
         <div role="tabpanel" id="game-panel-catalog" aria-labelledby="game-tab-catalog" ${gameDetailTab !== "catalog" ? 'hidden' : ''} class="game-details-grid">
-        ${bggLookupMarkup(game, false)}
-        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"-9999\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Categories (comma-separated)", "text", "maxlength=\"1000\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) ?? '')}"></label>`).join("")}</div></section>
+        <div class="game-linking-panel">${bggLookupMarkup(game, false)}${expansionParentMarkup(game)}</div>
+        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"-9999\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) ?? '')}"></label>`).join("")}</div></section>
         </div>
         <section class="detail-section" role="tabpanel" id="game-panel-plays" aria-labelledby="game-tab-plays" ${gameDetailTab !== "plays" ? 'hidden' : ''}>
           <h3>Your plays</h3>
@@ -1257,7 +1279,7 @@
       <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1" required',2], ["maxPlayers","Max players","number",'min="1" max="20" step="1" required',4], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
       <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1" required',value("minMinutes",30))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1" required',value("maxMinutes",60))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',value("complexityWeight",""),"Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
       <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
-      <div class="wide custom-catalog-fields">${[["pasteTags","Categories (comma-separated)","category"],["pasteMechanisms","Mechanisms (semicolon-separated)","mechanisms"],["pasteExpansions","Expansions (semicolon-separated)","expansions"]].map(([name,label,key]) => field(name,label,"text",'maxlength="10000"',game ? sheetValue(game,key) : "")).join("")}</div>
+      <div class="wide custom-catalog-fields">${[["pasteMechanisms","Mechanisms (semicolon-separated)","mechanisms"],["pasteExpansions","Expansions (semicolon-separated)","expansions"]].map(([name,label,key]) => field(name,label,"text",'maxlength="10000"',game ? sheetValue(game,key) : "")).join("")}</div>
       ${bggLookupMarkup(game,true)}
       <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields were not supplied in the paste. Review or fill them in; numeric defaults are suggestions.</p>
       <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>`;
@@ -1323,7 +1345,7 @@
         parentEntry.metadata.ownedExpansions = entry.owned ? [...new Set((parentEntry.metadata.ownedExpansions || []).concat(name))] : (parentEntry.metadata.ownedExpansions || []).filter(value => value !== name);
         next.workspace.library.games[newParent] = parentEntry;
       }
-      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
       if (newParent) entry.metadata.expansionOf = newParent; else delete entry.metadata.expansionOf;
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
@@ -1624,6 +1646,8 @@
     }
     const rate = event.target.closest("[data-sheet-rating]");
     if (rate) { openRatingPicker(rate); return; }
+    const disclosure = event.target.closest("[data-expand-game]");
+    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); if (!expanded) showUnownedExpansions(id); return; }
     const info = event.target.closest("[data-sheet-info]");
     if (info) { showSheetInfo(info, true); return; }
     const heading = event.target.closest("[data-sheet-sort]");
@@ -1638,8 +1662,6 @@
       libraryRoot.querySelector(`[data-sheet-sort="${key}"]`)?.focus({ preventScroll: true });
       return;
     }
-    const disclosure = event.target.closest("[data-expand-game]");
-    if (disclosure) { const id = disclosure.dataset.expandGame; const expanded = expansionsExpanded(play.gameById(id)); updateLibraryUi(ui => { ui.expansionDisclosure = Object.assign({}, ui.expansionDisclosure, {[id]: !expanded}); }); refreshSheetPosition(`[data-expand-game="${CSS.escape(id)}"]`); if (!expanded) showUnownedExpansions(id); return; }
     const host = event.target.closest("[data-host]");
     if (host) {
       const name = host.dataset.host;
@@ -1679,7 +1701,7 @@
     if (handleMetadataChoice(event)) return;
     if (event.target.matches("[data-show-expansions]")) { const checked = event.target.checked; updateLibraryUi(ui => { ui.showExpansions = checked; ui.expansionDisclosure = {}; }); renderLibrary(); libraryRoot.querySelector("[data-show-expansions]")?.focus({preventScroll:true}); return; }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
-    else if (event.target.matches("[data-library-category], [data-library-mechanism], [data-library-main-type], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : event.target.matches("[data-library-mechanism]") ? "mechanism" : event.target.matches("[data-library-main-type]") ? "mainType" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
+    else if (event.target.matches("[data-library-mechanism], [data-library-main-type], [data-library-verified]")) { const key = event.target.matches("[data-library-mechanism]") ? "mechanism" : event.target.matches("[data-library-main-type]") ? "mainType" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
     else if (event.target.matches("[data-person-name]")) renamePerson(event.target.dataset.personName, event.target.value);
     else if (event.target.matches("[data-person-color]")) {
@@ -1810,6 +1832,7 @@
       if (event.target.matches("[data-detail-metadata]") && event.target.checkValidity()) { const key = event.target.dataset.detailMetadata; const value = event.target.value.trim(); mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: value }); }); if (appState().ui.view === "library") renderLibrary(); }
     });
     document.querySelector("#gameDialogBody").addEventListener("change", event => {
+      if (event.target.matches("[data-detail-expansion-parent]")) { setExpansionParent(event.target.dataset.detailExpansionParent,event.target.value); return; }
       if (handleMetadataChoice(event)) return;
       if (event.target.closest("#game-panel-setup") && event.target.matches("[data-setup-color], [data-setup-factions], [data-setup-verified], [data-setup-sort]")) { syncSetupControls(); saveGameSetup(false); return; }
       if (event.target.matches("[data-detail-rating-select]")) {

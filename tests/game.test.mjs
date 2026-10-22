@@ -147,7 +147,7 @@ test('library sheet metadata survives normalization and sync without changing hi
   assert.equal(normalized.workspace.library.games.catan.metadata.bggId, '');
   assert.equal(normalized.workspace.library.games.catan.note, 'Keep');
   assert.equal(normalized.modules.library.sortBy, 'bggRating');
-  assert.equal(normalized.modules.library.category, 'Strategy');
+  assert.equal(normalized.modules.library.category, 'all');
   assert.equal(normalized.modules.library.verified, 'yes');
   const restored = model.prepareSync(model.syncPayload(normalized)).state;
   assert.equal(restored.workspace.library.games.root.metadata.bggId, '237182');
@@ -368,12 +368,12 @@ test('setup normalization rejects unsafe colors and rules and allows clearing bu
 });
 
 
-test('multiple hosts and separate type/category/mechanism filters normalize and migrate legacy hosts', () => {
+test('multiple hosts and type/mechanism filters normalize while legacy category filters are ignored', () => {
   const { App } = load();
   const state = App.stateModel.normalize({workspace:{people:[{name:'Adam'},{name:'Bea'}]},modules:{library:{hosts:['Adam','Bea','Adam','Missing'],category:'Strategy',mechanism:'Drafting',mainType:'Cards'}}});
   assert.deepEqual([...state.modules.library.hosts], ['Adam','Bea']);
   assert.equal(state.modules.library.host,'all');
-  assert.equal(state.modules.library.category,'Strategy');
+  assert.equal(state.modules.library.category,'all');
   assert.equal(state.modules.library.mechanism,'Drafting');
   assert.equal(state.modules.library.mainType,'Cards');
   assert.deepEqual([...App.stateModel.normalize(state).modules.library.hosts],['Adam','Bea']);
@@ -501,4 +501,17 @@ test('overview, player poll and correction can be parsed together in form displa
   assert.equal(fields.bggId,'283355');
   assert.equal(fields.bestPlayers,'6');
   assert.ok(fields.mechanisms.includes('Variable Player Powers'));
+});
+
+
+test('legacy category data remains backed up while category filters and sorts are retired', () => {
+  const { App }=load();
+  const state=App.stateModel.normalize({workspace:{library:{games:{root:{metadata:{category:'RetiredCategoryOnly'}}}}},modules:{library:{category:'RetiredCategoryOnly',sortBy:'categories'}}});
+  assert.equal(state.modules.library.category,'all');
+  assert.equal(state.modules.library.sortBy,'fit');
+  App.storage.mutate(next=>{next.workspace.library=state.workspace.library;});
+  assert.equal(App.library.gameSearchText(App.play.gameById('root')).includes('retiredcategoryonly'),false);
+  const restored=App.stateModel.prepareSync(App.stateModel.syncPayload(state)).state;
+  assert.equal(restored.workspace.library.games.root.metadata.category,'RetiredCategoryOnly');
+  assert.equal(App.stateModel.normalize({modules:{library:{sortBy:'category'}}}).modules.library.sortBy,'mainType');
 });

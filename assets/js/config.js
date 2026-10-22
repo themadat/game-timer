@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.15";
+  const VERSION = "2.1.0.16";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T00:00:00.000Z",
+        title: "Compact names and expansion ownership counts",
+        summary: "Name columns use less space, expansion counts show ownership with color, and existing games can be linked to a base game.",
+        features: ["Expansion count before its disclosure: purple none owned, blue some, green all", "Hover or focus the count to inspect expansion lists", "Assign existing games through Expansion of in Catalog & BGG"],
+        improvements: ["Narrower Name column and tighter gaps", "Remove Category from library columns, filters, forms, and paste previews"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.15",
         date: "2026-10-22T23:00:00.000Z",
         title: "Grouped game form and compact library rows",
         summary: "Game forms group identity, player counts, and types, and highlight fields missing from pasted information.",

@@ -825,7 +825,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 [data-game-kind-fields] [hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .expansion-count .glyph { transition: none; } }
 
-.library-sheet .sheet-category .main-game-tag { white-space: nowrap; max-width: none; }
+.library-sheet .sheet-mainType .main-game-tag { white-space: nowrap; max-width: none; }
 
 /* Compact spreadsheet rows and a grouped game form. */
 #customGameDialog { width: min(1320px, calc(100vw - 2rem)); max-height: calc(100svh - 2rem); }
@@ -851,3 +851,21 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .custom-player-fields, .custom-timing-fields, .custom-catalog-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .custom-types-row .additional-types > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Tighter name parts; expansion ownership colors remain readable in both themes. */
+.library-sheet .sheet-name-cell { width: 560px; min-width: 560px; max-width: 560px; }
+.sheet-name-line { gap: 2px; }
+.library-sheet .sheet-name-line .sheet-name-details { gap: 2px; }
+.library-sheet .sheet-name-details .sheet-colors { gap: 2px; }
+.library-sheet .sheet-name-line .sheet-year { flex-basis: 40px; min-width: 40px; }
+.sheet-expansion-slot { flex-basis: 32px; }
+.sheet-expansion-slot .expansion-count { gap: 1px; }
+.sheet-expansion-slot .expansion-owned-none { color: #7652ab; }
+.sheet-expansion-slot .expansion-owned-some { color: #2563eb; }
+.sheet-expansion-slot .expansion-owned-all { color: #237a43; }
+:root[data-theme="dark"] .sheet-expansion-slot .expansion-owned-none { color: #bf9bea; }
+:root[data-theme="dark"] .sheet-expansion-slot .expansion-owned-some { color: #80b7ff; }
+:root[data-theme="dark"] .sheet-expansion-slot .expansion-owned-all { color: #70d595; }
+.custom-catalog-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+
+.game-linking-panel { display: grid; align-content: start; gap: .75rem; min-width: 0; }
