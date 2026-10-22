@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.18";
+  const VERSION = "2.1.0.19";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,14 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T00:30:00.000Z",
+        title: "Visible owner selection when adding games",
+        summary: "Owner selection sits directly below the game name, with an option to enter other owners.",
+        improvements: ["Show ownership and owner selection near the top of Add/Edit game", "Enter owners who are not in People", "Remove Have checkboxes from expansion Owner cells"],
+        features: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.18",
         date: "2026-10-23T00:20:00.000Z",
         title: "Expansion editing and game owners",
         summary: "Owned expansion names open an editor, and game forms include ownership and owner selection.",

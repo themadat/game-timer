@@ -887,3 +887,5 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .custom-owner-choice:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb,var(--accent) 15%,var(--surface)); }
 .custom-ownership input { width: 16px; height: 16px; min-height: 16px; margin: 0; accent-color: var(--accent); }
 .custom-ownership .chip-grid { margin-top: .3rem; }
+
+.custom-other-owners { margin-top: .5rem; }
