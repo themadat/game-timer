@@ -19,6 +19,7 @@
   const VIEW_IDS = ["play", "library", "history"];
   const LIBRARY_TABS = ["games", "people"];
   const LIBRARY_OWNERSHIP = ["all", "owned", "available", "unowned", "wishlist", "played", "unplayed"];
+  const ADDITIONAL_GAME_TYPES = ["Abstract", "Customizable", "Thematic", "Family", "Children's", "Party", "Strategy", "Wargames"];
   const LIBRARY_SORTS = ["fit", "name", "plays", "recent", "length", "weight", "wins", "year", "rating", "bggRating", "minPlayers", "maxPlayers", "bestPlayers", "recommendedPlayers", "avoidPlayers", "minMinutes", "maxMinutes", "category", "categories", "mechanisms", "note", "bggId", "turnStart", "factions", "verified", "colors", "owners"];
   const gameData = App.gameData || { QUICK_PLAYERS: [], NAMED_COLORS: {}, GAME_PRESETS: [] };
 
@@ -187,6 +188,10 @@
         const tags = Array.from(new Set(list.map(function (tag) { return u.cleanLine(tag, 150); }).filter(Boolean))).slice(0, 100);
         if (tags.length) normalized.metadata[key] = tags;
       });
+      const additionalTypes = Array.from(new Set((Array.isArray(entry.metadata?.additionalTypes) ? entry.metadata.additionalTypes : []).filter(type => ADDITIONAL_GAME_TYPES.includes(type))));
+      if (additionalTypes.length) normalized.metadata.additionalTypes = additionalTypes;
+      const ownedExpansions = Array.from(new Set((Array.isArray(entry.metadata?.ownedExpansions) ? entry.metadata.ownedExpansions : []).map(name => u.cleanLine(name, 150)).filter(name => normalized.metadata.expansions?.includes(name))));
+      if (ownedExpansions.length) normalized.metadata.ownedExpansions = ownedExpansions;
       if (["Board", "Cards", "Coop", "1v1", "Table"].includes(entry.metadata?.mainType)) normalized.metadata.mainType = entry.metadata.mainType;
       const mainTag = u.cleanLine(entry.metadata?.mainTag, 150);
       const allTags = normalized.metadata.category.split(/[,;]/).map(function (tag) { return tag.trim(); }).concat(normalized.metadata.mechanisms || [], normalized.metadata.expansions || []);
@@ -350,7 +355,7 @@
         supportTab: "settings"
       },
       modules: {
-        library: { tab: "games", search: "", host: "all", hosts: [], category: "all", mechanism: "all", mainType: "all", ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
+        library: { tab: "games", search: "", host: "all", hosts: [], category: "all", mechanism: "all", mainType: "all", showExpansions: false, ownership: "all", present: [], playerCount: 0, sortBy: "fit", sortDirection: "asc" },
         history: { search: "", game: "all", person: "all" },
         play: { gameFilter: "all" },
         records: { showDemoFields: true },
@@ -733,7 +738,8 @@
           search: u.cleanLine(sourceLibraryUi.search, 200),
           category: !sourceLibraryUi.mainType && ["Board", "Cards", "Coop", "1v1", "Table"].includes(sourceLibraryUi.category) ? "all" : u.cleanLine(sourceLibraryUi.category, 100) || "all",
           mechanism: u.cleanLine(sourceLibraryUi.mechanism, 150) || "all",
-          mainType: ["Board", "Cards", "Coop", "1v1", "Table"].includes(sourceLibraryUi.mainType || sourceLibraryUi.category) ? sourceLibraryUi.mainType || sourceLibraryUi.category : "all",
+          mainType: ["Board", "Cards", "Coop", "1v1", "Table", ...ADDITIONAL_GAME_TYPES.map(type => "additional:" + type)].includes(sourceLibraryUi.mainType || sourceLibraryUi.category) ? sourceLibraryUi.mainType || sourceLibraryUi.category : "all",
+          showExpansions: sourceLibraryUi.showExpansions === true,
           verified: ["yes", "no"].includes(sourceLibraryUi.verified) ? sourceLibraryUi.verified : "all",
           host: hosts.length === 1 ? hosts[0] : "all",
           hosts,
@@ -965,6 +971,7 @@
   }
 
   App.stateModel = {
+    additionalGameTypes: ADDITIONAL_GAME_TYPES,
     migrations: migrations,
     createDefaultState: createDefaultState,
     normalize: normalize,

@@ -764,7 +764,8 @@
 .expansion-count { margin-left: .3rem; font-variant-numeric: tabular-nums; }
 .library-sheet :is(.sheet-categories, .sheet-mechanisms) { white-space: nowrap; }
 .library-sheet :is(.sheet-categories, .sheet-mechanisms) .game-tag { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-:is(.sheet-turnStart, .sheet-factions) .sheet-info-button.has-info { opacity: .3; }
+:is(.sheet-turnStart, .sheet-factions) .sheet-info-button { opacity: .3; }
+:is(.sheet-turnStart, .sheet-factions) .sheet-info-button.has-info { opacity: 1; }
 :is(.sheet-turnStart, .sheet-factions) .sheet-info-button:is(:hover, :focus-visible, [aria-expanded="true"]) { opacity: 1; }
 input:not([type="checkbox"]):not([type="radio"]), textarea, select { color: var(--text); }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
@@ -781,4 +782,31 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .library-controls .filter-row .library-search-field { flex-basis: 300px; }
   .add-game-color { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .add-game-color > button { grid-column: 1 / -1; }
+}
+
+/* Details combine game setup with personal ownership; expansion rows are optional. */
+#gameDialog { width: min(1380px, calc(100vw - 2rem)); }
+.game-details-grid.game-overview { grid-template-columns: minmax(0, 2.5fr) minmax(250px, 1fr); }
+.game-overview .game-color-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.game-overview .game-color-option { padding-block: 0; }
+.game-personal-panel .wishlist-choice { justify-self: start; }
+.wishlist-choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+.game-personal-panel .wishlist-note { margin: 0; }
+.additional-types { min-width: 0; margin: .5rem 0 0; padding: .5rem .65rem; border: 1px solid var(--line); border-radius: 8px; }
+.additional-types legend { padding-inline: .25rem; font-size: .8rem; font-weight: 700; }
+.additional-types > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem .6rem; }
+.additional-types label, .expansion-ownership { display: flex; align-items: center; gap: .4rem; font-size: .8rem; }
+.additional-types input, .expansion-ownership input { width: 16px; height: 16px; min-height: 16px; margin: 0; flex: 0 0 16px; accent-color: var(--accent); }
+.expansion-checklist { display: grid; gap: .65rem; margin-top: .7rem; }
+.expansion-ownership span { overflow-wrap: anywhere; }
+.sheet-expansion-row > :is(th,td) { background: var(--surface-2); }
+.sheet-expansion-row .sheet-name-cell { padding-left: 1rem; }
+.expansion-row-name { font-weight: 600; }
+.expansion-parent-name { display: inline-block; max-width: 160px; margin-left: .6rem; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: .7rem; white-space: nowrap; }
+@media (max-width: 1050px) {
+  .game-details-grid.game-overview { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .game-overview .game-color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #gameDialogFooter { flex-wrap: wrap; }
 }

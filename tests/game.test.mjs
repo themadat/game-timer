@@ -402,3 +402,36 @@ test('custom palettes, named factions and an empty selected pool persist through
   App.storage.mutate(next=>{next.workspace.library.games.root.metadata.setup.factions=false;});
   assert.equal(App.play.colorsForGame(App.play.gameById('root'))[0].faction,false);
 });
+
+test('expansion ownership and Additional Types survive sync independently of wishlist and owners', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.createDefaultState({demo:false});
+  state.workspace.library.games.root={owned:true,owners:['Bea'],wishlist:true,rating:4.5,note:'Keep',metadata:{expansions:['Riverfolk','Underworld'],ownedExpansions:['Riverfolk','Missing','Riverfolk'],additionalTypes:['Strategy',"Children's",'Unknown','Strategy']}};
+  state.modules.library.showExpansions=true;
+  state.modules.library.mainType='additional:Strategy';
+  const normalized=model.normalize(state);
+  assert.equal(normalized.modules.library.showExpansions,true);
+  assert.equal(normalized.modules.library.mainType,'additional:Strategy');
+  const restored=model.prepareSync(model.syncPayload(normalized)).state;
+  const game=restored.workspace.library.games.root;
+  assert.deepEqual([...game.metadata.ownedExpansions],['Riverfolk']);
+  assert.deepEqual([...game.metadata.additionalTypes],['Strategy',"Children's"]);
+  assert.deepEqual([...game.owners],['Bea']);
+  assert.equal(game.owned,true);
+  assert.equal(game.wishlist,true);
+  assert.equal(game.rating,4.5);
+  assert.equal(game.note,'Keep');
+  assert.deepEqual(plain(restored.workspace.history),plain(state.workspace.history));
+  const reset=model.resetPreferences(normalized);
+  assert.equal(reset.modules.library.showExpansions,false);
+  assert.deepEqual([...reset.workspace.library.games.root.metadata.ownedExpansions],['Riverfolk']);
+});
+
+test('expansion and type normalization rejects unknown data without creating game records', () => {
+  const { App } = load();
+  const state=App.stateModel.normalize({workspace:{library:{games:{root:{metadata:{ownedExpansions:['Unknown'],additionalTypes:['Unknown']}}}}},modules:{library:{showExpansions:'yes',mainType:'additional:Unknown'}}});
+  assert.equal(state.workspace.library.games.root,undefined);
+  assert.equal(state.modules.library.showExpansions,false);
+  assert.equal(state.modules.library.mainType,'all');
+});

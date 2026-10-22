@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.12";
+  const VERSION = "2.1.0.13";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-22T20:00:00.000Z",
+        title: "Expansion ownership and combined game details",
+        summary: "Details include colors and timing alongside personal ownership, while expansions can be checked off and shown as rows.",
+        features: ["Track which expansions you have", "Show or hide expansion rows beneath their base game", "Choose Additional Types alongside Main Type"],
+        improvements: ["Wishlist has its own control, independent of who owns a copy", "Colors and timing move into Details in place of the range summary"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.12",
         date: "2026-10-22T18:00:00.000Z",
         title: "Autosaving game details and focused filters",
         summary: "Game edits save automatically, hosts support multiple selections, and categories and mechanisms have separate filters.",

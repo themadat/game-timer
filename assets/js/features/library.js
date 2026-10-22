@@ -21,6 +21,7 @@
     unplayed: "Never played"
   };
   const MAIN_GAME_TYPES = ["Board", "Cards", "Coop", "1v1", "Table"];
+  const ADDITIONAL_GAME_TYPES = App.stateModel.additionalGameTypes;
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
@@ -251,7 +252,7 @@
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
     ["rating", "Rate"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["category", "Type"], ["categories", "Category"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
+    ["length", "Time"], ["category", "Main Type"], ["categories", "Category"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
@@ -290,15 +291,7 @@
       popup.className = "sheet-info-popover";
       popup.setAttribute("popover", "auto");
       document.body.appendChild(popup);
-      popup.addEventListener("change", event => {
-        const select = event.target.closest("[data-main-type]");
-        if (!select || !MAIN_GAME_TYPES.includes(select.value)) return;
-        const game = play.gameById(select.dataset.mainType);
-        if (!game) return;
-        mutateLibrary(game.id, entry => { entry.metadata = Object.assign({}, entry.metadata, { mainType: select.value }); });
-        hideSheetInfo();
-        refreshSheetPosition(`[data-info-kind="tags"][data-info-game="${CSS.escape(game.id)}"]`);
-      });
+      popup.addEventListener("change", handleMetadataChoice);
       popup.addEventListener("mouseleave", () => { if (!infoPinned) hideSheetInfo(); });
       popup.addEventListener("toggle", event => { if (event.newState === "closed") { infoAnchor?.setAttribute("aria-expanded", "false"); infoAnchor = null; infoPinned = false; } });
     }
@@ -312,6 +305,7 @@
       const values = gameTagGroups(game)[({categories:"Category",mechanisms:"Mechanism",expansions:"Expansions"})[button.dataset.infoKind]];
       popup.innerHTML = `<strong>${esc(button.dataset.infoLabel)}</strong><ul class="tag-values">${values.length ? values.map(value => `<li>${esc(value)}</li>`).join("") : '<li>None added</li>'}</ul>`;
     }
+    if (game && button.dataset.infoKind === "expansions") popup.innerHTML = `<strong>Expansions I have</strong><div class="expansion-checklist">${gameTagGroups(game).Expansions.map(name => expansionOwnershipMarkup(game, name)).join("")}</div>`;
     popup.showPopover();
     infoAnchor = button;
     infoPinned = Boolean(pin);
@@ -358,13 +352,49 @@
     };
   }
   function gameTags(game) {
-    return [...new Set([mainGameTag(game), ...Object.values(gameTagGroups(game)).flat()])];
+    return [...new Set([mainGameTag(game), ...(libraryEntry(game.id).metadata?.additionalTypes || []), ...Object.values(gameTagGroups(game)).flat()])];
   }
   function mainGameTag(game) {
     return libraryEntry(game.id).metadata?.mainType || "Board";
   }
+  function additionalTypesMarkup(game, custom) {
+    const selected = game ? libraryEntry(game.id).metadata?.additionalTypes || [] : [];
+    return `<fieldset class="additional-types"><legend>Additional Types</legend><div>${ADDITIONAL_GAME_TYPES.map(type => `<label><input type="checkbox" ${custom ? 'name="additionalTypes"' : ''} data-additional-type="${esc(type)}" data-type-game="${esc(game?.id || '')}" ${selected.includes(type) ? 'checked' : ''}>${esc(type)}</label>`).join("")}</div></fieldset>`;
+  }
   function tagSectionsMarkup(game) {
-    return `<label class="field main-type-field"><span>Main type</span><select data-main-type="${esc(game.id)}">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>`;
+    return `<label class="field main-type-field"><span>Main Type</span><select data-main-type="${esc(game.id)}">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game, false)}`;
+  }
+  function expansionOwnershipMarkup(game, name, compact) {
+    const owned = libraryEntry(game.id).metadata?.ownedExpansions?.includes(name) || false;
+    return `<label class="expansion-ownership"><input type="checkbox" data-expansion-game="${esc(game.id)}" data-expansion-owned="${esc(name)}" aria-label="I have ${esc(name)}" ${owned ? 'checked' : ''}><span>${compact ? 'Have' : esc(name)}</span></label>`;
+  }
+  function handleMetadataChoice(event) {
+    const input = event.target.closest("[data-expansion-owned], [data-additional-type], [data-main-type]");
+    if (!input || input.closest("#customGameForm")) return false;
+    const gameId = input.dataset.expansionGame || input.dataset.typeGame || input.dataset.mainType;
+    const game = play.gameById(gameId);
+    if (!game) return false;
+    const inPopup = Boolean(input.closest("#libraryInfoPopover"));
+    const kind = input.hasAttribute("data-expansion-owned") ? "expansions" : "tags";
+    if (input.hasAttribute("data-main-type")) {
+      if (!MAIN_GAME_TYPES.includes(input.value)) return false;
+      mutateLibrary(gameId, entry => { entry.metadata = Object.assign({}, entry.metadata, {mainType: input.value}); });
+    } else {
+      const key = kind === "expansions" ? "ownedExpansions" : "additionalTypes";
+      const value = kind === "expansions" ? input.dataset.expansionOwned : input.dataset.additionalType;
+      const checked = input.checked;
+      mutateLibrary(gameId, entry => { const values = entry.metadata?.[key] || []; entry.metadata = Object.assign({}, entry.metadata, {[key]: checked ? [...new Set(values.concat(value))] : values.filter(item => item !== value)}); });
+    }
+    if (appState().ui.view === "library") renderLibrary();
+    if (inPopup) {
+      const anchor = libraryRoot.querySelector(`[data-info-kind="${kind}"][data-info-game="${CSS.escape(gameId)}"]`);
+      if (anchor) {
+        showSheetInfo(anchor, true);
+        const selector = input.hasAttribute("data-expansion-owned") ? `[data-expansion-owned="${CSS.escape(input.dataset.expansionOwned)}"]` : input.hasAttribute("data-additional-type") ? `[data-additional-type="${CSS.escape(input.dataset.additionalType)}"]` : "[data-main-type]";
+        document.querySelector("#libraryInfoPopover")?.querySelector(selector)?.focus({preventScroll:true});
+      }
+    }
+    return true;
   }
   function gameListButton(game, kind, label, values) {
     return `<button class="game-tag" type="button" data-info-game="${esc(game.id)}" data-info-kind="${kind}" data-info-label="${label}" data-sheet-info="${esc(values.join('\n') || 'None added')}" aria-expanded="false">${esc(values[0] || '—')}${values.length > 1 ? ` +${values.length - 1}` : ''}${symbol("chevronDown")}</button>`;
@@ -474,7 +504,7 @@
       if (key === "owners") content = ownerPillsMarkup(game);
       if (key === "category") {
         const expansions = gameTagGroups(game).Expansions;
-        content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main type" data-info-game="${id}" data-info-kind="tags" data-info-label="Main type" aria-expanded="false">${esc(mainGameTag(game))}${symbol("chevronDown")}</button>${expansions.length ? `<button class="text-link expansion-count" type="button" data-info-game="${id}" data-info-kind="expansions" data-info-label="Expansions" data-sheet-info="Expansions" aria-label="${expansions.length} expansions" aria-expanded="false">[${expansions.length}]</button>` : ''}`;
+        content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type" aria-expanded="false">${esc(mainGameTag(game))}${symbol("chevronDown")}</button>${expansions.length ? `<button class="text-link expansion-count" type="button" data-info-game="${id}" data-info-kind="expansions" data-info-label="Expansions" data-sheet-info="Expansions" aria-label="${expansions.length} expansions" aria-expanded="false">[${expansions.length}]</button>` : ''}`;
       }
       if (key === "categories") content = gameListButton(game, key, "Category", gameTagGroups(game).Category);
       if (key === "mechanisms") content = gameListButton(game, key, "Mechanism", gameTagGroups(game).Mechanism);
@@ -490,9 +520,14 @@
     return `<tr${game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell"><button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button></td>${cells}</tr>`;
   }
 
+  function expansionRows(game) {
+    if (!moduleState().showExpansions) return "";
+    return gameTagGroups(game).Expansions.map(name => `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ ${esc(name)}</span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}">${key === "owners" ? expansionOwnershipMarkup(game, name, true) : key === "category" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`).join("");
+  }
+
   function gameSheet(games) {
     const ui = moduleState();
-    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr><th scope="col" class="sheet-play-cell"><span class="visually-hidden">Play</span></th>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" class="${key === 'name' ? 'sheet-name-cell' : 'sheet-' + key}" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "bggRating", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", bggRating: "libraryBggRating", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}</tr></thead><tbody>${games.map(gameRow).join("")}</tbody></table></div>`;
+    return `<div class="library-sheet" role="region" aria-label="Game library spreadsheet" tabindex="0"><table><caption class="visually-hidden">Game library. Select a column heading to sort; select a game name to edit details. Player squares: green best, blue good, red bad, purple neutral. Times are in minutes, colored in half-hour bands by longest time. Turn and faction symbols show information on hover, focus, or tap.</caption><thead><tr><th scope="col" class="sheet-play-cell"><span class="visually-hidden">Play</span></th>${SHEET_COLUMNS.map(([key, label]) => `<th scope="col" class="${key === 'name' ? 'sheet-name-cell' : 'sheet-' + key}" aria-sort="${ui.sortBy === key ? (ui.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}"><button type="button" data-sheet-sort="${key}">${["bggId", "bggRating", "turnStart", "factions", "minPlayers", "length", "weight", "verified"].includes(key) ? `<span class="sheet-heading-icon" title="${label}">${symbol(({ bggId: "libraryWeb", bggRating: "libraryBggRating", turnStart: "libraryTurnStart", factions: "libraryFactions", minPlayers: "libraryPlayers", length: "libraryTime", weight: "libraryWeight", verified: "libraryVerified" })[key])}<span class="visually-hidden">${label}</span></span>` : label}${ui.sortBy === key ? (ui.sortDirection === 'desc' ? ' ↓' : ' ↑') : ''}</button></th>`).join("")}</tr></thead><tbody>${games.map(game => gameRow(game) + expansionRows(game)).join("")}</tbody></table></div>`;
   }
 
   let libraryRoot = null;
@@ -665,7 +700,7 @@
       if (ui.ownership === "available" && count && play.playerCountFit(game, count).score < 0) return false;
       if (ui.category && ui.category !== "all" && !gameTagGroups(game).Category.includes(ui.category)) return false;
       if (ui.mechanism && ui.mechanism !== "all" && !gameTagGroups(game).Mechanism.includes(ui.mechanism)) return false;
-      if (ui.mainType && ui.mainType !== "all" && mainGameTag(game) !== ui.mainType) return false;
+      if (ui.mainType && ui.mainType !== "all" && (ui.mainType.startsWith("additional:") ? !entry.metadata?.additionalTypes?.includes(ui.mainType.slice(11)) : mainGameTag(game) !== ui.mainType)) return false;
       if (ui.verified === "yes" && !game.verified || ui.verified === "no" && game.verified) return false;
       if (terms.length) {
         const text = gameSearchText(game);
@@ -798,6 +833,7 @@
         <div class="chip-grid">
           ${people().map(person => `<button class="chip-btn" type="button" data-present="${esc(person.name)}" aria-pressed="${ui.present.includes(person.name)}" style="--accent:${esc(person.color)}"><span class="dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`).join("")}
         </div>
+        <label class="game-setup-check"><input type="checkbox" data-show-expansions ${ui.showExpansions ? 'checked' : ''}> Show expansions as rows</label>
         ${ui.present.length ? `<span class="panel-note">${ui.present.length} at the table · <button class="text-link" type="button" data-clear-present>Clear</button></span>` : ""}
       </div>`;
   }
@@ -817,7 +853,7 @@
           <label class="select-field"><span class="visually-hidden">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
           <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
-          <label class="select-field"><span class="visually-hidden">Type</span><select data-library-main-type><option value="all">All types</option>${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${ui.mainType === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>
+          <label class="select-field"><span class="visually-hidden">Main Type / Additional Types</span><select data-library-main-type><option value="all">All types</option>${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${ui.mainType === type ? 'selected' : ''}>${type}</option>`).join("")}<optgroup label="Additional Types">${ADDITIONAL_GAME_TYPES.map(type => `<option value="additional:${esc(type)}" ${ui.mainType === 'additional:' + type ? 'selected' : ''}>${esc(type)}</option>`).join("")}</optgroup></select></label>
           ${[["category", "Category", "Category"], ["mechanism", "Mechanism", "Mechanism"]].map(([key, label, group]) => `<label class="select-field"><span class="visually-hidden">${label}</span><select data-library-${key}><option value="all">${label}</option>${[...new Set(allGames().flatMap(game => gameTagGroups(game)[group]))].sort().map(value => `<option value="${esc(value)}" ${ui[key] === value ? 'selected' : ''}>${esc(value)}</option>`).join("")}</select></label>`).join("")}
           <label class="select-field"><span class="visually-hidden">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
           <button class="button small" type="button" data-library-reset>Reset</button>
@@ -1031,24 +1067,22 @@
     const recent = record ? record.records.slice(0, 6) : [];
     return `
       <div class="game-detail">
-        <div class="game-detail-tabs" role="tablist" aria-label="Game editor">${["details", "catalog", "setup", "plays"].map(tab => `<button type="button" id="game-tab-${tab}" role="tab" aria-selected="${gameDetailTab === tab}" aria-controls="game-panel-${tab}" tabindex="${gameDetailTab === tab ? 0 : -1}" data-detail-tab="${tab}">${({details:"Details",catalog:"Catalog & BGG",setup:"Colors & timing",plays:"Your plays"})[tab]}</button>`).join("")}</div>
-        <div role="tabpanel" id="game-panel-details" aria-labelledby="game-tab-details" ${gameDetailTab !== "details" ? 'hidden' : ''} class="game-details-grid">
-        <div class="game-catalog-panel">
-        <p class="game-detail-range">${esc(play.gameRangeText(game)).replace("\n", "<br>")}</p>
-        <button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>
-        <div class="fit-strip" aria-label="Player count fit">${playerCountBadges(game)}<span class="player-fit-legend"><span class="is-best">Best</span><span class="is-good">Good</span><span class="is-avoid">Bad</span><span class="is-plays">Neutral</span></span></div>
-        </div><section class="detail-section game-personal-panel">
+        <div class="game-detail-tabs" role="tablist" aria-label="Game editor">${["details", "catalog", "plays"].map(tab => `<button type="button" id="game-tab-${tab}" role="tab" aria-selected="${gameDetailTab === tab}" aria-controls="game-panel-${tab}" tabindex="${gameDetailTab === tab ? 0 : -1}" data-detail-tab="${tab}">${({details:"Details",catalog:"Catalog & BGG",setup:"Colors & timing",plays:"Your plays"})[tab]}</button>`).join("")}</div>
+        <div role="tabpanel" id="game-panel-details" aria-labelledby="game-tab-details" ${gameDetailTab !== "details" ? 'hidden' : ''} class="game-details-grid game-overview">
+        <section id="game-panel-setup" class="detail-section" aria-label="Colors and timing">${gameSetupMarkup(game)}</section>
+        <section class="detail-section game-personal-panel">
           <h3>Ownership</h3>
           <div class="segmented" role="group" aria-label="Ownership">
             <button type="button" data-detail-owned="true" aria-pressed="${entry.owned}">${symbol("checkmark")}<span>Owned</span></button>
             <button type="button" data-detail-owned="false" aria-pressed="${!entry.owned}"><span>Not owned</span></button>
-            <button type="button" data-detail-wishlist aria-pressed="${entry.wishlist}">${symbol("heart")}<span>Wishlist</span></button>
           </div>
           <div class="owner-picker" ${entry.owned ? "" : "hidden"}>
             <span class="eyebrow">Who owns it?</span>
             <div class="chip-grid">${people().map(person => `<button class="chip-btn" type="button" data-detail-owner="${esc(person.name)}" aria-pressed="${owners.some(owner => sameName(owner, person.name))}" style="--accent:${esc(person.color)}"><span class="dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`).join("")}</div>
             <p class="setting-note">Leave everyone unselected if it belongs to the whole table.</p>
           </div>
+          <button type="button" class="button wishlist-choice" data-detail-wishlist aria-pressed="${entry.wishlist}">${symbol("heart")}<span>On my wishlist</span></button>
+          <p class="setting-note wishlist-note">Keep this on your wishlist even when someone else owns a copy.</p>
           <div class="rating-picker">
             <label class="field"><span>My rating</span><select data-detail-rating-select>${Array.from({ length: 11 }, (_, index) => index / 2).map(value => `<option value="${value}" ${entry.rating === value ? 'selected' : ''}>${value ? `${value} / 5 stars` : 'Not rated'}</option>`).join("")}</select></label>
             ${starsMarkup(entry.rating)}
@@ -1058,9 +1092,8 @@
         </div>
         <div role="tabpanel" id="game-panel-catalog" aria-labelledby="game-tab-catalog" ${gameDetailTab !== "catalog" ? 'hidden' : ''} class="game-details-grid">
         ${bggLookupMarkup(game, false)}
-        <section class="detail-section"><h3>Catalog details</h3><p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Categories (comma-separated)", "text", "maxlength=\"1000\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
+        <section class="detail-section"><h3>Catalog details</h3>${tagSectionsMarkup(game)}<p class="setting-note">BGG rating is recorded manually (out of 10). Verified refers to the game’s colors.</p><div class="custom-game-fields">${[["year", "Published year", "number", "min=\"1\" max=\"9999\" step=\"1\""], ["bggRating", "BGG rating", "number", "min=\"1\" max=\"10\" step=\"0.01\""], ["category", "Categories (comma-separated)", "text", "maxlength=\"1000\""], ["mechanisms", "Mechanisms (semicolon-separated)", "text", "maxlength=\"10000\""], ["expansions", "Expansions (semicolon-separated)", "text", "maxlength=\"10000\""], ["bggId", "BGG game ID", "text", "inputmode=\"numeric\" pattern=\"[0-9]+\" maxlength=\"12\""]].map(([key, label, type, attrs]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="${type}" ${attrs} value="${esc(sheetValue(game, key) || '')}"></label>`).join("")}</div></section>
         </div>
-        <section class="detail-section" role="tabpanel" id="game-panel-setup" aria-labelledby="game-tab-setup" ${gameDetailTab !== "setup" ? 'hidden' : ''}>${gameSetupMarkup(game)}</section>
         <section class="detail-section" role="tabpanel" id="game-panel-plays" aria-labelledby="game-tab-plays" ${gameDetailTab !== "plays" ? 'hidden' : ''}>
           <h3>Your plays</h3>
           ${record ? `
@@ -1085,7 +1118,7 @@
     document.querySelector("#gameDialogTitle").innerHTML = play.gameTitleMarkup(game.name);
     document.querySelector("[data-game-dialog-eyebrow]").textContent = game.custom ? "Added game" : game.verified ? "Game · verified colors" : "Game";
     document.querySelector("#gameDialogBody").innerHTML = gameDialogMarkup(game);
-    document.querySelector("#gameDialogFooter").innerHTML = `${game.custom ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button><button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`;
+    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>${game.custom ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button><button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`;
     syncSetupControls();
     icons.mount(document.querySelector("#gameDialog"));
   }
@@ -1172,7 +1205,8 @@
     });
     let extra = form.querySelector("[data-custom-paste-fields]");
     if (extra) extra.remove();
-    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields><label class="field"><span>Main type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
+    form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", `<div class="wide custom-game-fields" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${[["pasteYear", "Published year", "year", "number", 'min="1" max="9999" step="1"'], ["pasteBggRating", "BGG rating", "bggRating", "number", 'min="1" max="10" step="0.01"'], ["pasteTags", "Categories (comma-separated)", "category", "text", 'maxlength="1000"'], ["pasteMechanisms", "Mechanisms (semicolon-separated)", "mechanisms", "text", 'maxlength="10000"'], ["pasteExpansions", "Expansions (semicolon-separated)", "expansions", "text", 'maxlength="10000"']].map(([name, label, key, type, attrs]) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} value="${esc(game ? sheetValue(game, key) || '' : '')}"></label>`).join("")}</div>`);
+    form.querySelector("[data-custom-paste-fields]").insertAdjacentHTML("beforeend", `<div class="wide">${additionalTypesMarkup(game, true)}</div>`);
     let lookup = form.querySelector("[data-bgg-lookup]");
     if (lookup) lookup.remove();
     form.querySelector(".custom-game-fields").insertAdjacentHTML("beforeend", bggLookupMarkup(game, true));
@@ -1226,7 +1260,7 @@
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
-      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), category: values.pasteTags || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
       delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
@@ -1574,6 +1608,8 @@
   }
 
   function handleLibraryChange(event) {
+    if (handleMetadataChoice(event)) return;
+    if (event.target.matches("[data-show-expansions]")) { const checked = event.target.checked; updateLibraryUi(ui => { ui.showExpansions = checked; }); renderLibrary(); libraryRoot.querySelector("[data-show-expansions]")?.focus({preventScroll:true}); return; }
     if (event.target.matches("[data-library-ownership]")) { const value = event.target.value; updateLibraryUi(ui => { ui.ownership = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-category], [data-library-mechanism], [data-library-main-type], [data-library-verified]")) { const key = event.target.matches("[data-library-category]") ? "category" : event.target.matches("[data-library-mechanism]") ? "mechanism" : event.target.matches("[data-library-main-type]") ? "mainType" : "verified"; const value = event.target.value; updateLibraryUi(ui => { ui[key] = value; }); renderLibrary(); }
     else if (event.target.matches("[data-library-sort]")) { const value = event.target.value; updateLibraryUi(ui => { ui.sortBy = value; ui.sortDirection = "asc"; }); renderLibrary(); }
@@ -1702,6 +1738,7 @@
       if (event.target.matches("[data-detail-metadata]") && event.target.checkValidity()) { const key = event.target.dataset.detailMetadata; const value = event.target.value.trim(); mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: value }); }); if (appState().ui.view === "library") renderLibrary(); }
     });
     document.querySelector("#gameDialogBody").addEventListener("change", event => {
+      if (handleMetadataChoice(event)) return;
       if (event.target.closest("#game-panel-setup") && event.target.matches("[data-setup-color], [data-setup-factions], [data-setup-verified], [data-setup-sort]")) { syncSetupControls(); saveGameSetup(false); return; }
       if (event.target.matches("[data-detail-rating-select]")) {
         mutateLibrary(openGameId, entry => { entry.rating = Number(event.target.value); });
