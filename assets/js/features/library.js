@@ -215,7 +215,7 @@
       if (key === "complexityWeight") return Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "—";
       return sheetValue(game, key) ?? "—";
     };
-    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">Pasted</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${mismatch && key === "name" ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(key === "complexityWeight" && Number.isFinite(Number(current(key))) ? Number(current(key)).toFixed(2) : current(key))}</td><td>${esc(Array.isArray(fields[key]) ? fields[key].join("; ") : key === "complexityWeight" ? Number(fields[key]).toFixed(2) : fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
+    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">Pasted</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${key === "alternativeNames" || (mismatch && key === "name") ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(key === "complexityWeight" && Number.isFinite(Number(current(key))) ? Number(current(key)).toFixed(2) : current(key))}</td><td>${esc(Array.isArray(fields[key]) ? fields[key].join("; ") : key === "complexityWeight" ? Number(fields[key]).toFixed(2) : fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
     const status = keys.length ? keys.length + " fields found. Only checked fields will be filled." : gamePasteText().trim() ? "No supported fields found. Paste the correction form, game overview, or player recommendation table." : "Paste a BGG correction form, game overview, or player recommendation table.";
     document.querySelector("#gamePasteStatus").textContent = [status, ...pasteParsed.warnings, mismatch ? "The pasted name differs from this game; Name is unchecked. Review the other fields before applying." : ""].filter(Boolean).join(" ");
     const target = document.querySelector("#gamePasteTarget").value.trim();
@@ -603,9 +603,42 @@
       if (key === "bggId") content = `<a class="sheet-web ${value ? 'is-linked' : 'is-unlinked'}" aria-label="${esc((value ? 'View BGG: ' : 'Find on BGG (not linked): ') + game.name)}" title="${value ? 'Linked to BGG' : 'Not linked · search BGG'}" href="${value ? 'https://boardgamegeek.com/boardgame/' + encodeURIComponent(value) : 'https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=' + encodeURIComponent(sheetValue(game, 'name'))}" target="_blank" rel="noopener noreferrer">${symbol("libraryWeb")}</a>`;
       if (key === "colors") content = `${gameColorsMarkup(game)}`;
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
-      return `<td class="sheet-${key}" title="${esc(value ?? '')}">${content}</td>`;
+      return `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="${id}" tabindex="0" aria-label="Notes for ${esc(game.name)}; double-click or press Enter to edit"` : ''} title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
     return `<tr${parent ? ` class="sheet-expansion-row" data-expansion-parent="${esc(parent.id)}"` : game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
+  }
+
+  function editSheetNote(cell) {
+    if (!cell || cell.querySelector("textarea")) return;
+    const id = cell.dataset.editNote;
+    const original = libraryEntry(id).note || "";
+    const input = document.createElement("textarea");
+    input.className = "sheet-note-editor";
+    input.maxLength = 1000;
+    input.rows = 3;
+    input.value = original;
+    input.setAttribute("aria-label", "Edit notes; click away to save, Escape to cancel");
+    cell.replaceChildren(input);
+    let finished = false;
+    const finish = save => {
+      if (finished) return;
+      finished = true;
+      const note = save ? u.cleanText(input.value, 1000).trim() : original;
+      if (save && note !== original) mutateLibrary(id, entry => { entry.note = note; });
+      cell.title = note;
+      cell.innerHTML = note ? `<span class="sheet-cell-text">${esc(note)}</span>` : '<span class="sheet-missing" aria-label="Not recorded">—</span>';
+    };
+    input.addEventListener("blur", () => finish(true));
+    input.addEventListener("keydown", event => {
+      if (event.key === "Escape" || (event.key === "Enter" && (event.ctrlKey || event.metaKey))) {
+        event.preventDefault();
+        event.stopPropagation();
+        finish(event.key !== "Escape");
+        cell.focus({ preventScroll: true });
+      }
+    });
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
   }
 
   function expansionRows(game) {
@@ -1877,6 +1910,13 @@
     libraryRoot = document.querySelector("#libraryView");
     historyRoot = document.querySelector("#historyView");
     libraryRoot.addEventListener("click", handleLibraryClick);
+    libraryRoot.addEventListener("dblclick", event => editSheetNote(event.target.closest("[data-edit-note]")));
+    libraryRoot.addEventListener("keydown", event => {
+      if (event.key === "Enter" && event.target.matches("[data-edit-note]")) {
+        event.preventDefault();
+        editSheetNote(event.target);
+      }
+    });
     libraryRoot.addEventListener("mouseover", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags" && !button.contains(event.relatedTarget)) showSheetInfo(button, false); });
     libraryRoot.addEventListener("mouseout", event => { const button = event.target.closest("[data-sheet-info]"); if (button && !button.contains(event.relatedTarget) && !document.querySelector("#libraryInfoPopover")?.contains(event.relatedTarget) && !infoPinned) scheduleSheetInfoHide(); });
     libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags") showSheetInfo(button, false); });

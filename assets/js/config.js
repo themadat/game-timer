@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.23";
+  const VERSION = "2.1.0.25";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,20 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T02:00:00.000Z",
+        title: "Edit notes in the library table",
+        summary: "Double-click a Notes cell to edit it directly. Click away to save or press Escape to cancel.",
+        features: ["Inline notes editing with keyboard access"], improvements: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.24",
+        date: "2026-10-23T01:45:00.000Z",
+        title: "Optional alternative-name import",
+        summary: "Pasted alternative names start unchecked so importing them is an explicit choice.",
+        features: [], improvements: ["Leave alternative names unchecked in paste previews"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.23",
         date: "2026-10-23T01:30:00.000Z",
         title: "Alternative names beside game names",
         summary: "Library rows show alternative names beside the main name, with the full list available on hover.",
