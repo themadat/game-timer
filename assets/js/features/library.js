@@ -1374,7 +1374,7 @@
     document.querySelector("#gameDialogTitle").innerHTML = play.gameTitleMarkup(game.name);
     document.querySelector("[data-game-dialog-eyebrow]").textContent = game.custom ? "Added game" : game.verified ? "Game · verified colors" : "Game";
     document.querySelector("#gameDialogBody").innerHTML = gameDialogMarkup(game);
-    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>${game.custom ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button>${libraryEntry(game.id).metadata?.expansionOf ? `<button class="button primary" type="button" data-open-base="${esc(libraryEntry(game.id).metadata.expansionOf)}">Open base game</button>` : `<button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`}`;
+    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>${game.id !== "custom" ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button>${libraryEntry(game.id).metadata?.expansionOf ? `<button class="button primary" type="button" data-open-base="${esc(libraryEntry(game.id).metadata.expansionOf)}">Open base game</button>` : `<button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`}`;
     syncSetupControls();
     icons.mount(document.querySelector("#gameDialog"));
   }
@@ -1453,7 +1453,7 @@
     editingCustomGameId = game?.id || "";
     editingExpansionDraft = draft || null;
     document.querySelector("#customGameTitle").textContent = draft ? "Edit expansion" : game ? "Edit game" : "Add a game";
-    document.querySelector("#customGameDelete").hidden = !game;
+    document.querySelector("#customGameDelete").hidden = !game?.custom;
     document.querySelector("#customGameSave").hidden = Boolean(game || draft);
     form.querySelector(".dialog-footer [data-close-dialog]").textContent = game || draft ? "Close" : "Cancel";
     const parentId = draft?.parentId || (game ? libraryEntry(game.id).metadata?.expansionOf || "" : "");
@@ -1471,11 +1471,26 @@
       <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
       <div class="wide custom-catalog-fields">${[["alternativeNames","Alternative names","alternativeNames"],["pasteMechanisms","Mechanisms","mechanisms"],["pasteExpansions","Expansions","expansions"]].map(([name,label,key]) => `<label class="field"><span>${label}</span><textarea name="${name}" rows="8" maxlength="10000" placeholder="One per line">${esc(game ? (libraryEntry(game.id).metadata?.[key] || []).join("\n") : "")}</textarea></label>`).join("")}</div>
       ${bggLookupMarkup(game,true)}
-      <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields were not supplied in the paste. Review or fill them in; numeric defaults are suggestions.</p>
+      <label class="field wide"><span>Notes</span><textarea name="gameNote" rows="2" maxlength="1000" placeholder="Notes about this game">${esc(game ? libraryEntry(game.id).note : "")}</textarea></label>
+      <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields are missing information. Fill in what you know; unknown values can stay blank.</p>
       <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>`;
     body.querySelector("[data-bgg-lookup] [data-bgg-link]").closest(".bgg-lookup-row").remove();
     if (draft) fillCustomGameFromPaste({name:draft.name});
+    highlightGameMissingFields(form);
     components.openDialog("#customGameDialog", { focus: "#customGameName" });
+  }
+
+  function highlightGameMissingFields(form) {
+    const names = ["name","bggLink","minPlayers","maxPlayers","bestPlayers","recommendedPlayers","avoidPlayers","minMinutes","maxMinutes","complexityWeight","pasteYear","pasteBggRating","alternativeNames","pasteMechanisms","pasteExpansions"];
+    names.forEach(name => {
+      const input = form.elements[name];
+      if (!input) return;
+      const missing = !input.value.trim();
+      input.classList.toggle("paste-missing-field",missing);
+      input.toggleAttribute("data-paste-missing",missing);
+      input.setAttribute("aria-describedby","customGameMissingNote");
+    });
+    form.querySelector("#customGameMissingNote").hidden = !form.querySelector(".paste-missing-field");
   }
 
   function saveCustomGame(event, autosave) {
@@ -1515,14 +1530,18 @@
       createdAt: u.isoNow()
     };
     const isNew = !editingCustomGameId;
+    const builtin = !isNew && !play.gameById(editingCustomGameId)?.custom;
     const previousName = editingCustomGameId ? play.gameById(editingCustomGameId)?.name : editingExpansionDraft?.name || "";
     storage.mutate(next => {
       const list = next.workspace.library.customGames;
       const index = list.findIndex(item => item.id === id);
-      if (index >= 0) list[index] = Object.assign({}, list[index], record, { createdAt: list[index].createdAt });
-      else list.push(record);
+      if (!builtin) {
+        if (index >= 0) list[index] = Object.assign({}, list[index], record, { createdAt: list[index].createdAt });
+        else list.push(record);
+      }
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
+      entry.note = u.cleanText(values.gameNote,1000).trim();
       entry.rating = Number(values.personalRating) || 0;
       entry.owners = Array.from(form.querySelectorAll('[name="gameOwners"]:checked')).map(input => input.value).concat((values.additionalOwners || "").split(",").map(name => u.cleanLine(name,60)).filter(Boolean)).filter((name,index,names) => names.findIndex(other => sameName(other,name)) === index);
       entry.owned = form.elements.customOwned.checked || entry.owners.length > 0;
@@ -1542,7 +1561,8 @@
       }
       entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), alternativeNames: values.alternativeNames || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
       if (newParent) entry.metadata.expansionOf = newParent; else delete entry.metadata.expansionOf;
-      delete entry.metadata.catalog;
+      if (builtin) entry.metadata.catalog = Object.fromEntries(PASTE_CATALOG_FIELDS.map(key => [key,record[key]]));
+      else delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
     if (autosave) {
@@ -2053,6 +2073,7 @@
       if (event.target.name === "gameOwners" && event.target.checked) event.currentTarget.elements.customOwned.checked = true;
       if (event.target.name === "customOwned" && !event.target.checked) { event.currentTarget.querySelectorAll('[name="gameOwners"]').forEach(input => { input.checked = false; }); event.currentTarget.elements.additionalOwners.value = ""; }
 
+      highlightGameMissingFields(event.currentTarget);
       if (event.target.name) event.target.dataset.fieldKnown = event.target.value.trim() && event.target.checkValidity() ? "true" : "false";
       if (event.target.hasAttribute("data-paste-missing")) { const missing = !event.target.value.trim(); event.target.classList.toggle("paste-missing-field",missing); document.querySelector("#customGameMissingNote").hidden = !event.currentTarget.querySelector(".paste-missing-field"); }
 

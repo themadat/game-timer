@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.33";
+  const VERSION = "2.1.0.34";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T16:00:00.000Z",
+        title: "Consistent Add and Edit game forms",
+        summary: "Every saved game can use the complete Add/Edit form, with yellow missing fields and automatic saving for updates.",
+        features: [], improvements: ["Full catalog editing for built-in games without duplicating records", "Missing-field highlights on opening Add or Edit", "Notes in the shared form"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.33",
         date: "2026-10-23T15:30:00.000Z",
         title: "Numeric personal ratings",
         summary: "Select your numeric rating with one click when adding or updating a game.",
