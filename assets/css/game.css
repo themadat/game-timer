@@ -894,3 +894,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
 [data-edit-note] { cursor: text; }
 .sheet-note-editor { display: block; width: 100%; min-width: 160px; box-sizing: border-box; resize: vertical; font: inherit; color: var(--text); }
+
+.sheet-year-button { padding: 0; width: 100%; min-height: 24px; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; cursor: text; }
+.library-sheet .sheet-year:has(.sheet-year-editor) { flex-basis: 78px; min-width: 78px; }
+.sheet-year-editor { width: 78px; min-height: 28px; padding: 2px; box-sizing: border-box; color: var(--text); font: inherit; text-align: right; }
+.sheet-name-line > .expansion-row-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }

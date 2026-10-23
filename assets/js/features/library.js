@@ -583,7 +583,7 @@
     const alternativeNames = (entry.metadata?.alternativeNames || []).join(" · ");
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line">${parent ? '<span class="expansion-indent" aria-hidden="true">↳</span>' : ''}<button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc([game.name, alternativeNames].filter(Boolean).join(' · '))}"><span class="name-text">${esc(value)}${alternativeNames ? ` <span class="sheet-alternative-names">(${esc(alternativeNames)})</span>` : ''}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span><span class="sheet-year">${sheetValue(game, "year") !== null ? `(${esc(sheetValue(game, "year"))})` : ''}</span><span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line">${parent ? '<span class="expansion-indent" aria-hidden="true">↳</span>' : ''}<button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc([game.name, alternativeNames].filter(Boolean).join(' · '))}"><span class="name-text">${esc(value)}${alternativeNames ? ` <span class="sheet-alternative-names">(${esc(alternativeNames)})</span>` : ''}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span>${sheetYearMarkup(game)}<span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
@@ -606,6 +606,57 @@
       return `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="${id}" tabindex="0" aria-label="Notes for ${esc(game.name)}; double-click or press Enter to edit"` : ''} title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
     return `<tr${parent ? ` class="sheet-expansion-row" data-expansion-parent="${esc(parent.id)}"` : game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
+  }
+
+  function sheetYearMarkup(game, parentId, expansionName) {
+    const year = game ? sheetValue(game, "year") : null;
+    const name = game?.name || expansionName;
+    return `<span class="sheet-year"><button type="button" class="sheet-year-button" data-edit-year="${esc(game?.id || '')}" ${parentId ? `data-year-parent="${esc(parentId)}" data-year-expansion="${esc(expansionName)}"` : ''} aria-label="Edit published year for ${esc(name)}" title="Click to edit published year">${year !== null ? `(${esc(year)})` : '—'}</button></span>`;
+  }
+
+  function editSheetYear(button) {
+    if (!button) return;
+    const holder = button.parentElement;
+    const game = button.dataset.editYear ? play.gameById(button.dataset.editYear) : play.allGames(true).find(game => game.expansionOf === button.dataset.yearParent && game.name === button.dataset.yearExpansion);
+    const original = game ? sheetValue(game, "year") : null;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "-9999";
+    input.max = "9999";
+    input.step = "1";
+    input.className = "sheet-year-editor";
+    input.value = original ?? "";
+    input.setAttribute("aria-label", button.getAttribute("aria-label"));
+    holder.replaceChildren(input);
+    let finished = false;
+    const finish = save => {
+      if (finished) return;
+      if (save && !input.checkValidity()) { input.reportValidity(); input.focus(); return; }
+      finished = true;
+      const year = input.value.trim() ? Number(input.value) : null;
+      if (save && year !== original) {
+        const id = game?.id || u.uid("custom-game");
+        storage.mutate(next => {
+          if (!game) next.workspace.library.customGames.push({id, name:button.dataset.yearExpansion, createdAt:u.isoNow()});
+          const entry = next.workspace.library.games[id] || {owned:!game, owners:[], wishlist:false, rating:0, note:""};
+          entry.metadata = Object.assign({}, entry.metadata, {year});
+          if (!game) entry.metadata.expansionOf = button.dataset.yearParent;
+          next.workspace.library.games[id] = entry;
+        }, {reason:"library-year"});
+        renderLibrary();
+      } else holder.replaceChildren(button);
+    };
+    input.addEventListener("blur", () => finish(true));
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        finish(event.key === "Enter");
+        if (holder.isConnected) holder.querySelector("button")?.focus();
+      }
+    });
+    input.focus();
+    input.select();
   }
 
   function editSheetNote(cell) {
@@ -662,7 +713,7 @@
     return gameTagGroups(game).Expansions.filter(name => owned.includes(name)).map(name => {
       const child = linked.find(child => child.name === name);
       if (child) return gameRow(child,game);
-      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><span class="expansion-row-name">↳ <button type="button" class="text-link" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></span><span class="expansion-parent-name">${esc(sheetValue(game, "name"))}</span></th>` : `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="" data-note-parent="${esc(game.id)}" data-note-expansion="${esc(name)}" tabindex="0" aria-label="Notes for ${esc(name)}; double-click or press Enter to edit"` : ''}>${key === "owners" ? '<span class="owner-pill">Owned</span>' : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
+      return `<tr class="sheet-expansion-row" data-expansion-parent="${esc(game.id)}"><td class="sheet-play-cell"></td>${SHEET_COLUMNS.map(([key]) => key === "name" ? `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line"><span class="expansion-row-name">↳ <button type="button" class="text-link" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></span>${sheetYearMarkup(null,game.id,name)}</div></th>` : `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="" data-note-parent="${esc(game.id)}" data-note-expansion="${esc(name)}" tabindex="0" aria-label="Notes for ${esc(name)}; double-click or press Enter to edit"` : ''}>${key === "owners" ? '<span class="owner-pill">Owned</span>' : key === "mainType" ? '<span class="game-tag">Expansion</span>' : '<span class="sheet-missing" aria-label="Not applicable">—</span>'}</td>`).join("")}</tr>`;
     }).join("");
   }
 
@@ -1743,6 +1794,8 @@
   /* ---------- Events ---------- */
 
   function handleLibraryClick(event) {
+    const year = event.target.closest("[data-edit-year]");
+    if (year) { editSheetYear(year); return; }
     const paste = event.target.closest("[data-open-game-paste]");
     if (paste) { openGamePaste(paste.dataset.openGamePaste, false, paste); return; }
     const tab = event.target.closest("[data-library-tab]");

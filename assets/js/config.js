@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.26";
+  const VERSION = "2.1.0.27";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T02:30:00.000Z",
+        title: "Edit published years in the table",
+        summary: "Click the year area to add or edit a published year on regular and expansion rows.",
+        features: ["Inline year editing, including negative years and name-only expansions"], improvements: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.26",
         date: "2026-10-23T02:15:00.000Z",
         title: "Expansion notes editing",
         summary: "Double-click Notes on name-only expansion rows to add notes without opening the editor.",
