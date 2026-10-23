@@ -591,3 +591,13 @@ test('BGG IDs parse from slugless title links, correction URLs and explicit labe
   assert.equal(App.library.parseBggPaste('BGG ID: 198773\n[Other game](https://boardgamegeek.com/boardgame/13/catan/ratings)').fields.bggId, '198773');
   assert.equal(App.library.parseBggPaste('BGG ID: 0').fields.bggId, undefined);
 });
+
+test('correction imports skip fan expansions in labeled and bare rows', () => {
+  const { App } = load();
+  for (const prefix of ['', 'Remove\t']) {
+    const text = `Expansion\n${prefix}Dune: Official Pack\n${prefix}Dune: Landsraad (fan expansion for Dune)\n${prefix}Dune: More (Fan-Made Expansion)\n${prefix}Dune: Extra (fan-made)\nAdd Expansion\nFan Expansions\n${prefix}Dune: Unofficial Pack\nExpands\nDune`;
+    assert.deepEqual([...App.library.parseBggPaste(text).fields.expansions], ['Dune: Official Pack']);
+  }
+  assert.equal(App.library.parseBggPaste('Expansion\nRemove Dune: Fan (fan expansion)\nAdd Expansion').fields.expansions, undefined);
+  assert.deepEqual([...App.library.parseBggPaste('Expansion\nFantasy Realms: Official Pack\nExpands').fields.expansions], ['Fantasy Realms: Official Pack']);
+});

@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.28";
+  const VERSION = "2.1.0.29";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T14:00:00.000Z",
+        title: "Skip fan expansions in correction imports",
+        summary: "Correction paste excludes expansions labeled as fan expansions or fan-made entries.",
+        features: [], improvements: ["Skip separate Fan Expansions sections"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.28",
         date: "2026-10-23T02:45:00.000Z",
         title: "Visible BGG ID in paste",
         summary: "Review or correct the BGG ID beside the game name before applying pasted information.",
