@@ -1166,10 +1166,27 @@
     popup.style.top = rect.bottom + 4 + "px";
   }
 
+  function preserveScroll(nodes) {
+    const positions = nodes.filter(Boolean).map(node => ({node,top:node.scrollTop,left:node.scrollLeft}));
+    return () => positions.forEach(({node,top,left}) => {
+      if (node.isConnected) { node.scrollTop = top; node.scrollLeft = left; }
+    });
+  }
+
   function renderLibrary(options) {
     if (!options?.keepInfo) hideSheetInfo();
     hideRatingPicker();
     if (!libraryRoot) return;
+    const previousSheet = libraryRoot.querySelector(".library-sheet");
+    const sheetScroll = {top:previousSheet?.scrollTop || 0,left:previousSheet?.scrollLeft || 0};
+    const ancestors = [];
+    for (let node = libraryRoot; node; node = node.parentElement) ancestors.push(node);
+    const restoreParents = preserveScroll(ancestors);
+    const restore = () => {
+      const sheet = libraryRoot.querySelector(".library-sheet");
+      if (sheet) { sheet.scrollTop = sheetScroll.top; sheet.scrollLeft = sheetScroll.left; }
+      restoreParents();
+    };
     const ui = moduleState();
     const tableOptionsOpen = Boolean(libraryRoot.querySelector(".library-table-options")?.open);
     const focusSelector = document.activeElement?.matches?.("[data-library-search]") ? "[data-library-search]" : "";
@@ -1185,7 +1202,8 @@
       input?.focus();
       input?.setSelectionRange(input.value.length, input.value.length);
     }
-    requestAnimationFrame(fitLibrarySheet);
+    restore();
+    requestAnimationFrame(() => { fitLibrarySheet(); restore(); });
     emit("app:viewrendered");
   }
 
@@ -1456,8 +1474,11 @@
   function refreshAfterLibraryChange() {
     const focusKey = document.activeElement && Array.from(document.activeElement.attributes || []).find(attribute => attribute.name.startsWith("data-detail-"));
     const focusSelector = focusKey ? `[${focusKey.name}${focusKey.value ? `="${CSS.escape(focusKey.value)}"` : ""}]` : "";
-    if (document.querySelector("#gameDialog").open) renderGameDialog();
+    const dialog = document.querySelector("#gameDialog");
+    const restoreEditor = preserveScroll([dialog, dialog.querySelector(".dialog-shell"), dialog.querySelector(".dialog-body")]);
+    if (dialog.open) renderGameDialog();
     if (focusSelector) document.querySelector("#gameDialog " + focusSelector)?.focus({ preventScroll: true });
+    restoreEditor();
     if (appState().ui.view === "library") renderLibrary();
   }
 
@@ -1596,7 +1617,7 @@
     }, { reason: "custom-game" });
     if (autosave) {
       if (isNew) { editingCustomGameId = id; editingExpansionDraft = null; document.querySelector("#customGameDelete").hidden = false; document.querySelector("#customGameSave").hidden = true; }
-      renderLibrary(); return;
+      return;
     }
     components.closeDialog("#customGameDialog", "saved");
     components.toast(isNew ? name + " was added to your library as owned." : name + " was updated.", { title: isNew ? "Game added" : "Game saved", kind: "success" });
@@ -2158,6 +2179,7 @@
     });
     document.querySelector("#customGameForm").addEventListener("change", event => { if ((editingCustomGameId || editingExpansionDraft) && event.target.name) saveCustomGame(event, true); });
     document.querySelector("#customGameForm").addEventListener("submit", saveCustomGame);
+    document.querySelector("#customGameDialog").addEventListener("close", () => { if (editingCustomGameId) renderLibrary(); });
     document.querySelector("#customGameDelete").addEventListener("click", deleteCustomGame);
     document.querySelector("#historyDialogBody").addEventListener("change", event => {
       const select = event.target.closest("[data-placement-id]");

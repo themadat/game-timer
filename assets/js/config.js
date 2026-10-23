@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.37";
+  const VERSION = "2.1.0.38";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T17:00:00.000Z",
+        title: "Keep scroll steady while editing games",
+        summary: "Autosaving game edits keeps the editor in place and preserves library scrolling when it closes.",
+        features: [], improvements: [], fixes: ["Avoid rebuilding the background library on each form edit", "Restore editor and library scroll positions during refreshes"], knownIssues: []
+      },
+      {
+        version: "2.1.0.37",
         date: "2026-10-23T16:45:00.000Z",
         title: "Stable expansion checklist scrolling",
         summary: "Checking owned expansions keeps the checklist, focus, and library scroll position in place.",
