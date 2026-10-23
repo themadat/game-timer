@@ -583,3 +583,11 @@ test('whole correction page ignores navigation and reads rows without edit contr
   assert.equal(combined.bggRating, 7.1);
   assert.equal(combined.name, 'Codenames: Pictures');
 });
+
+test('BGG IDs parse from slugless title links, correction URLs and explicit labels', () => {
+  const { App } = load();
+  assert.equal(App.library.parseBggPaste('# [Cheat](https://boardgamegeek.com/boardgame/15832)').fields.bggId, '15832');
+  assert.equal(App.library.parseBggPaste('https://boardgamegeek.com/geekitem/edit/thing/198773').fields.bggId, '198773');
+  assert.equal(App.library.parseBggPaste('BGG ID: 198773\n[Other game](https://boardgamegeek.com/boardgame/13/catan/ratings)').fields.bggId, '198773');
+  assert.equal(App.library.parseBggPaste('BGG ID: 0').fields.bggId, undefined);
+});

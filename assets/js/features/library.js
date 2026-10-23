@@ -53,7 +53,7 @@
     };
     const editName = text.match(/^Edit Name[\t ]+(?!Set as Primary Name\b)([^\n]+)/mi) || text.match(/^Edit Name[\t ]*\n([^\n]+)/mi);
     if (editName && !/\(alternate\)/i.test(editName[1])) fields.name = editName[1].trim().slice(0, 100);
-    const heading = raw.match(/^\s*#{1,6}\s*\[([^\]]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})\/[^\n)]*\)(?:[^\S\n]*\((-?\d{1,4})\))?/mi);
+    const heading = raw.match(/^\s*#{1,6}\s*\[([^\]]+)\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})(?:\/[^\n)]*)?\)(?:[^\S\n]*\((-?\d{1,4})\))?/mi);
     const plainHeading = text.match(/^#\s+([^\n|]+?)(?:[ \t]+\((-?\d{1,4})\))?\s*$/m) || text.match(/^([^\n|]+?)\s*\((-?\d{1,4})\)\s*$/m);
     if (heading) {
       fields.name = heading[1].trim().slice(0, 100); fields.bggId = heading[2]; if (heading[3] !== undefined) fields.year = Number(heading[3]);
@@ -96,6 +96,12 @@
       const before = text.slice(0, plainHeading.index).trim().split("\n").slice(-4).reverse();
       const candidate = before.find(line => /^\d+(?:\.\d+)?$/.test(line) && Number(line) >= 1 && Number(line) <= 10);
       if (candidate) fields.bggRating = Number(candidate);
+    }
+    if (!fields.bggId) {
+      const explicitId = raw.match(/\bBGG(?:\s+game)?\s*(?:ID|#)\s*[:#=]?\s*(\d{1,12})\b/i);
+      const correctionId = raw.match(/https:\/\/(?:www\.)?boardgamegeek\.com\/geekitem\/edit\/thing\/(\d{1,12})(?=[/?#\s)]|$)/i);
+      if (explicitId && Number(explicitId[1]) > 0) fields.bggId = explicitId[1];
+      else if (correctionId && Number(correctionId[1]) > 0) fields.bggId = correctionId[1];
     }
     if (!fields.bggId) {
       const ratingsId = raw.match(/https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/(\d{1,12})\/[^/\s)]+\/ratings\b/i);
@@ -195,7 +201,13 @@
     target.readOnly = Boolean(customForm || game);
     document.querySelector("#gamePasteTargets").innerHTML = allGames().filter(game => game.id !== "custom").map(game => `<option value="${esc(pasteGameLabel(game))}"></option>`).join("");
     document.querySelectorAll("[data-game-paste-input]").forEach(input => { input.value = ""; });
+    const idInput = document.querySelector("#gamePasteBggId");
+    idInput.value = customForm ? document.querySelector('#customGameForm [name="bggLink"]').value : game ? sheetValue(game,"bggId") || "" : "";
+    idInput.dataset.manual = "false";
+    idInput.dataset.initial = idInput.value;
+    idInput.setCustomValidity("");
     pasteParsed = { fields: {}, warnings: [] };
+    if (bggIdFromInput(idInput.value)) pasteParsed.fields.bggId = bggIdFromInput(idInput.value);
     renderPastePreview();
     components.openDialog("#gamePasteDialog", { trigger, focus: "#gamePasteOverview" });
   }
@@ -220,15 +232,22 @@
     document.querySelector("#gamePasteStatus").textContent = [status, ...pasteParsed.warnings, mismatch ? "The pasted name differs from this game; Name is unchecked. Review the other fields before applying." : ""].filter(Boolean).join(" ");
     const target = document.querySelector("#gamePasteTarget").value.trim();
     const apply = document.querySelector("#gamePasteApply");
-    apply.disabled = !keys.length || (!target && pasteContext !== "custom");
+    apply.disabled = !keys.length || !document.querySelector("#gamePasteBggId").checkValidity() || (!target && pasteContext !== "custom");
     apply.textContent = pasteContext === "custom" ? "Fill form" : game ? "Apply to game" : "Fill new game";
   }
   function gamePasteText() {
     return Array.from(document.querySelectorAll("[data-game-paste-input]")).map(input => input.value).join("\n\n");
   }
   function updateGamePaste(event) {
-    if (event.target.matches("[data-game-paste-input]")) {
+    if (event.target.matches("[data-game-paste-input], #gamePasteBggId")) {
+      const idInput = document.querySelector("#gamePasteBggId");
+      if (event.target === idInput) idInput.dataset.manual = "true";
       pasteParsed = parseBggPaste(gamePasteText());
+      if (idInput.dataset.manual !== "true") idInput.value = pasteParsed.fields.bggId || idInput.dataset.initial || "";
+      const id = bggIdFromInput(idInput.value);
+      idInput.setCustomValidity(idInput.value.trim() && !id ? "Enter a BGG game ID or HTTPS game/correction page link." : "");
+      if (id) pasteParsed.fields.bggId = id;
+      else if (idInput.dataset.manual === "true") delete pasteParsed.fields.bggId;
       const target = document.querySelector("#gamePasteTarget");
       if (!target.readOnly && !target.value.trim()) {
         const suggested = suggestedPasteGame(pasteParsed.fields);
@@ -957,7 +976,7 @@
     try {
       const url = new URL(text);
       if (url.protocol !== "https:" || !["boardgamegeek.com", "www.boardgamegeek.com"].includes(url.hostname) || url.username || url.password) return "";
-      const id = url.pathname.match(/^\/boardgame\/(\d{1,12})(?:\/|$)/)?.[1];
+      const id = url.pathname.match(/^\/(?:boardgame|geekitem\/edit\/thing)\/(\d{1,12})(?:\/|$)/)?.[1];
       return Number(id) > 0 ? id : "";
     } catch (_) { return ""; }
   }
@@ -1954,7 +1973,7 @@
           const content = Array.from(node.childNodes).map(walk).join("");
           if (tag === "a") {
             const href = node.getAttribute("href") || "";
-            if (/^https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\/\d+(?:[/?#]|$)/i.test(href)) return `[${content.replace(/[\[\]\n]/g, " ")}](${href.replace(/[\s()]/g, char => encodeURIComponent(char))})`;
+            if (/^https:\/\/(?:www\.)?boardgamegeek\.com\/(?:boardgame|geekitem\/edit\/thing)\/\d+(?:[/?#]|$)/i.test(href)) return `[${content.replace(/[\[\]\n]/g, " ")}](${href.replace(/[\s()]/g, char => encodeURIComponent(char))})`;
           }
           if (/^h[1-6]$/.test(tag)) return "\n" + "#".repeat(Number(tag[1])) + " " + content + "\n";
           if (tag === "br") return "\n";
@@ -1962,7 +1981,7 @@
           return ["p", "div", "li", "tr", "table", "section"].includes(tag) ? "\n" + content + "\n" : content;
         };
         const text = walk(template.content);
-        if (!/\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/boardgame\//i.test(text)) return;
+        if (!/\]\(https:\/\/(?:www\.)?boardgamegeek\.com\/(?:boardgame|geekitem\/edit\/thing)\//i.test(text)) return;
         event.preventDefault();
         const available = Math.max(0, input.maxLength - (input.value.length - (input.selectionEnd - input.selectionStart)));
         input.setRangeText(text.slice(0, available), input.selectionStart, input.selectionEnd, "end");
@@ -1970,6 +1989,7 @@
       });
     });
     document.querySelector("#gamePasteTarget").addEventListener("input", updateGamePaste);
+    document.querySelector("#gamePasteBggId").addEventListener("input", updateGamePaste);
     document.querySelector("#customGameForm").addEventListener("click", event => {
       const trigger = event.target.closest("[data-custom-game-paste]");
       if (trigger) openGamePaste(editingCustomGameId, true, trigger);

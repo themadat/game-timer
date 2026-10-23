@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.27";
+  const VERSION = "2.1.0.28";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T02:45:00.000Z",
+        title: "Visible BGG ID in paste",
+        summary: "Review or correct the BGG ID beside the game name before applying pasted information.",
+        features: ["Editable BGG ID or page-link field in Paste game info"], improvements: ["Read IDs from correction page URLs and labeled BGG IDs"], fixes: ["Detect linked title IDs without a URL slug"], knownIssues: []
+      },
+      {
+        version: "2.1.0.27",
         date: "2026-10-23T02:30:00.000Z",
         title: "Edit published years in the table",
         summary: "Click the year area to add or edit a published year on regular and expansion rows.",
