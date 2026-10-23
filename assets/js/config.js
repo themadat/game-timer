@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.31";
+  const VERSION = "2.1.0.32";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T15:15:00.000Z",
+        title: "Skip promo expansions in correction imports",
+        summary: "Correction paste excludes promo and promotional expansions as well as fan expansions.",
+        features: [], improvements: ["Ignore separate promo sections and promo-labeled expansion names"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.31",
         date: "2026-10-23T15:00:00.000Z",
         title: "Leave unknown player counts and times blank",
         summary: "New games and expansions no longer receive invented player counts, recommendations, or play times.",

@@ -125,7 +125,7 @@
       }
     }
     // Some browser copies omit the Edit/Remove/Add controls entirely.
-    const formSections = /^(?:Names|Year Released|Minimum Players|Maximum Players|Mfg Suggested Ages|Minimum Playing Time|Maximum Playing Time|Designer|Solo Designer|Artist|Developer|Graphic Designer|Sculptor|Editor|Writer|Insert Designer|Publisher|Category|Mechanism|Expansion|Fan Expansions?|Expands|Integrates With|Contains|Contained in|Reimplemented By|Reimplements|Family|Video Game Adaptation|Note(?:s)? to Admin)(?:\s+more information)?$/i;
+    const formSections = /^(?:Names|Year Released|Minimum Players|Maximum Players|Mfg Suggested Ages|Minimum Playing Time|Maximum Playing Time|Designer|Solo Designer|Artist|Developer|Graphic Designer|Sculptor|Editor|Writer|Insert Designer|Publisher|Category|Mechanism|Expansion|Fan Expansions?|Promo(?:tional)?(?: Expansions?)?|Expands|Integrates With|Contains|Contained in|Reimplemented By|Reimplements|Family|Video Game Adaptation|Note(?:s)? to Admin)(?:\s+more information)?$/i;
     let bareSection = "";
     for (const line of lines) {
       if (formSections.test(line)) {
@@ -134,8 +134,8 @@
       }
       if (bareSection && line && !/^(?:Remove|Add)\b/i.test(line)) tagSections[bareSection].push(line);
     }
-    // BGG marks unofficial entries in their names; do not import those as expansions.
-    tagSections.expansions = tagSections.expansions.filter(name => !/\bfan[\s–—-]*(?:made[\s–—-]*)?(?:expansion|extension)\b|\(\s*fan[\s–—-]*made\s*\)/i.test(name));
+    // Skip fan-made and promotional entries when importing expansion lists.
+    tagSections.expansions = tagSections.expansions.filter(name => !/\bfan[\s–—-]*(?:made[\s–—-]*)?(?:expansion|extension)\b|\(\s*fan[\s–—-]*made\s*\)|\bpromo(?:s|tional)?\b/i.test(name));
     if (tagSections.category.length) fields.category = [...new Set(tagSections.category)].join(", ").slice(0, 1000);
     ["mechanisms", "expansions"].forEach(key => { if (tagSections[key].length) fields[key] = [...new Set(tagSections[key])].slice(0, 100); });
     const votes = { bestPlayers: [], recommendedPlayers: [], avoidPlayers: [] };

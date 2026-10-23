@@ -576,7 +576,8 @@ test('whole correction page ignores navigation and reads rows without edit contr
   assert.equal(fields.alternativeNames.length, 23);
   assert.ok(fields.alternativeNames.includes('Codenames: Images'));
   assert.deepEqual([...fields.mechanisms], ['Communication Limits', 'Memory', 'Team-Based Game']);
-  assert.equal(fields.expansions.length, 9);
+  assert.equal(fields.expansions.length, 7);
+  assert.ok(fields.expansions.every(name => !/\bpromo\b/i.test(name)));
   assert.ok(!fields.expansions.includes('Codenames: Duet'));
   assert.ok(!fields.alternativeNames.includes('boardgame geek'));
   const combined = App.library.parseBggPaste('[**7.1**](https://boardgamegeek.com/boardgame/198773/codenames-pictures/ratings)\n' + paste).fields;
@@ -615,4 +616,12 @@ test('unknown custom player and timing data remains unknown through sync and lin
   assert.equal(linked.maxPlayers,null);
   assert.equal(linked.maxMinutes,null);
   assert.equal(App.play.playerCountFit(linked,4).score,0);
+});
+
+test('correction imports exclude promo names and sections without dropping normal expansions', () => {
+  const { App } = load();
+  for (const prefix of ['', 'Remove\t']) {
+    const fields = App.library.parseBggPaste(`Expansion\n${prefix}Codenames: Official Pack\n${prefix}Codenames: 5x5 Promo Tiles\n${prefix}Codenames: Promotional Pack\n${prefix}Codenames: Extra (promos)\nAdd Expansion\nPromo Expansions\n${prefix}Unmarked Pack\nExpands`).fields;
+    assert.deepEqual([...fields.expansions], ['Codenames: Official Pack']);
+  }
 });
