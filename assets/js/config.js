@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.32";
+  const VERSION = "2.1.0.33";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T15:30:00.000Z",
+        title: "Numeric personal ratings",
+        summary: "Select your numeric rating with one click when adding or updating a game.",
+        features: [], improvements: ["Replace remaining stars with numeric ratings", "Direct half-point rating buttons in game forms"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.32",
         date: "2026-10-23T15:15:00.000Z",
         title: "Skip promo expansions in correction imports",
         summary: "Correction paste excludes promo and promotional expansions as well as fan expansions.",

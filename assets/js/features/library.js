@@ -962,9 +962,12 @@
     return `<span class="own-pill is-unowned">Not owned</span>`;
   }
 
-  function starsMarkup(rating) {
-    if (!rating) return "";
-    return `<span class="rating rating-stars" role="img" aria-label="Rated ${rating} of 5" title="${rating} / 5">${[0, 1, 2, 3, 4].map(index => `<span class="rating-star" aria-hidden="true">☆<span style="width:${Math.max(0, Math.min(1, rating - index)) * 100}%">★</span></span>`).join("")}</span>`;
+  function numericRatingMarkup(rating) {
+    return rating ? `<span class="rating-score rating-band-${Math.ceil(rating)}" aria-label="Rated ${rating.toFixed(1)} out of 5">${rating.toFixed(1)}</span>` : "";
+  }
+
+  function ratingLevelsMarkup(rating, custom) {
+    return `<fieldset class="numeric-rating-levels"><legend>My rating</legend>${custom ? `<input type="hidden" name="personalRating" value="${rating}">` : ''}<div>${Array.from({length:11},(_,i)=>i/2).map(value=>`<button type="button" class="rating-score rating-band-${Math.ceil(value)}" ${custom ? 'data-custom-rating' : 'data-detail-rating'}="${value}" aria-pressed="${rating === value}" aria-label="${value ? value.toFixed(1) + ' out of 5' : 'Not rated'}">${value ? value.toFixed(1) : '—'}</button>`).join("")}</div></fieldset>`;
   }
 
   function bggLookupMarkup(game, customForm) {
@@ -1010,7 +1013,7 @@
     return `
       <article class="library-card ${entry.owned ? "is-owned" : ""} ${available && moduleState().present.length ? "is-available" : ""}" data-game-card="${esc(game.id)}">
         <button class="library-card-main" type="button" data-open-game="${esc(game.id)}" aria-label="${esc(play.gameAccessibleName(game.name))} details">
-          <span class="library-card-title">${play.gameTitleMarkup(game.name)}${starsMarkup(entry.rating)}</span>
+          <span class="library-card-title">${play.gameTitleMarkup(game.name)}${numericRatingMarkup(entry.rating)}</span>
           <span class="library-card-facts">
             <span>${symbol("people")}${esc(players)}</span>
             <span>${symbol("star")}Best ${esc(game.bestPlayers || players)}</span>
@@ -1339,10 +1342,7 @@
           </div>
           <button type="button" class="button wishlist-choice" data-detail-wishlist aria-pressed="${entry.wishlist}">${symbol("heart")}<span>On my wishlist</span></button>
           <p class="setting-note wishlist-note">Keep this on your wishlist even when someone else owns a copy.</p>
-          <div class="rating-picker">
-            <label class="field"><span>My rating</span><select data-detail-rating-select>${Array.from({ length: 11 }, (_, index) => index / 2).map(value => `<option value="${value}" ${entry.rating === value ? 'selected' : ''}>${value ? `${value} / 5 stars` : 'Not rated'}</option>`).join("")}</select></label>
-            ${starsMarkup(entry.rating)}
-          </div>
+          ${ratingLevelsMarkup(entry.rating,false)}
           <label class="field"><span>Notes</span><textarea data-detail-note rows="2" maxlength="1000" placeholder="House rules, missing pieces, expansions…">${esc(entry.note)}</textarea></label>
         </section>
         </div>
@@ -1464,6 +1464,7 @@
     body.innerHTML = `
       <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || draft?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Paste game info</button></div>
       ${customOwnershipMarkup(game,draft)}
+      <div class="wide">${ratingLevelsMarkup(game ? libraryEntry(game.id).rating : 0,true)}</div>
       <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${baseGameChoices(gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
       <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1"',""], ["maxPlayers","Max players","number",'min="1" max="20" step="1"',""], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
       <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1"',value("minMinutes",""))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1"',value("maxMinutes",""))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',game && Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "","Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
@@ -1522,6 +1523,7 @@
       else list.push(record);
       if (isNew) next.workspace.library.games[id] = { owned: true, owners: [], wishlist: false, rating: 0, note: "" };
       const entry = next.workspace.library.games[id] || { owned: false, owners: [], wishlist: false, rating: 0, note: "" };
+      entry.rating = Number(values.personalRating) || 0;
       entry.owners = Array.from(form.querySelectorAll('[name="gameOwners"]:checked')).map(input => input.value).concat((values.additionalOwners || "").split(",").map(name => u.cleanLine(name,60)).filter(Boolean)).filter((name,index,names) => names.findIndex(other => sameName(other,name)) === index);
       entry.owned = form.elements.customOwned.checked || entry.owners.length > 0;
       entry.wishlist = form.elements.customWishlist.checked;
@@ -1994,6 +1996,14 @@
     document.querySelector("#gamePasteTarget").addEventListener("input", updateGamePaste);
     document.querySelector("#gamePasteBggId").addEventListener("input", updateGamePaste);
     document.querySelector("#customGameForm").addEventListener("click", event => {
+      const rating = event.target.closest("[data-custom-rating]");
+      if (rating) {
+        const form = event.currentTarget;
+        form.elements.personalRating.value = rating.dataset.customRating;
+        form.querySelectorAll("[data-custom-rating]").forEach(button => button.setAttribute("aria-pressed",button === rating));
+        if (editingCustomGameId || editingExpansionDraft) saveCustomGame({preventDefault() {},currentTarget:form},true);
+        return;
+      }
       const trigger = event.target.closest("[data-custom-game-paste]");
       if (trigger) openGamePaste(editingCustomGameId, true, trigger);
     });

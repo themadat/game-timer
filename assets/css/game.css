@@ -916,3 +916,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .custom-catalog-fields textarea { width: 100%; min-height: 160px; max-height: 280px; overflow-y: auto; resize: vertical; box-sizing: border-box; }
 @media(max-width: 800px) { #game-panel-catalog { grid-template-columns: 1fr; } }
 @media(max-width: 600px) { .catalog-list-columns, .custom-catalog-fields { grid-template-columns: 1fr; } #gameDialog .catalog-list-columns textarea { height: 200px; } }
+
+.numeric-rating-levels { border: 0; padding: 0; margin: 0; min-width: 0; }
+.numeric-rating-levels legend { font-size: .8rem; font-weight: 650; margin-bottom: .4rem; }
+.numeric-rating-levels > div { display: flex; flex-wrap: wrap; gap: .3rem; }
+.numeric-rating-levels button { min-width: 40px; min-height: 36px; font: inherit; cursor: pointer; border: 1px solid transparent; opacity: .7; }
+.numeric-rating-levels button[aria-pressed="true"] { opacity: 1; outline: 2px solid currentColor; outline-offset: 1px; font-weight: 750; }
