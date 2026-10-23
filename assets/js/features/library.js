@@ -1335,7 +1335,7 @@
             <button type="button" data-detail-owned="true" aria-pressed="${entry.owned}">${symbol("checkmark")}<span>Owned</span></button>
             <button type="button" data-detail-owned="false" aria-pressed="${!entry.owned}"><span>Not owned</span></button>
           </div>
-          <div class="owner-picker" ${entry.owned ? "" : "hidden"}>
+          <div class="owner-picker ${owners.length ? '' : 'owner-missing'}" ${entry.owned ? "" : "hidden"}>
             <span class="eyebrow">Who owns it?</span>
             <div class="chip-grid">${people().map(person => `<button class="chip-btn" type="button" data-detail-owner="${esc(person.name)}" aria-pressed="${owners.some(owner => sameName(owner, person.name))}" style="--accent:${esc(person.color)}"><span class="dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`).join("")}</div>
             <p class="setting-note">Leave everyone unselected if it belongs to the whole table.</p>
@@ -1481,6 +1481,8 @@
   }
 
   function highlightGameMissingFields(form) {
+    const ownerMissing = !form.querySelector('[name="gameOwners"]:checked') && !form.elements.additionalOwners.value.split(",").some(name => name.trim());
+    form.querySelector(".custom-ownership").classList.toggle("owner-missing",ownerMissing);
     const names = ["name","bggLink","minPlayers","maxPlayers","bestPlayers","recommendedPlayers","avoidPlayers","minMinutes","maxMinutes","complexityWeight","pasteYear","pasteBggRating","alternativeNames","pasteMechanisms","pasteExpansions"];
     names.forEach(name => {
       const input = form.elements[name];

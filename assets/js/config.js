@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.34";
+  const VERSION = "2.1.0.35";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T16:15:00.000Z",
+        title: "Highlight missing owners",
+        summary: "Ownership gets a yellow border until an owner is selected or entered.",
+        features: [], improvements: ["Highlight unspecified owners in Add/Edit and Details"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.34",
         date: "2026-10-23T16:00:00.000Z",
         title: "Consistent Add and Edit game forms",
         summary: "Every saved game can use the complete Add/Edit form, with yellow missing fields and automatic saving for updates.",
