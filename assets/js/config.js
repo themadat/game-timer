@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.29";
+  const VERSION = "2.1.0.30";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T14:30:00.000Z",
+        title: "Roomier catalog lists",
+        summary: "Edit alternative names, mechanisms, and expansions one per line in tall scrollable columns.",
+        features: [], improvements: ["Compact lookup-side types, year and rating", "Newline lists in Add/Edit game and paste fills"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.29",
         date: "2026-10-23T14:00:00.000Z",
         title: "Skip fan expansions in correction imports",
         summary: "Correction paste excludes expansions labeled as fan expansions or fan-made entries.",

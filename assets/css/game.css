@@ -899,3 +899,20 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .sheet-year:has(.sheet-year-editor) { flex-basis: 78px; min-width: 78px; }
 .sheet-year-editor { width: 78px; min-height: 28px; padding: 2px; box-sizing: border-box; color: var(--text); font: inherit; text-align: right; }
 .sheet-name-line > .expansion-row-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Keep lookup controls compact and give catalog lists the remaining width. */
+#game-panel-catalog { grid-template-columns: minmax(250px, .9fr) minmax(0, 2.1fr); gap: 1rem; }
+.game-linking-panel { display: grid; gap: .65rem; min-width: 0; }
+#game-panel-catalog .bgg-lookup { gap: .4rem; }
+#game-panel-catalog .setting-note { margin: 0; font-size: .78rem; }
+#game-panel-catalog .bgg-lookup-row { flex-wrap: wrap; }
+#game-panel-catalog .bgg-lookup-row .field { flex: 1 1 150px; }
+.catalog-compact-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .5rem; }
+.catalog-compact-fields .main-type-field, .catalog-compact-fields .additional-types { grid-column: 1 / -1; }
+.catalog-compact-fields .additional-types { margin: 0; padding: .4rem .5rem; }
+.catalog-compact-fields .additional-types > div { gap: .3rem .5rem; }
+.catalog-list-columns, .custom-catalog-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .65rem; min-width: 0; }
+#gameDialog .catalog-list-columns textarea { height: clamp(260px,48vh,480px); max-height: none; overflow-y: auto; resize: none; line-height: 1.5; padding: .6rem; }
+.custom-catalog-fields textarea { width: 100%; min-height: 160px; max-height: 280px; overflow-y: auto; resize: vertical; box-sizing: border-box; }
+@media(max-width: 800px) { #game-panel-catalog { grid-template-columns: 1fr; } }
+@media(max-width: 600px) { .catalog-list-columns, .custom-catalog-fields { grid-template-columns: 1fr; } #gameDialog .catalog-list-columns textarea { height: 200px; } }
