@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.35";
+  const VERSION = "2.1.0.36";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T16:30:00.000Z",
+        title: "Consistent promo filtering",
+        summary: "Exclude promo entries in both correction imports and expansion-list saves, including Promokarte.",
+        features: [], improvements: [], fixes: ["Filter directly edited expansion lists too", "Apply an empty expansion list when every imported entry is excluded"], knownIssues: []
+      },
+      {
+        version: "2.1.0.35",
         date: "2026-10-23T16:15:00.000Z",
         title: "Highlight missing owners",
         summary: "Ownership gets a yellow border until an owner is selected or entered.",

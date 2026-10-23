@@ -27,6 +27,11 @@
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
   const PASTE_LABELS = { name: "Name", alternativeNames: "Alternative names", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
 
+  function importedExpansions(value) {
+    const names = Array.isArray(value) ? value : String(value || "").split(/[;\n]/);
+    return [...new Set(names.map(name => name.trim()).filter(name => name && !/\bfan[\s–—-]*(?:made[\s–—-]*)?(?:expansion|extension)\b|\(\s*fan[\s–—-]*made\s*\)|\bpromo\p{L}*/iu.test(name)))];
+  }
+
   // Parse text and Markdown links; clipboard HTML is converted to inert text separately.
   function parseBggPaste(value) {
     const warnings = [];
@@ -134,8 +139,9 @@
       }
       if (bareSection && line && !/^(?:Remove|Add)\b/i.test(line)) tagSections[bareSection].push(line);
     }
-    // Skip fan-made and promotional entries when importing expansion lists.
-    tagSections.expansions = tagSections.expansions.filter(name => !/\bfan[\s–—-]*(?:made[\s–—-]*)?(?:expansion|extension)\b|\(\s*fan[\s–—-]*made\s*\)|\bpromo(?:s|tional)?\b/i.test(name));
+    const hadExpansions = tagSections.expansions.length > 0;
+    tagSections.expansions = importedExpansions(tagSections.expansions);
+    if (hadExpansions) fields.expansions = tagSections.expansions;
     if (tagSections.category.length) fields.category = [...new Set(tagSections.category)].join(", ").slice(0, 1000);
     ["mechanisms", "expansions"].forEach(key => { if (tagSections[key].length) fields[key] = [...new Set(tagSections[key])].slice(0, 100); });
     const votes = { bestPlayers: [], recommendedPlayers: [], avoidPlayers: [] };
@@ -294,7 +300,7 @@
       mutateLibrary(game.id, entry => {
         entry.metadata = Object.assign({}, entry.metadata);
         Object.entries(fields).forEach(([key, value]) => {
-          if (PASTE_CATALOG_FIELDS.includes(key)) entry.metadata.catalog = Object.assign({}, entry.metadata.catalog, { [key]: value });
+          if (PASTE_CATALOG_FIELDS.includes(key)) entry.metadata.catalog = Object.assign({}, entry.metadata.catalog, { [key]: key === "expansions" ? importedExpansions(value) : value });
           else entry.metadata[key] = value;
         });
       }, "catalog-paste");
@@ -1561,7 +1567,7 @@
         parentEntry.metadata.ownedExpansions = entry.owned ? [...new Set((parentEntry.metadata.ownedExpansions || []).concat(name))] : (parentEntry.metadata.ownedExpansions || []).filter(value => value !== name);
         next.workspace.library.games[newParent] = parentEntry;
       }
-      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), alternativeNames: values.alternativeNames || "", mechanisms: values.pasteMechanisms || "", expansions: values.pasteExpansions || "" });
+      entry.metadata = Object.assign({}, entry.metadata, { bggId: bggIdFromInput(values.bggLink), year: values.pasteYear || null, bggRating: values.pasteBggRating || null, mainType: values.pasteMainType || entry.metadata?.mainType || "Board", additionalTypes: Array.from(form.querySelectorAll("[name=additionalTypes]:checked")).map(input => input.dataset.additionalType), alternativeNames: values.alternativeNames || "", mechanisms: values.pasteMechanisms || "", expansions: importedExpansions(values.pasteExpansions) });
       if (newParent) entry.metadata.expansionOf = newParent; else delete entry.metadata.expansionOf;
       if (builtin) entry.metadata.catalog = Object.fromEntries(PASTE_CATALOG_FIELDS.map(key => [key,record[key]]));
       else delete entry.metadata.catalog;
@@ -2104,7 +2110,7 @@
       if (event.target.matches("[data-bgg-link]")) { const raw = event.target.value.trim(); const bggId = bggIdFromInput(raw); if (!raw || bggId) { mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { bggId }); }); if (appState().ui.view === "library") renderLibrary(); } }
       if (event.target.matches("[data-color-name], [data-setup-label], [data-setup-note], [data-setup-timers]")) saveGameSetup(false);
       if (event.target.matches("[data-detail-note]")) { const note = u.cleanText(event.target.value, 1000).trim(); mutateLibrary(openGameId, entry => { entry.note = note; }); if (appState().ui.view === "library") renderLibrary(); }
-      if (event.target.matches("[data-detail-metadata]") && event.target.checkValidity()) { const key = event.target.dataset.detailMetadata; const value = event.target.value.trim(); mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: value }); }); if (appState().ui.view === "library") renderLibrary(); }
+      if (event.target.matches("[data-detail-metadata]") && event.target.checkValidity()) { const key = event.target.dataset.detailMetadata; const value = event.target.value.trim(); mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: key === "expansions" ? importedExpansions(value) : value }); }); if (appState().ui.view === "library") renderLibrary(); }
     });
     document.querySelector("#gameDialogBody").addEventListener("change", event => {
       if (event.target.matches("[data-detail-expansion-parent]")) { setExpansionParent(event.target.dataset.detailExpansionParent,event.target.value); return; }
@@ -2119,7 +2125,7 @@
         if (!event.target.checkValidity()) { event.target.reportValidity(); return; }
         const key = event.target.dataset.detailMetadata;
         const value = event.target.value.trim();
-        mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: value }); });
+        mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: key === "expansions" ? importedExpansions(value) : value }); });
         if (appState().ui.view === "library") renderLibrary();
       }
       if (event.target.matches("[data-detail-note]")) {

@@ -599,7 +599,7 @@ test('correction imports skip fan expansions in labeled and bare rows', () => {
     const text = `Expansion\n${prefix}Dune: Official Pack\n${prefix}Dune: Landsraad (fan expansion for Dune)\n${prefix}Dune: More (Fan-Made Expansion)\n${prefix}Dune: Extra (fan-made)\nAdd Expansion\nFan Expansions\n${prefix}Dune: Unofficial Pack\nExpands\nDune`;
     assert.deepEqual([...App.library.parseBggPaste(text).fields.expansions], ['Dune: Official Pack']);
   }
-  assert.equal(App.library.parseBggPaste('Expansion\nRemove Dune: Fan (fan expansion)\nAdd Expansion').fields.expansions, undefined);
+  assert.deepEqual([...App.library.parseBggPaste('Expansion\nRemove Dune: Fan (fan expansion)\nAdd Expansion').fields.expansions], []);
   assert.deepEqual([...App.library.parseBggPaste('Expansion\nFantasy Realms: Official Pack\nExpands').fields.expansions], ['Fantasy Realms: Official Pack']);
 });
 
@@ -624,4 +624,15 @@ test('correction imports exclude promo names and sections without dropping norma
     const fields = App.library.parseBggPaste(`Expansion\n${prefix}Codenames: Official Pack\n${prefix}Codenames: 5x5 Promo Tiles\n${prefix}Codenames: Promotional Pack\n${prefix}Codenames: Extra (promos)\nAdd Expansion\nPromo Expansions\n${prefix}Unmarked Pack\nExpands`).fields;
     assert.deepEqual([...fields.expansions], ['Codenames: Official Pack']);
   }
+});
+
+
+test('Forest Shuffle correction excludes promo cards including German Promokarte', () => {
+  const { App } = load();
+  const names = ["Embosca't: Geneta / Teixó Promo Card", "Forest Shuffle: Alpine", "Forest Shuffle: Arara-Azul / Guaraná Promo Card", "Forest Shuffle: Exploration", "Forest Shuffle: Песец / Соболь Promo Card", "Forêt Mixte: Palmier Promo Card", "Mischwald: Dürer-Fledermaus / Feldhase Promokarte", "Forest Shuffle: Woodland Edge", "Forest Shuffle: Památná lípa"];
+  for (const prefix of ['', 'Remove ']) {
+    const fields = App.library.parseBggPaste('Expansion\n' + names.map(name=>prefix+name).join('\n') + '\nAdd Expansion').fields;
+    assert.deepEqual([...fields.expansions], ['Forest Shuffle: Alpine','Forest Shuffle: Exploration','Forest Shuffle: Woodland Edge','Forest Shuffle: Památná lípa']);
+  }
+  assert.deepEqual([...App.library.parseBggPaste('Expansion\nForest Shuffle: Maple Promo Card\nExpands').fields.expansions], []);
 });
