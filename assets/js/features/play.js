@@ -106,8 +106,8 @@
       const merged = Object.assign({}, game, metadata.catalog, metadata.setup);
       if (metadata?.expansionOf) merged.expansionOf = metadata.expansionOf;
       if (typeof merged.factions === "boolean" && merged.colors) merged.colors = merged.colors.map(color => Object.assign({}, color, { faction: merged.factions }));
-      merged.maxPlayers = Math.max(merged.minPlayers, merged.maxPlayers);
-      merged.maxMinutes = Math.max(merged.minMinutes, merged.maxMinutes);
+      if (Number.isFinite(merged.minPlayers) && Number.isFinite(merged.maxPlayers)) merged.maxPlayers = Math.max(merged.minPlayers, merged.maxPlayers);
+      if (Number.isFinite(merged.minMinutes) && Number.isFinite(merged.maxMinutes)) merged.maxMinutes = Math.max(merged.minMinutes, merged.maxMinutes);
       return merged;
     }).filter(game => includeExpansions || !game.expansionOf);
   }
@@ -138,10 +138,11 @@
 
   function playerCountFit(game, count) {
     if (!game || !count || game.id === "custom") return { score: 0, label: "", key: "none" };
-    if (count < game.minPlayers || count > game.maxPlayers) return { score: -2, label: "Doesn’t support " + count, key: "outside" };
+    if ((Number.isFinite(game.minPlayers) && count < game.minPlayers) || (Number.isFinite(game.maxPlayers) && count > game.maxPlayers)) return { score: -2, label: "Doesn’t support " + count, key: "outside" };
     if (parsePlayerCounts(game.avoidPlayers).has(count)) return { score: -1, label: "Weak at " + count, key: "avoid" };
     if (parsePlayerCounts(game.bestPlayers).has(count)) return { score: 3, label: "Best at " + count, key: "best" };
     if (parsePlayerCounts(game.recommendedPlayers).has(count)) return { score: 2, label: "Good at " + count, key: "good" };
+    if (!Number.isFinite(game.minPlayers) || !Number.isFinite(game.maxPlayers)) return {score:0,label:"Player count unknown",key:"none"};
     return { score: 1, label: "Plays " + count, key: "plays" };
   }
 
@@ -297,9 +298,9 @@
   }
 
   function gameRangeText(game) {
-    const playerRange = game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}-${game.maxPlayers}`;
+    const playerRange = !Number.isFinite(game.minPlayers) || !Number.isFinite(game.maxPlayers) ? "??" : game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}-${game.maxPlayers}`;
     const weightValue = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "??";
-    const timeValue = game.minMinutes === game.maxMinutes ? `${game.minMinutes} min` : `${game.minMinutes}-${game.maxMinutes} min`;
+    const timeValue = !Number.isFinite(game.minMinutes) || !Number.isFinite(game.maxMinutes) ? "??" : game.minMinutes === game.maxMinutes ? `${game.minMinutes} min` : `${game.minMinutes}-${game.maxMinutes} min`;
     const recommendedValue = game.recommendedPlayers || playerRange;
     const bestValue = game.bestPlayers || game.recommendedPlayers || playerRange;
     const avoidValue = game.avoidPlayers && game.avoidPlayers !== "--" ? game.avoidPlayers : "None";

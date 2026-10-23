@@ -93,12 +93,12 @@
       if (!id.startsWith("custom-")) id = "custom-" + id;
       if (ids.has(id)) id = u.uid("custom-game");
       ids.add(id);
-      const minPlayers = Math.round(cleanNumber(source.minPlayers, 1, 20, 2));
-      const maxPlayers = Math.round(cleanNumber(source.maxPlayers, minPlayers, 20, Math.max(minPlayers, 4)));
-      const minMinutes = Math.round(cleanNumber(source.minMinutes, 1, 1440, 30));
-      const maxMinutes = Math.round(cleanNumber(source.maxMinutes, minMinutes, 1440, Math.max(minMinutes, 60)));
+      const optionalNumber = (key, max) => source[key] !== null && source[key] !== "" && Number.isFinite(Number(source[key])) && Number(source[key]) >= 1 && Number(source[key]) <= max ? Math.round(Number(source[key])) : null;
+      const minPlayers = optionalNumber("minPlayers",20);
+      const maxPlayers = optionalNumber("maxPlayers",20);
+      const minMinutes = optionalNumber("minMinutes",1440);
+      const maxMinutes = optionalNumber("maxMinutes",1440);
       const weight = Number(source.complexityWeight);
-      const range = minPlayers === maxPlayers ? String(minPlayers) : minPlayers + "-" + maxPlayers;
       return {
         id: id,
         name: name,
@@ -107,8 +107,8 @@
         minMinutes: minMinutes,
         maxMinutes: maxMinutes,
         complexityWeight: Number.isFinite(weight) && weight >= 1 && weight <= 5 ? Math.round(weight * 100) / 100 : null,
-        recommendedPlayers: normalizePlayerCountText(source.recommendedPlayers, range),
-        bestPlayers: normalizePlayerCountText(source.bestPlayers, range),
+        recommendedPlayers: normalizePlayerCountText(source.recommendedPlayers, "--"),
+        bestPlayers: normalizePlayerCountText(source.bestPlayers, "--"),
         avoidPlayers: normalizePlayerCountText(source.avoidPlayers, "--"),
         createdAt: u.ensureIso(source.createdAt)
       };

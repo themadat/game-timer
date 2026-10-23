@@ -601,3 +601,18 @@ test('correction imports skip fan expansions in labeled and bare rows', () => {
   assert.equal(App.library.parseBggPaste('Expansion\nRemove Dune: Fan (fan expansion)\nAdd Expansion').fields.expansions, undefined);
   assert.deepEqual([...App.library.parseBggPaste('Expansion\nFantasy Realms: Official Pack\nExpands').fields.expansions], ['Fantasy Realms: Official Pack']);
 });
+
+test('unknown custom player and timing data remains unknown through sync and linked expansion setup', () => {
+  const { App, setState } = load();
+  const state = App.stateModel.normalize({workspace:{library:{customGames:[{id:'custom-unknown',name:'Unknown Pack'}],games:{'custom-unknown':{owned:true,metadata:{expansionOf:'root'}}}}}});
+  const restored = App.stateModel.prepareSync(App.stateModel.syncPayload(state)).state;
+  const game = restored.workspace.library.customGames.find(game=>game.id==='custom-unknown');
+  for (const key of ['minPlayers','maxPlayers','minMinutes','maxMinutes']) assert.equal(game[key],null);
+  assert.equal(game.bestPlayers,'--');
+  assert.equal(game.recommendedPlayers,'--');
+  setState(restored);
+  const linked = App.play.gameById('custom-unknown');
+  assert.equal(linked.maxPlayers,null);
+  assert.equal(linked.maxMinutes,null);
+  assert.equal(App.play.playerCountFit(linked,4).score,0);
+});

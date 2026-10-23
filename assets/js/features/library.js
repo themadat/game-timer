@@ -320,6 +320,7 @@
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
 
   function playerCountBadges(game) {
+    if (!Number.isFinite(game.minPlayers) || !Number.isFinite(game.maxPlayers)) return '<span class="sheet-missing" aria-label="Not recorded">—</span>';
     const badges = [];
     for (let count = 1; count <= game.maxPlayers; count += 1) {
       if (count < game.minPlayers) { badges.push('<span class="player-count-square is-placeholder" aria-hidden="true"></span>'); continue; }
@@ -609,7 +610,7 @@
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
       if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${Number(value).toFixed(2)} / 5">${Number(value).toFixed(2)}</span>`;
-      if (key === "length") {
+      if (key === "length" && Number.isFinite(game.minMinutes) && Number.isFinite(game.maxMinutes)) {
         const band = Math.min(6, Math.max(1, Math.ceil(game.maxMinutes / 30)));
         content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average"><span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
       }
@@ -865,7 +866,7 @@
   function averageMinutes(game) {
     const record = gameStats(game.id);
     if (record?.plays) return record.totalMs / record.plays / 60000;
-    return (Number(game.minMinutes) + Number(game.maxMinutes)) / 2 || 0;
+    return Number.isFinite(game.minMinutes) && Number.isFinite(game.maxMinutes) ? (game.minMinutes + game.maxMinutes) / 2 : null;
   }
 
   /* ---------- Filtering ---------- */
@@ -1005,7 +1006,7 @@
     const record = gameStats(game.id);
     const winner = record ? topEntry(record.winners) : null;
     const available = isAvailable(game);
-    const players = game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}–${game.maxPlayers}`;
+    const players = !Number.isFinite(game.minPlayers) || !Number.isFinite(game.maxPlayers) ? "?" : game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}–${game.maxPlayers}`;
     return `
       <article class="library-card ${entry.owned ? "is-owned" : ""} ${available && moduleState().present.length ? "is-available" : ""}" data-game-card="${esc(game.id)}">
         <button class="library-card-main" type="button" data-open-game="${esc(game.id)}" aria-label="${esc(play.gameAccessibleName(game.name))} details">
@@ -1013,7 +1014,7 @@
           <span class="library-card-facts">
             <span>${symbol("people")}${esc(players)}</span>
             <span>${symbol("star")}Best ${esc(game.bestPlayers || players)}</span>
-            <span>${symbol("timer")}${esc(game.minMinutes === game.maxMinutes ? game.minMinutes : game.minMinutes + "–" + game.maxMinutes)}m</span>
+            <span>${symbol("timer")}${esc(!Number.isFinite(game.minMinutes) || !Number.isFinite(game.maxMinutes) ? "?" : game.minMinutes === game.maxMinutes ? game.minMinutes : game.minMinutes + "–" + game.maxMinutes)}m</span>
             ${Number.isFinite(game.complexityWeight) ? `<span>${symbol("bolt")}${esc(game.complexityWeight.toFixed(2))}</span>` : ""}
           </span>
           <span class="library-card-pills">${ownershipPill(game)}${fitPill(game)}${game.custom ? `<span class="plays-pill">Added</span>` : ""}</span>
@@ -1464,8 +1465,8 @@
       <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || draft?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Paste game info</button></div>
       ${customOwnershipMarkup(game,draft)}
       <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${baseGameChoices(gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
-      <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1" required',2], ["maxPlayers","Max players","number",'min="1" max="20" step="1" required',4], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
-      <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1" required',value("minMinutes",30))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1" required',value("maxMinutes",60))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',game && Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "","Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
+      <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1"',""], ["maxPlayers","Max players","number",'min="1" max="20" step="1"',""], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
+      <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1"',value("minMinutes",""))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1"',value("maxMinutes",""))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',game && Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "","Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
       <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
       <div class="wide custom-catalog-fields">${[["alternativeNames","Alternative names","alternativeNames"],["pasteMechanisms","Mechanisms","mechanisms"],["pasteExpansions","Expansions","expansions"]].map(([name,label,key]) => `<label class="field"><span>${label}</span><textarea name="${name}" rows="8" maxlength="10000" placeholder="One per line">${esc(game ? (libraryEntry(game.id).metadata?.[key] || []).join("\n") : "")}</textarea></label>`).join("")}</div>
       ${bggLookupMarkup(game,true)}
@@ -1483,15 +1484,15 @@
     const values = Object.fromEntries(new FormData(form).entries());
     const validation = document.querySelector("#customGameValidation");
     const name = u.cleanLine(values.name, 100);
-    const minPlayers = Number(values.minPlayers);
-    const maxPlayers = Number(values.maxPlayers);
-    const minMinutes = Number(values.minMinutes);
-    const maxMinutes = Number(values.maxMinutes);
+    const minPlayers = values.minPlayers ? Number(values.minPlayers) : null;
+    const maxPlayers = values.maxPlayers ? Number(values.maxPlayers) : null;
+    const minMinutes = values.minMinutes ? Number(values.minMinutes) : null;
+    const maxMinutes = values.maxMinutes ? Number(values.maxMinutes) : null;
     let error = "";
     if (!name) error = "Enter a game name.";
     else if (values.bggLink?.trim() && !bggIdFromInput(values.bggLink)) error = "Paste a valid HTTPS BoardGameGeek game link or numeric game ID.";
-    else if (!(minPlayers >= 1 && maxPlayers >= minPlayers)) error = "Max players must be at least min players.";
-    else if (!(minMinutes >= 1 && maxMinutes >= minMinutes)) error = "Max minutes must be at least min minutes.";
+    else if (minPlayers !== null && maxPlayers !== null && maxPlayers < minPlayers) error = "Max players must be at least min players.";
+    else if (minMinutes !== null && maxMinutes !== null && maxMinutes < minMinutes) error = "Max minutes must be at least min minutes.";
     else if (values.gameKind === "expansion" && !allGames().some(parent => parent.id === values.expansionOf && parent.id !== "custom" && parent.id !== editingCustomGameId)) error = "Choose a standalone base game for this expansion.";
     else if (values.gameKind === "expansion" && editingCustomGameId && play.allGames(true).some(child => child.expansionOf === editingCustomGameId)) error = "A game with linked expansions must stay standalone.";
     else if (play.allGames(true).some(game => game.id !== editingCustomGameId && sameName(game.name, name))) error = "A game with that name is already in the library.";

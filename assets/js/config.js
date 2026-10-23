@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.30";
+  const VERSION = "2.1.0.31";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T15:00:00.000Z",
+        title: "Leave unknown player counts and times blank",
+        summary: "New games and expansions no longer receive invented player counts, recommendations, or play times.",
+        features: [], improvements: ["Allow saving incomplete player and timing information"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.30",
         date: "2026-10-23T14:30:00.000Z",
         title: "Roomier catalog lists",
         summary: "Edit alternative names, mechanisms, and expansions one per line in tall scrollable columns.",
