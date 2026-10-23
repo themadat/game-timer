@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.36";
+  const VERSION = "2.1.0.37";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T16:45:00.000Z",
+        title: "Stable expansion checklist scrolling",
+        summary: "Checking owned expansions keeps the checklist, focus, and library scroll position in place.",
+        features: [], improvements: [], fixes: ["Update expansion ownership without rebuilding the open checklist or resetting table scroll"], knownIssues: []
+      },
+      {
+        version: "2.1.0.36",
         date: "2026-10-23T16:30:00.000Z",
         title: "Consistent promo filtering",
         summary: "Exclude promo entries in both correction imports and expansion-list saves, including Promokarte.",

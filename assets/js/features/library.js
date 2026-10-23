@@ -482,6 +482,7 @@
     if (owned && !compact) return `<div class="expansion-ownership"><input type="checkbox" data-expansion-game="${esc(game.id)}" data-expansion-owned="${esc(name)}" aria-label="I have ${esc(name)}" checked><button class="text-link" type="button" data-edit-expansion="${esc(game.id)}" data-expansion-name="${esc(name)}">${esc(name)}</button></div>`;
     return `<label class="expansion-ownership"><input type="checkbox" data-expansion-game="${esc(game.id)}" data-expansion-owned="${esc(name)}" aria-label="I have ${esc(name)}" ${owned ? 'checked' : ''}><span>${compact ? 'Have' : esc(name)}</span></label>`;
   }
+  let restoringMetadataScroll = false;
   function handleMetadataChoice(event) {
     const input = event.target.closest("[data-expansion-owned], [data-additional-type], [data-main-type]");
     if (!input || input.closest("#customGameForm")) return false;
@@ -489,6 +490,12 @@
     const game = play.gameById(gameId);
     if (!game) return false;
     const inPopup = Boolean(input.closest("#libraryInfoPopover"));
+    const sheet = libraryRoot?.querySelector(".library-sheet");
+    const sheetScroll = {left:sheet?.scrollLeft || 0,top:sheet?.scrollTop || 0};
+    const scrollParents = [];
+    for (let node = input.parentElement; node; node = node.parentElement) {
+      if (node.scrollHeight > node.clientHeight || node.scrollWidth > node.clientWidth) scrollParents.push({node,top:node.scrollTop,left:node.scrollLeft});
+    }
     const kind = input.hasAttribute("data-expansion-owned") ? "expansions" : "tags";
     if (input.hasAttribute("data-main-type")) {
       if (!MAIN_GAME_TYPES.includes(input.value)) return false;
@@ -503,9 +510,23 @@
       const child = play.allGames(true).find(game => game.expansionOf === gameId && game.name === input.dataset.expansionOwned);
       if (child) mutateLibrary(child.id, entry => { entry.owned = input.checked; });
     }
-    if (appState().ui.view === "library") renderLibrary();
+    if (appState().ui.view === "library") {
+      restoringMetadataScroll = kind === "expansions";
+      renderLibrary({keepInfo:inPopup && kind === "expansions"});
+      requestAnimationFrame(() => { restoringMetadataScroll = false; });
+      const updated = libraryRoot.querySelector(".library-sheet");
+      if (updated) { updated.scrollLeft = sheetScroll.left; updated.scrollTop = sheetScroll.top; }
+    }
+    if (kind === "expansions") {
+      scrollParents.forEach(({node,top,left}) => { if (node.isConnected) { node.scrollTop = top; node.scrollLeft = left; } });
+      if (inPopup) {
+        // Keep the live checklist and focus in place while updating the table behind it.
+        infoAnchor = libraryRoot.querySelector(`[data-expand-game="${CSS.escape(gameId)}"]`);
+        infoAnchor?.setAttribute("aria-expanded","true");
+      }
+      return true;
+    }
     if (inPopup) {
-      if (kind === "expansions") { showUnownedExpansions(gameId); return true; }
       const anchor = libraryRoot.querySelector(`[data-info-kind="${kind}"][data-info-game="${CSS.escape(gameId)}"]`);
       if (anchor) {
         showSheetInfo(anchor, true);
@@ -1145,8 +1166,8 @@
     popup.style.top = rect.bottom + 4 + "px";
   }
 
-  function renderLibrary() {
-    hideSheetInfo();
+  function renderLibrary(options) {
+    if (!options?.keepInfo) hideSheetInfo();
     hideRatingPicker();
     if (!libraryRoot) return;
     const ui = moduleState();
@@ -2050,6 +2071,7 @@
     libraryRoot.addEventListener("focusin", event => { const button = event.target.closest("[data-sheet-info]"); if (button && button.dataset.infoKind !== "tags") showSheetInfo(button, false); });
     libraryRoot.addEventListener("focusout", scheduleSheetInfoHide);
     window.addEventListener("scroll", event => {
+      if (restoringMetadataScroll) return;
       if (!document.querySelector("#libraryInfoPopover")?.contains(event.target)) hideSheetInfo();
       if (!ratingPopup.contains(event.target)) hideRatingPicker();
     }, true);
