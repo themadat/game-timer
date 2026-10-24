@@ -940,3 +940,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .player-count-badges, .library-sheet tr:not(.is-pinned-game) .player-count-badges { display: flex; flex-wrap: nowrap; width: max-content; min-width: 0; max-width: none; overflow: visible; }
 
 #customGameSaveStatus { flex: 1 1 180px; margin: 0; max-width: 500px; font-size: .78rem; }
+
+/* Share one content-sized name column; push each row's trailing details to its right edge. */
+.library-sheet .sheet-name-line { width: auto; min-width: max-content; }
+.library-sheet .sheet-name-line > .sheet-name, .library-sheet .sheet-name-line > .expansion-row-name { flex: 1 0 auto; }
+.library-sheet .sheet-name-line .sheet-name-details { margin-left: auto; }
+.library-sheet .player-count-badges.has-two-rows, .library-sheet tr:not(.is-pinned-game) .player-count-badges.has-two-rows { display: grid; grid-template-columns: repeat(var(--player-count-columns),17px); grid-template-rows: repeat(2,17px); gap: 3px; }

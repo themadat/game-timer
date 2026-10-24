@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.41";
+  const VERSION = "2.1.0.42";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T18:00:00.000Z",
+        title: "Right-aligned name details and two-row player counts",
+        summary: "Colors, year and expansions align right within the content-sized name column; games above eight players use two rows of counts.",
+        features: [], improvements: ["Share name-column space across rows without fixed lanes", "Keep all supported player counts visible in two rows"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.41",
         date: "2026-10-23T17:45:00.000Z",
         title: "Visible and immediate game autosave",
         summary: "Game edits write to local storage immediately and show whether they saved or why saving is blocked.",
