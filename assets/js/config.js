@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.39";
+  const VERSION = "2.1.0.40";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T17:30:00.000Z",
+        title: "Show all supported player counts",
+        summary: "The Players column fits every supported count instead of hiding counts above eight in a scroll area.",
+        features: [], improvements: [], fixes: ["Keep player counts through 20 visible on one line"], knownIssues: []
+      },
+      {
+        version: "2.1.0.39",
         date: "2026-10-23T17:15:00.000Z",
         title: "Content-sized game name column",
         summary: "Names, colors, years and expansion counts sit together without fixed-width lanes.",

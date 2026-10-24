@@ -334,7 +334,7 @@
       const label = fit.key === "plays" ? `Neutral at ${count}` : fit.label || `${count} players`;
       badges.push(`<span class="player-count-square is-${fit.key}" title="${esc(label)}" role="img" aria-label="${esc(label)}">${icons.markup(`number${count}SquareFill`)}</span>`);
     }
-    return `<span class="player-count-badges" ${game.id !== "custom" && game.maxPlayers > 8 ? 'tabindex="0" aria-label="Player counts; scroll horizontally for more"' : ''}>${badges.join("")}</span>`;
+    return `<span class="player-count-badges">${badges.join("")}</span>`;
   }
 
   function sheetInfoButton(game, key, icon, label) {
