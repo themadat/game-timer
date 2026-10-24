@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.42";
+  const VERSION = "2.1.0.43";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T18:15:00.000Z",
+        title: "Align years and expansion counts",
+        summary: "Years and expansion counts use consistent right-aligned slots across regular and expansion rows.",
+        features: [], improvements: [], fixes: ["Keep year positions steady when expansion counts differ or are absent"], knownIssues: []
+      },
+      {
+        version: "2.1.0.42",
         date: "2026-10-23T18:00:00.000Z",
         title: "Right-aligned name details and two-row player counts",
         summary: "Colors, year and expansions align right within the content-sized name column; games above eight players use two rows of counts.",

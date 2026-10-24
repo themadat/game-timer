@@ -946,3 +946,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .sheet-name-line > .sheet-name, .library-sheet .sheet-name-line > .expansion-row-name { flex: 1 0 auto; }
 .library-sheet .sheet-name-line .sheet-name-details { margin-left: auto; }
 .library-sheet .player-count-badges.has-two-rows, .library-sheet tr:not(.is-pinned-game) .player-count-badges.has-two-rows { display: grid; grid-template-columns: repeat(var(--player-count-columns),17px); grid-template-rows: repeat(2,17px); gap: 3px; }
+
+/* Stable trailing slots keep years and expansion counts aligned between games. */
+.library-sheet .sheet-name-line .sheet-year { flex: 0 0 7ch; min-width: 7ch; text-align: right; font-variant-numeric: tabular-nums; }
+.library-sheet .sheet-name-line .sheet-expansion-slot { flex: 0 0 8ch; min-width: 8ch; justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.library-sheet .sheet-name-line .sheet-year:has(.sheet-year-editor) { flex-basis: 78px; min-width: 78px; }
