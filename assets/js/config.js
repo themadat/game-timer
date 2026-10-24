@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.38";
+  const VERSION = "2.1.0.39";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T17:15:00.000Z",
+        title: "Content-sized game name column",
+        summary: "Names, colors, years and expansion counts sit together without fixed-width lanes.",
+        features: [], improvements: ["Size the name column to complete inline content", "Keep long names visible with horizontal table scrolling"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.38",
         date: "2026-10-23T17:00:00.000Z",
         title: "Keep scroll steady while editing games",
         summary: "Autosaving game edits keeps the editor in place and preserves library scrolling when it closes.",

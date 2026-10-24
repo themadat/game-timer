@@ -925,3 +925,13 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
 .custom-ownership.owner-missing, .owner-picker.owner-missing { border: 1px solid #d29b00; box-shadow: inset 0 0 0 1px #d29b00; border-radius: 8px; }
 .owner-picker.owner-missing { padding: .5rem; }
+
+/* Size the name column around each complete inline row instead of fixed name/color lanes. */
+.library-sheet .sheet-name-cell { width: auto; min-width: 200px; max-width: none; }
+.library-sheet .sheet-name-line { width: max-content; gap: 4px; }
+.library-sheet .sheet-name-line > .sheet-name { flex: 0 0 auto; }
+.library-sheet .sheet-name-line .sheet-name-details { margin: 0; }
+.library-sheet .sheet-name .name-text { overflow: visible; text-overflow: clip; }
+.library-sheet .sheet-name-line .sheet-year { flex: 0 0 auto; min-width: 0; margin-left: 2px; }
+.library-sheet .sheet-name-line .sheet-expansion-slot { flex: 0 0 auto; }
+.library-sheet .sheet-name-line > .expansion-row-name { flex: 0 0 auto; overflow: visible; }
