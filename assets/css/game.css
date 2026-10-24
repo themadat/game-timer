@@ -938,3 +938,5 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
 /* Let the player column fit every supported count, including 9–20. */
 .library-sheet .player-count-badges, .library-sheet tr:not(.is-pinned-game) .player-count-badges { display: flex; flex-wrap: nowrap; width: max-content; min-width: 0; max-width: none; overflow: visible; }
+
+#customGameSaveStatus { flex: 1 1 180px; margin: 0; max-width: 500px; font-size: .78rem; }

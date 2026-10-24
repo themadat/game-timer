@@ -1507,6 +1507,7 @@
     const parentId = draft?.parentId || (game ? libraryEntry(game.id).metadata?.expansionOf || "" : "");
     const field = (name, label, type, attrs, value, placeholder) => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs || ''} value="${esc(value ?? '')}" ${placeholder ? `placeholder="${esc(placeholder)}"` : ''}></label>`;
     const value = (key, fallback) => game ? game[key] === "--" ? "" : game[key] ?? "" : fallback;
+    form.querySelector("#customGameSaveStatus")?.remove();
     const body = form.querySelector(".dialog-body");
     body.className = "dialog-body custom-game-fields custom-game-editor";
     body.innerHTML = `
@@ -1521,7 +1522,9 @@
       ${bggLookupMarkup(game,true)}
       <label class="field wide"><span>Notes</span><textarea name="gameNote" rows="2" maxlength="1000" placeholder="Notes about this game">${esc(game ? libraryEntry(game.id).note : "")}</textarea></label>
       <p class="setting-note wide" id="customGameMissingNote" role="status" hidden>Yellow fields are missing information. Fill in what you know; unknown values can stay blank.</p>
-      <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>`;
+      <p class="inline-status warning wide" id="customGameValidation" role="alert" hidden></p>
+      <p class="setting-note wide" id="customGameSaveStatus" role="status">${game || draft ? "Edits save automatically on this device." : "Save the game to add it; later edits save automatically."}</p>`;
+    form.querySelector(".dialog-footer").prepend(body.querySelector("#customGameSaveStatus"));
     body.querySelector("[data-bgg-lookup] [data-bgg-link]").closest(".bgg-lookup-row").remove();
     if (draft) fillCustomGameFromPaste({name:draft.name});
     highlightGameMissingFields(form);
@@ -1546,7 +1549,18 @@
   function saveCustomGame(event, autosave) {
     event.preventDefault();
     const form = event.currentTarget;
-    if (!(autosave ? form.checkValidity() : form.reportValidity())) return;
+    const status = form.querySelector("#customGameSaveStatus");
+    const invalid = Array.from(form.elements).find(input => input.willValidate && !input.validity.valid);
+    if (invalid) {
+      const label = invalid.closest("label")?.querySelector("span")?.textContent || invalid.name || "Field";
+      const message = "Not saved: " + label + ". " + invalid.validationMessage;
+      const validation = form.querySelector("#customGameValidation");
+      validation.hidden = false;
+      validation.textContent = message;
+      if (status) status.textContent = "Changes are pending. Correct the highlighted field to save.";
+      if (!autosave) form.reportValidity();
+      return;
+    }
     const values = Object.fromEntries(new FormData(form).entries());
     const validation = document.querySelector("#customGameValidation");
     const name = u.cleanLine(values.name, 100);
@@ -1564,7 +1578,7 @@
     else if (play.allGames(true).some(game => game.id !== editingCustomGameId && sameName(game.name, name))) error = "A game with that name is already in the library.";
     validation.hidden = !error;
     validation.textContent = error;
-    if (error) return;
+    if (error) { if (status) status.textContent = "Not saved: " + error; return; }
     const id = editingCustomGameId || "custom-" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) + "-" + Date.now().toString(36);
     const record = {
       id,
@@ -1615,7 +1629,13 @@
       else delete entry.metadata.catalog;
       next.workspace.library.games[id] = entry;
     }, { reason: "custom-game" });
-    if (autosave) {
+    const persisted = storage.saveNow();
+    if (status) status.textContent = persisted ? "Saved on this device." : "Not saved to this device. Browser storage is unavailable or full; keep this page open and export a backup.";
+    if (!persisted) {
+      validation.hidden = false;
+      validation.textContent = "The browser could not persist your changes. They are currently only in memory.";
+    }
+    if (autosave || !persisted) {
       if (isNew) { editingCustomGameId = id; editingExpansionDraft = null; document.querySelector("#customGameDelete").hidden = false; document.querySelector("#customGameSave").hidden = true; }
       return;
     }
@@ -2179,7 +2199,7 @@
     });
     document.querySelector("#customGameForm").addEventListener("change", event => { if ((editingCustomGameId || editingExpansionDraft) && event.target.name) saveCustomGame(event, true); });
     document.querySelector("#customGameForm").addEventListener("submit", saveCustomGame);
-    document.querySelector("#customGameDialog").addEventListener("close", () => { if (editingCustomGameId) renderLibrary(); });
+    document.querySelector("#customGameDialog").addEventListener("close", () => { if (editingCustomGameId) { storage.saveNow(); renderLibrary(); } });
     document.querySelector("#customGameDelete").addEventListener("click", deleteCustomGame);
     document.querySelector("#historyDialogBody").addEventListener("change", event => {
       const select = event.target.closest("[data-placement-id]");

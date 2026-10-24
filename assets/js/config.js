@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.40";
+  const VERSION = "2.1.0.41";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-23T17:45:00.000Z",
+        title: "Visible and immediate game autosave",
+        summary: "Game edits write to local storage immediately and show whether they saved or why saving is blocked.",
+        features: [], improvements: ["Show saved, pending validation, and storage-failure status"], fixes: ["Stop silently skipping autosave on invalid fields"], knownIssues: []
+      },
+      {
+        version: "2.1.0.40",
         date: "2026-10-23T17:30:00.000Z",
         title: "Show all supported player counts",
         summary: "The Players column fits every supported count instead of hiding counts above eight in a scroll area.",
