@@ -74,7 +74,8 @@
       let id = cleanId(source.id, "person");
       if (ids.has(id)) id = u.uid("person");
       ids.add(id);
-      return { id: id, name: name, color: u.normalizeColor(source.color, "#94a3b8") };
+      const color = u.normalizeColor(source.color, "#94a3b8");
+      return { id: id, name: name, color: key === "tristen" && color === "#22c55e" ? gameData.NAMED_COLORS.Pine : color };
     }).filter(Boolean).slice(0, config.controls.maxPeople);
   }
 
@@ -142,7 +143,7 @@
       setup[key] = source[key].slice(0, 64).map(item => {
         const color = u.plainObject(item);
         return { name: u.cleanLine(color.name, 60), value: /^#[0-9a-f]{6}$/i.test(color.value) ? color.value.toLowerCase() : "" };
-      }).filter((color, index, colors) => color.name && color.value && colors.findIndex(other => other.name.toLowerCase() === color.name.toLowerCase() && (key === "colors" || other.value === color.value)) === index);
+      }).filter((color, index, colors) => color.name && color.value && colors.findIndex(other => other.name.toLowerCase() === color.name.toLowerCase() && (key === "colors" || other.value === color.value)) === index).map(color => gameData.migrateStandardColor(color)).filter((color, index, colors) => colors.findIndex(other => other.name.toLowerCase() === color.name.toLowerCase() && (key === "colors" || other.value === color.value)) === index);
     });
     if (typeof source.factions === "boolean") setup.factions = source.factions;
     if (typeof source.verified === "boolean") setup.verified = source.verified;

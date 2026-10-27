@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.45";
+  const VERSION = "2.1.0.46";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-27T01:30:00.000Z",
+        title: "Refresh existing standard colors",
+        summary: "Existing games adopt Pine, Lime and Slate for legacy standard swatches while custom hex colors stay intact. Tristen defaults to Pine.",
+        features: [], improvements: ["Update saved standard palettes and built-in color names", "Set Tristen’s default color to Pine"], fixes: ["Preserve custom hex colors in the game editor"], knownIssues: []
+      },
+      {
+        version: "2.1.0.45",
         date: "2026-10-27T01:00:00.000Z",
         title: "Sixteen standard colors",
         summary: "Use the ordered sixteen-color palette with darker Slate, and consolidate old Green, Teal and Gray options in the game editor.",

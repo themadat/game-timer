@@ -5,9 +5,11 @@
   window.LocalApp = window.LocalApp || {};
 
   function colorDef(name, namedColor = name, customValue = null) {
+    const aliases = { Green: "Pine", Teal: "Lime", Gray: "Slate" };
+    const standard = !customValue && !String(namedColor).startsWith("#");
     return {
-      name: name === "Green" && namedColor === "Green" && !customValue ? "Pine" : name,
-      namedColor,
+      name: standard && name === namedColor ? aliases[name] || name : name,
+      namedColor: standard ? aliases[namedColor] || namedColor : namedColor,
       customValue,
       get value() {
         return this.customValue || NAMED_COLORS[this.namedColor] || this.namedColor;
@@ -22,7 +24,7 @@
     { name: "Austin", color: "Aqua" },
     { name: "Bryson", color: "Orange" },
     { name: "Johanna", color: "Yellow" },
-    { name: "Tristen", color: "Green" },
+    { name: "Tristen", color: "Pine" },
     { name: "Kathleen", color: "Pink" },
     { name: "Jake", color: "Navy" },
     { name: "Kacie", color: "Purple" }
@@ -70,6 +72,18 @@
     colorDef("Slate"),
     colorDef("Black")
   ];
+  // Only migrate known standard swatches; custom hex values and faction names stay intact.
+  function migrateStandardColor(color) {
+    const legacy = {
+      green: { values: ["#22c55e", "#15803d"], name: "Pine" },
+      teal: { values: ["#14b8a6"], name: "Lime" },
+      gray: { values: ["#94a3b8", "#475569"], name: "Slate" }
+    };
+    const match = legacy[String(color.name).toLowerCase()];
+    if (!match || !match.values.includes(String(color.value).toLowerCase())) return color;
+    const standard = STANDARD_COLORS.find(item => item.name === match.name);
+    return { name: standard.name, value: standard.value };
+  }
   const OTHER_COLORS = STANDARD_COLORS.filter(color => ["White", "Silver", "Slate", "Black"].includes(color.name));
   const GAME_PRESETS = [
     {
@@ -642,6 +656,7 @@
 
   window.LocalApp.gameData = Object.freeze({
     colorDef,
+    migrateStandardColor,
     PRESET_NAMES,
     QUICK_PLAYERS,
     OTHER_NAMES,

@@ -362,7 +362,7 @@ test('setup normalization rejects unsafe colors and rules and allows clearing bu
   state.workspace.library.games['dune-2019'] = { metadata: { setup: { openColorPool: false, colors: [{name:'Bad',value:'url(https://example.com)'}, {name:'Green',value:'#22c55e'}, {name:'Green',value:'#ffffff'}], turnOrder: null, unknown: true } } };
   const normalized = App.stateModel.normalize(state);
   const setup = normalized.workspace.library.games['dune-2019'].metadata.setup;
-  assert.deepEqual(plain(setup.colors), [{name:'Green',value:'#22c55e'}]);
+  assert.deepEqual(plain(setup.colors), [{name:'Pine',value:'#15803d'}]);
   assert.equal(setup.unknown, undefined);
   App.storage.mutate(next => { next.workspace.library = normalized.workspace.library; });
   assert.equal(App.play.gameById('dune-2019').turnOrder, null);
@@ -739,4 +739,36 @@ test('random first-player roll preserves clockwise order and excludes other time
   const snapshot = api.buildSessionSnapshot();
   assert.equal(snapshot.selectedStarterId, 'c');
   assert.deepEqual(plain(snapshot.setupEntries.map(p => p.id)), ['c', 'd', 'a', 'b', 'combat']);
+});
+
+
+test('legacy standard game colors migrate while custom hex colors and history remain intact', () => {
+  const { App } = load();
+  const state = App.stateModel.createDefaultState({ demo: false });
+  state.workspace.people = [{ id: 'tristen', name: 'Tristen', color: '#22c55e' }];
+  const colors = [
+    { name: 'Green', value: '#22c55e' }, { name: 'Teal', value: '#14b8a6' },
+    { name: 'Gray', value: '#94a3b8' }, { name: 'Pine', value: '#15803d' },
+    { name: 'Custom Green', value: '#123456' }, { name: 'Atreides', value: '#22c55e' }
+  ];
+  state.workspace.library.games.root = { metadata: { setup: { colors, palette: colors, openColorPool: false } } };
+  const expected = [
+    { name: 'Pine', value: '#15803d' }, { name: 'Lime', value: '#a3e635' },
+    { name: 'Slate', value: '#475569' },
+    { name: 'Custom Green', value: '#123456' }, { name: 'Atreides', value: '#22c55e' }
+  ];
+  const normalized = App.stateModel.normalize(state);
+  const setup = normalized.workspace.library.games.root.metadata.setup;
+  assert.deepEqual(plain(setup.colors), expected);
+  assert.deepEqual(plain(setup.palette), expected);
+  assert.equal(normalized.workspace.people[0].color, '#15803d');
+  assert.deepEqual(plain(normalized.workspace.history), plain(state.workspace.history));
+  assert.deepEqual(plain(App.stateModel.normalize(normalized).workspace.library.games.root.metadata.setup), plain(setup));
+  assert.deepEqual(plain(App.gameData.migrateStandardColor({ name: 'Green', value: '#123456' })), { name: 'Green', value: '#123456' });
+  assert.equal(App.gameData.colorDef('Green', '#7ABB66').value, '#7ABB66');
+  assert.equal(App.gameData.colorDef('Green', 'Green', '#169549').value, '#169549');
+  assert.equal(App.gameData.colorDef('Green').name, 'Pine');
+  assert.equal(App.gameData.colorDef('Teal').value, '#a3e635');
+  assert.equal(App.gameData.colorDef('Gray').name, 'Slate');
+  assert.equal(App.stateModel.createDefaultState({ demo: false }).workspace.people.find(person => person.name === 'Tristen').color, '#15803d');
 });

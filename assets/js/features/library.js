@@ -1230,8 +1230,7 @@
   /* ---------- Game dialog ---------- */
 
   function canonicalSetupColor(color) {
-    const name = ({ green: "pine", teal: "lime", gray: "slate" })[color.name.toLowerCase()] || color.name.toLowerCase();
-    return STANDARD_COLORS.find(item => item.name.toLowerCase() === name) || color;
+    return App.gameData.migrateStandardColor(color);
   }
   function setupColorOptions(game) {
     const base = GAME_PRESETS.find(item => item.id === game.id);
