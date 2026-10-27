@@ -34,7 +34,8 @@ function load({ setupHarness = false, random = Math.random } = {}) {
     App.play = {
       setupTest: { chooseSetupStarter, shuffleSetupOrder, startGame, pickFirstPlayer, hydrateFromSnapshot, buildSessionSnapshot, handleChange },`);
   vm.runInContext(`(function (window) { ${playSource} })(window);`, context);
-  vm.runInContext(`(function (window) { ${read('features/library.js')} })(window);`, context);
+  const librarySource = setupHarness ? read('features/library.js').replace('  App.library = {', '  App.library = { deleteTest: { removeLibraryGame, deleteCustomGame, edit: id => { editingCustomGameId = id; } },') : read('features/library.js');
+  vm.runInContext(`(function (window) { ${librarySource} })(window);`, context);
   return { App, setState: next => { current = next; } };
 }
 
@@ -771,4 +772,71 @@ test('legacy standard game colors migrate while custom hex colors and history re
   assert.equal(App.gameData.colorDef('Teal').value, '#a3e635');
   assert.equal(App.gameData.colorDef('Gray').name, 'Slate');
   assert.equal(App.stateModel.createDefaultState({ demo: false }).workspace.people.find(person => person.name === 'Tristen').color, '#15803d');
+});
+
+
+test('deleting a built-in game persists through normalization and sync, preserving history', () => {
+  const { App } = load({ setupHarness: true });
+  App.storage.mutate(state => {
+    state.workspace.library.games.root = { owned: true, note: 'Keep metadata' };
+    state.workspace.history.push({ id: 'saved-root', gameId: 'root', gameName: 'Root', gameStartedAt: 1000, gameEndedAt: 3000, players: [{id:'adam', name:'Adam', type:'player', placement:1, turns:[]}] });
+  });
+  const before = plain(App.storage.getState().workspace.history);
+  assert.equal(before.length, 1);
+  App.library.deleteTest.removeLibraryGame(App.play.gameById('root'));
+  assert.equal(App.play.gameById('root'), null);
+  assert.equal(App.play.allGames().some(game => game.id === 'root'), false);
+  assert.deepEqual(plain(App.storage.getState().workspace.history), before);
+  const restored = App.stateModel.prepareSync(App.stateModel.syncPayload(App.storage.getState())).state;
+  assert.equal(restored.workspace.library.games.root.deleted, true);
+  assert.equal(restored.workspace.library.games.root.note, 'Keep metadata');
+  const fresh = App.stateModel.createDefaultState({ demo: false });
+  fresh.workspace.library.games.root = { deleted: 'true' };
+  assert.notEqual(App.stateModel.normalize(fresh).workspace.library.games.root?.deleted, true);
+  fresh.workspace.library.games.custom = { deleted: true };
+  assert.equal(App.stateModel.normalize(fresh).workspace.library.games.custom?.deleted, undefined);
+});
+
+test('deleting a base game keeps linked expansions as standalone games', () => {
+  const { App } = load({ setupHarness: true });
+  App.storage.mutate(state => {
+    state.workspace.library.customGames.push({ id: 'custom-expansion', name: 'Expansion' });
+    state.workspace.library.games['custom-expansion'] = { metadata: { expansionOf: 'root' } };
+  });
+  App.library.deleteTest.removeLibraryGame(App.play.gameById('root'));
+  assert.equal(App.play.gameById('custom-expansion').expansionOf, undefined);
+  assert.equal(App.play.allGames().some(game => game.id === 'custom-expansion'), true);
+  App.library.deleteTest.removeLibraryGame(App.play.gameById('custom-expansion'));
+  assert.equal(App.play.gameById('custom-expansion'), null);
+  assert.equal(App.storage.getState().workspace.library.games['custom-expansion'], undefined);
+});
+
+test('canceling deletion preserves the game; Custom Game cannot be deleted', async () => {
+  const { App } = load({ setupHarness: true });
+  App.components.confirm = async () => false;
+  App.library.deleteTest.edit('root');
+  await App.library.deleteTest.deleteCustomGame();
+  assert.ok(App.play.gameById('root'));
+  App.components.confirm = async () => { throw Error('Must not prompt for Custom Game'); };
+  App.library.deleteTest.edit('custom');
+  await App.library.deleteTest.deleteCustomGame();
+  assert.ok(App.play.gameById('custom'));
+});
+
+test('deletion clears setup selection but preserves a running session and its game ID on reload', () => {
+  const { App } = load({ setupHarness: true });
+  const api = App.play.setupTest;
+  setupSession(api, { gameId: 'root' });
+  const game = App.play.gameById('root');
+  App.library.deleteTest.removeLibraryGame(game);
+  assert.equal(api.buildSessionSnapshot().selectedGameId, 'custom');
+  const running = api.buildSessionSnapshot();
+  running.selectedGameId = 'root';
+  running.state.view = 'game';
+  running.state.gameName = 'Root';
+  api.hydrateFromSnapshot(running);
+  App.play.gameDeleted('root');
+  api.hydrateFromSnapshot(JSON.parse(JSON.stringify(api.buildSessionSnapshot())));
+  assert.equal(api.buildSessionSnapshot().selectedGameId, 'root');
+  assert.equal(api.buildSessionSnapshot().state.gameName, 'Root');
 });

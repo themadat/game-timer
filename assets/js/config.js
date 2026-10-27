@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.46";
+  const VERSION = "2.1.0.47";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-27T12:00:00.000-05:00",
+        title: "Delete any library game",
+        summary: "Delete built-in or custom games from Library and Play while keeping saved history and statistics.",
+        features: ["Enable Delete game for built-in games"], improvements: ["Keep linked expansions as standalone games when deleting their base game"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.46",
         date: "2026-10-27T01:30:00.000Z",
         title: "Refresh existing standard colors",
         summary: "Existing games adopt Pine, Lime and Slate for legacy standard swatches while custom hex colors stay intact. Tristen defaults to Pine.",

@@ -1505,7 +1505,7 @@
     editingCustomGameId = game?.id || "";
     editingExpansionDraft = draft || null;
     document.querySelector("#customGameTitle").textContent = draft ? "Edit expansion" : game ? "Edit game" : "Add a game";
-    document.querySelector("#customGameDelete").hidden = !game?.custom;
+    document.querySelector("#customGameDelete").hidden = !game || game.id === "custom";
     document.querySelector("#customGameSave").hidden = Boolean(game || draft);
     form.querySelector(".dialog-footer [data-close-dialog]").textContent = game || draft ? "Close" : "Cancel";
     const parentId = draft?.parentId || (game ? libraryEntry(game.id).metadata?.expansionOf || "" : "");
@@ -1648,18 +1648,35 @@
     renderLibrary();
   }
 
-  async function deleteCustomGame() {
-    const game = appState().workspace.library.customGames.find(item => item.id === editingCustomGameId);
-    if (!game) return;
-    const accepted = await components.confirm({ title: "Delete " + game.name + "?", message: "The game is removed from your library. Saved history for it is kept.", confirmLabel: "Delete game", danger: true });
-    if (!accepted) return;
+  function removeLibraryGame(game) {
     storage.mutate(next => {
-      const parent = next.workspace.library.games[next.workspace.library.games[game.id]?.metadata?.expansionOf];
-      if (parent?.metadata) { parent.metadata.expansions = (parent.metadata.expansions || []).filter(name => name !== game.name); parent.metadata.ownedExpansions = (parent.metadata.ownedExpansions || []).filter(name => name !== game.name); }
+      const games = next.workspace.library.games;
+      const parent = games[games[game.id]?.metadata?.expansionOf];
+      if (parent?.metadata) {
+        parent.metadata.expansions = (parent.metadata.expansions || []).filter(name => name !== game.name);
+        parent.metadata.ownedExpansions = (parent.metadata.ownedExpansions || []).filter(name => name !== game.name);
+      }
+      Object.values(games).forEach(entry => {
+        if (entry.metadata?.expansionOf === game.id) delete entry.metadata.expansionOf;
+      });
       next.workspace.library.customGames = next.workspace.library.customGames.filter(item => item.id !== game.id);
-      delete next.workspace.library.games[game.id];
-    }, { reason: "custom-game-delete" });
+      if (game.custom) delete games[game.id];
+      else {
+        games[game.id] = Object.assign({}, games[game.id], { deleted: true });
+        if (games[game.id].metadata) delete games[game.id].metadata.expansionOf;
+      }
+    }, { reason: "game-delete" });
+    play.gameDeleted(game.id);
+  }
+
+  async function deleteCustomGame() {
+    const game = play.gameById(editingCustomGameId);
+    if (!game || game.id === "custom") return;
+    const accepted = await components.confirm({ title: "Delete " + game.name + "?", message: "The game is removed from Library and Play. Saved history and statistics are kept. Linked expansions remain as standalone games.", confirmLabel: "Delete game", danger: true, trigger: document.querySelector("#customGameDelete") });
+    if (!accepted) return;
+    removeLibraryGame(game);
     components.closeDialog("#customGameDialog", "deleted");
+    components.closeDialog("#gameDialog", "deleted");
     renderLibrary();
   }
 

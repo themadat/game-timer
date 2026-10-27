@@ -185,6 +185,7 @@
           bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
         }
       };
+      if (id !== "custom" && entry.deleted === true) normalized.deleted = true;
       ["alternativeNames", "mechanisms", "expansions"].forEach(function (key) {
         const raw = entry.metadata?.[key];
         const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[;\n]/) : [];
@@ -192,7 +193,7 @@
         if (tags.length) normalized.metadata[key] = tags;
       });
       const expansionOf = u.cleanLine(entry.metadata?.expansionOf, 100);
-      if (expansionOf && expansionOf !== "custom" && expansionOf !== id && gameIds.has(expansionOf) && !source[expansionOf]?.metadata?.expansionOf) normalized.metadata.expansionOf = expansionOf;
+      if (entry.deleted !== true && source[expansionOf]?.deleted !== true && expansionOf && expansionOf !== "custom" && expansionOf !== id && gameIds.has(expansionOf) && !source[expansionOf]?.metadata?.expansionOf) normalized.metadata.expansionOf = expansionOf;
       const additionalTypes = Array.from(new Set((Array.isArray(entry.metadata?.additionalTypes) ? entry.metadata.additionalTypes : []).filter(type => ADDITIONAL_GAME_TYPES.includes(type))));
       if (additionalTypes.length) normalized.metadata.additionalTypes = additionalTypes;
       const ownedExpansions = Array.from(new Set((Array.isArray(entry.metadata?.ownedExpansions) ? entry.metadata.ownedExpansions : []).map(name => u.cleanLine(name, 150)).filter(name => normalized.metadata.expansions?.includes(name))));
@@ -205,7 +206,7 @@
       if (Object.keys(catalog).length) normalized.metadata.catalog = catalog;
       const setup = normalizeGameSetup(entry.metadata?.setup);
       if (Object.keys(setup).length) normalized.metadata.setup = setup;
-      if (normalized.owned || normalized.wishlist || normalized.rating || normalized.note || normalized.metadata.year === 0 || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
+      if (normalized.deleted || normalized.owned || normalized.wishlist || normalized.rating || normalized.note || normalized.metadata.year === 0 || Object.values(normalized.metadata).some(Boolean)) games[id] = normalized;
     });
     Object.entries(games).forEach(function ([id, entry]) {
       const parentId = entry.metadata.expansionOf;

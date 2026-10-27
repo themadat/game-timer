@@ -101,7 +101,7 @@
   }
 
   function allGames(includeExpansions) {
-    return GAME_PRESETS.concat(customGames().map(game => Object.assign({ colors: [], custom: true }, game))).map(game => {
+    return GAME_PRESETS.concat(customGames().map(game => Object.assign({ colors: [], custom: true }, game))).filter(game => !appState().workspace.library.games[game.id]?.deleted).map(game => {
       const metadata = appState().workspace.library.games[game.id]?.metadata;
       if (!metadata?.catalog && !metadata?.setup && !metadata?.expansionOf) return game;
       const merged = Object.assign({}, game, metadata.catalog, metadata.setup);
@@ -115,6 +115,18 @@
 
   function gameById(id) {
     return allGames(true).find(game => game.id === id) || null;
+  }
+
+  function gameDeleted(id) {
+    if (selectedGameId === id && state.view === "setup") {
+      selectedGameId = DEFAULT_GAME_ID;
+      state.gameName = currentPreset().name;
+      selectedStarterId = null;
+      turnOrderManuallyAdjusted = false;
+      playersInClockwiseOrder = true;
+      applyGameTurnOrderDefaults({ sortPlayers: false });
+    }
+    render();
   }
 
   function currentPreset() {
@@ -1092,7 +1104,7 @@
   function randomizeSetup() {
     const filter = appState().modules.play.gameFilter;
     const pool = setupGames().filter(game => game.id !== "custom" && (filter === "all" || !game.custom));
-    const games = pool.length ? pool : GAME_PRESETS.filter(game => game.id !== "custom");
+    const games = pool.length ? pool : allGames().filter(game => game.id !== "custom");
     randomizePlayersForGame(games[randomInteger(0, games.length - 1)]);
   }
 
@@ -2200,7 +2212,7 @@
     if (!snapshot) return false;
     state = Object.assign(emptySessionState(), snapshot.state);
     setupEntries = Array.isArray(snapshot.setupEntries) ? snapshot.setupEntries : [];
-    selectedGameId = gameById(snapshot.selectedGameId) ? snapshot.selectedGameId : DEFAULT_GAME_ID;
+    selectedGameId = gameById(snapshot.selectedGameId) || ((state.view === "game" || state.view === "summary") && typeof snapshot.selectedGameId === "string") ? snapshot.selectedGameId : DEFAULT_GAME_ID;
     selectedStarterId = snapshot.selectedStarterId || null;
     turnOrderManuallyAdjusted = Boolean(snapshot.turnOrderManuallyAdjusted);
     playersInClockwiseOrder = typeof snapshot.playersInClockwiseOrder === "boolean" ? snapshot.playersInClockwiseOrder : defaultClockwiseOrder();
@@ -2279,6 +2291,7 @@
     simulateForTesting,
     allGames,
     gameById,
+    gameDeleted,
     playerCountFit,
     parsePlayerCounts,
     gameRangeText,
