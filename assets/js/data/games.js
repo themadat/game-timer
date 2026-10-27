@@ -6,7 +6,7 @@
 
   function colorDef(name, namedColor = name, customValue = null) {
     return {
-      name,
+      name: name === "Green" && namedColor === "Green" && !customValue ? "Pine" : name,
       namedColor,
       customValue,
       get value() {
@@ -35,7 +35,9 @@
     Tan: "#d2b48c",
     Yellow: "#facc15",
     Gold: "#d4a017",
-    Green: "#22c55e",
+    Lime: "#a3e635",
+    Pine: "#15803d",
+    Green: "#15803d",
     Teal: "#14b8a6",
     Aqua: "#38bdf8",
     Blue: "#3b82f6",
@@ -52,16 +54,16 @@
   const STANDARD_COLORS = [
     colorDef("Red"),
     colorDef("Orange"),
-    colorDef("Brown"),
-    colorDef("Tan"),
     colorDef("Yellow"),
     colorDef("Gold"),
-    colorDef("Green"),
-    colorDef("Teal"),
+    colorDef("Lime"),
+    colorDef("Pine"),
     colorDef("Aqua"),
     colorDef("Navy"),
     colorDef("Purple"),
     colorDef("Pink"),
+    colorDef("Tan"),
+    colorDef("Brown"),
     colorDef("White"),
     colorDef("Silver"),
     colorDef("Gray"),

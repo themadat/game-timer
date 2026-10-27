@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.43";
+  const VERSION = "2.1.0.44";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-27T00:00:00.000Z",
+        title: "Lime and pine colors",
+        summary: "The standard palette offers lime and pine, with pine as the default green. Game color editors use four columns.",
+        features: [], improvements: ["Replace standard green and teal with light lime and dark pine", "Keep game color pickers in four columns"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.43",
         date: "2026-10-23T18:15:00.000Z",
         title: "Align years and expansion counts",
         summary: "Years and expansion counts use consistent right-aligned slots across regular and expansion rows.",

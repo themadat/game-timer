@@ -752,7 +752,6 @@
   .game-detail-tabs { flex-wrap: wrap; }
   .game-detail-tabs button { padding: .4rem .5rem; font-size: .85rem; }
   .game-setup-actions { flex-wrap: wrap; }
-  .game-color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* Library filters and the autosaving game editor. */
@@ -787,7 +786,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 /* Details combine game setup with personal ownership; expansion rows are optional. */
 #gameDialog { width: min(1380px, calc(100vw - 2rem)); }
 .game-details-grid.game-overview { grid-template-columns: minmax(0, 2.5fr) minmax(250px, 1fr); }
-.game-overview .game-color-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.game-overview .game-color-picker { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .game-overview .game-color-option { padding-block: 0; }
 .game-personal-panel .wishlist-choice { justify-self: start; }
 .wishlist-choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
@@ -807,7 +806,6 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .game-details-grid.game-overview { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
-  .game-overview .game-color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #gameDialogFooter { flex-wrap: wrap; }
 }
 
