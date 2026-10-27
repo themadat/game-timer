@@ -337,6 +337,19 @@
     return `<span class="player-count-badges${game.maxPlayers > 8 ? ' has-two-rows' : ''}"${game.maxPlayers > 8 ? ` style="--player-count-columns:${Math.ceil(game.maxPlayers / 2)}"` : ''}>${badges.join("")}</span>`;
   }
 
+  function pickerSummaryMarkup(game) {
+    if (game.id === "custom") return '<span class="game-summary">Any game · any player count</span>';
+    const time = Number.isFinite(game.minMinutes) && Number.isFinite(game.maxMinutes)
+      ? `${game.minMinutes}${game.minMinutes === game.maxMinutes ? "" : "–" + game.maxMinutes} min` : "Time unknown";
+    const weight = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(1) : "?";
+    return `<span class="game-summary">${playerCountBadges(game)} <span aria-hidden="true">·</span> <span class="summary-time time-band-${Math.min(6, Math.max(1, Math.ceil((game.maxMinutes || 0) / 30)))}">${esc(time)}</span> <span aria-hidden="true">·</span> <span class="summary-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(game.complexityWeight || 1)))}" title="Complexity out of 5">Weight ${esc(weight)}</span> <span aria-hidden="true">·</span> <span class="summary-type">${esc(combinedGameType(game))}</span></span>`;
+  }
+
+  function pickerInfoMarkup(game) {
+    if (game.id === "custom") return "";
+    return `<span class="sheet-turnStart">${sheetInfoButton(game, "turnStart", "libraryTurnStart", "Turn start")}</span><span class="sheet-factions">${sheetInfoButton(game, "factions", "libraryFactions", "Factions")}</span>`;
+  }
+
   function sheetInfoButton(game, key, icon, label) {
     const info = sheetValue(game, key);
     return `<button data-info-game="${esc(game.id)}" data-info-kind="${key}" class="sheet-info-button ${info ? "has-info" : ""}" type="button" data-sheet-info="${esc(info || `No ${label.toLowerCase()} recorded.`)}" data-info-label="${label}" aria-label="${esc(label + ': ' + (info || 'Not recorded'))}" aria-expanded="false">${symbol(icon)}</button>`;
@@ -632,7 +645,7 @@
     const alternativeNames = (entry.metadata?.alternativeNames || []).join(" · ");
     const cells = SHEET_COLUMNS.map(([key]) => {
       const value = sheetValue(game, key);
-      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line">${parent ? '<span class="expansion-indent" aria-hidden="true">↳</span>' : ''}<button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc([game.name, alternativeNames].filter(Boolean).join(' · '))}"><span class="name-text">${esc(value)}${alternativeNames ? ` <span class="sheet-alternative-names">(${esc(alternativeNames)})</span>` : ''}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span>${sheetYearMarkup(game)}<span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
+      if (key === "name") return `<th scope="row" class="sheet-name-cell"><div class="sheet-name-line">${parent ? '<span class="expansion-indent" aria-hidden="true">↳</span>' : ''}<button class="text-link sheet-name" type="button" data-open-game="${id}" title="${esc([game.name, alternativeNames].filter(Boolean).join(' · '))}"><span class="name-text"><span class="sheet-primary-name">${esc(value)}</span>${alternativeNames ? ` <span class="sheet-alternative-names">(${esc(alternativeNames)})</span>` : ''}</span></button><span class="sheet-name-details">${gameColorsMarkup(game)}<span class="sheet-verification-mark ${game.verified ? "is-verified" : ""}" role="img" title="${game.verified ? 'Verified colors' : 'Colors unchecked'}" aria-label="${game.verified ? 'Verified colors' : 'Colors unchecked'}">${symbol("libraryVerified")}</span></span>${sheetYearMarkup(game)}<span class="sheet-expansion-slot">${expansionCountMarkup(game)}</span></div></th>`;
       let content = value === null || value === "" || value === "--" ? '<span class="sheet-missing" aria-label="Not recorded">—</span>' : esc(value);
       if (key === "rating") content = `<button class="sheet-rate-pill rating-band-${value ? Math.ceil(value) : 0}" type="button" data-sheet-rating="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="Rate ${esc(game.name)}: ${value ? Number(value).toFixed(1) + ' out of 5' : 'Not rated'}">${value ? Number(value).toFixed(1) : '—'}</button>`;
       if (key === "bggRating" && value) content = `<span class="rating-score rating-band-${Math.ceil(value / 2)}" title="BGG rating ${Number(value).toFixed(1)} / 10">${Number(value).toFixed(1)}</span>`;
@@ -2238,6 +2251,9 @@
   }
 
   App.library = {
+    pickerSummaryMarkup,
+    pickerInfoMarkup,
+    showGameInfo: button => showSheetInfo(button, true),
     init,
     parseBggPaste,
     renderLibrary,

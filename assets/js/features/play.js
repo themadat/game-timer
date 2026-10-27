@@ -1597,15 +1597,6 @@
     return `<span class="swatches" aria-hidden="true">${preview.map(color => `<span class="swatch" style="--swatch:${esc(color.value)}"></span>`).join("")}${colors.length > preview.length ? `<span class="swatch-count">+${colors.length - preview.length}</span>` : ""}</span>`;
   }
 
-  function gameBadges(game) {
-    const badges = [];
-    if (hasFactionColorOptions(colorsForGame(game))) badges.push(`<span class="tag-badge" title="Faction based">F</span>`);
-    if (turnOrderRuleForGame(game)) badges.push(`<span class="tag-badge" title="${esc(turnOrderBadgeLabel(turnOrderRuleForGame(game)))}">T</span>`);
-    if (hasDefaultOtherTiming(game)) badges.push(`<span class="tag-badge" title="Known other timing: ${esc(defaultOtherTimingNames(game).join(", "))}">O</span>`);
-    if (game.verified) badges.push(`<span class="tag-badge is-verified" title="Verified colors">✓</span>`);
-    return badges.join("");
-  }
-
   function ownershipMarkup(game) {
     const entry = libraryEntry(game.id);
     if (!entry || (!entry.owned && !entry.wishlist)) return "";
@@ -1641,14 +1632,13 @@
     const fit = playerCountFit(game, count);
     const plays = App.library?.playCount?.(game.id) || 0;
     return `
-      <button class="game-option ${isHidden ? "is-hidden" : ""}" type="button" data-action="preset" data-game-id="${esc(game.id)}" data-search-text="${esc(gameSearchText(game))}" aria-pressed="${game.id === selectedGameId}">
+      <div class="game-option-card"><button class="game-option ${isHidden ? "is-hidden" : ""}" type="button" data-action="preset" data-game-id="${esc(game.id)}" data-search-text="${esc(gameSearchText(game))}" aria-pressed="${game.id === selectedGameId}">
         <span class="game-option-main">
-          <strong class="game-option-title">${gameTitleMarkup(game.name)}${gameBadges(game)}</strong>
-          <small>${esc(game.id === "custom" ? "Any game · any player count" : gameRangeText(game))}</small>
+          <strong class="game-option-title">${gameTitleMarkup(game.name)}</strong>
+          ${App.library.pickerSummaryMarkup(game)}
           <span class="game-option-meta">${ownershipMarkup(game)}${fit.key !== "none" && count ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}${plays ? `<span class="plays-pill">${plays} ${plays === 1 ? "play" : "plays"}</span>` : ""}${game.custom ? `<span class="plays-pill">Added</span>` : ""}</span>
         </span>
-        ${swatchesMarkup(game)}
-      </button>`;
+      </button><span class="game-option-info">${App.library.pickerInfoMarkup(game)}</span></div>`;
   }
 
   function turnOrderRuleMarkup(rule) {
@@ -1727,7 +1717,7 @@
           <button class="game-picker-toggle" type="button" data-action="toggle-game-list" data-shortcut="J" aria-expanded="${!isGameListCollapsed}" aria-controls="setupGameList">
             <span class="eyebrow">${prefs().demoMode ? "Demo Mode · " : ""}Game</span>
             ${gameTitleMarkup(preset.name, "picker-title")}
-            <small>${esc(preset.id === "custom" ? "Choose a game from the list, or play anything" : gameRangeText(preset))}</small>
+            ${App.library.pickerSummaryMarkup(preset)}
             <span class="picker-meta">${ownershipMarkup(preset)}${fit.key !== "none" ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}</span>
             <span class="picker-chevron" aria-hidden="true">${icons.markup("chevronDown")}</span>
           </button>
@@ -1911,7 +1901,7 @@
     saveSession();
     if (state.view === "game") renderGame();
     else if (state.view === "summary") renderSummary();
-    else renderSetup();
+    else { renderSetup(); fitGamePicker(); }
     App.sessionAids?.setSessionActive(state.view === "game" && !state.demo);
     emit("app:gamechange");
     emit("app:viewrendered");
@@ -1926,11 +1916,18 @@
     grid.dataset.density = height < 130 ? "essential" : height < 250 ? "insightful" : "detailed";
   }
 
+  function fitGamePicker() {
+    const panel = root?.querySelector("#setupGameList:not([hidden])");
+    if (!panel) return;
+    panel.style.setProperty("--game-picker-height", Math.max(160, window.innerHeight - panel.getBoundingClientRect().top - 12) + "px");
+  }
+
   function scheduleSessionDensityCheck() {
     if (sessionDensityFrame) window.cancelAnimationFrame(sessionDensityFrame);
     sessionDensityFrame = window.requestAnimationFrame(() => {
       sessionDensityFrame = null;
       applySessionDensityClass();
+      fitGamePicker();
     });
   }
 
@@ -1967,6 +1964,8 @@
   /* ---------- Events ---------- */
 
   function handleClick(event) {
+    const info = event.target.closest("[data-sheet-info]");
+    if (info) { App.library.showGameInfo(info); return; }
     const filterButton = event.target.closest("[data-game-filter]");
     if (filterButton) {
       storage.mutate(next => { next.modules.play.gameFilter = filterButton.dataset.gameFilter; }, { reason: "play-filter", touch: false });
@@ -2270,6 +2269,7 @@
     root.addEventListener("change", handleChange);
     root.addEventListener("pointerdown", startDrag);
     window.addEventListener("resize", scheduleSessionDensityCheck);
+    window.addEventListener("scroll", scheduleSessionDensityCheck, { passive: true });
     window.visualViewport?.addEventListener("resize", scheduleSessionDensityCheck);
     window.addEventListener("pagehide", saveSession);
     window.addEventListener("beforeunload", saveSession);

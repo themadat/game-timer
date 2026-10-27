@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.47";
+  const VERSION = "2.1.0.48";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-27T13:00:00.000-05:00",
+        title: "Compact Play game picker",
+        summary: "The game picker shares Library player counts, type labels and tappable rule symbols, with six desktop columns and full available height.",
+        features: [], improvements: ["Use a flowing player, time, weight and type summary", "Replace FTO badges with Library turn and faction info symbols"], fixes: ["Keep alternative names free of the game-name underline"], knownIssues: []
+      },
+      {
+        version: "2.1.0.47",
         date: "2026-10-27T12:00:00.000-05:00",
         title: "Delete any library game",
         summary: "Delete built-in or custom games from Library and Play while keeping saved history and statistics.",
