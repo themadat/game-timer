@@ -1229,10 +1229,14 @@
 
   /* ---------- Game dialog ---------- */
 
+  function canonicalSetupColor(color) {
+    const name = ({ green: "pine", teal: "lime", gray: "slate" })[color.name.toLowerCase()] || color.name.toLowerCase();
+    return STANDARD_COLORS.find(item => item.name.toLowerCase() === name) || color;
+  }
   function setupColorOptions(game) {
     const base = GAME_PRESETS.find(item => item.id === game.id);
     const palette = libraryEntry(game.id).metadata?.setup?.palette;
-    const colors = [...(palette || []), ...play.colorsForGame(game), ...(base ? play.colorsForGame(base) : []), ...STANDARD_COLORS];
+    const colors = [...STANDARD_COLORS, ...(palette || []), ...play.colorsForGame(game), ...(base ? play.colorsForGame(base) : [])].map(canonicalSetupColor);
     return colors.filter((color, index) => colors.findIndex(other => other.name === color.name && other.value === color.value) === index);
   }
   function setupColorRow(color, checked, factions) {
@@ -1241,7 +1245,7 @@
   function gameSetupMarkup(game) {
     const rule = game.turnOrder || {};
     const colors = setupColorOptions(game);
-    const selected = play.colorsForGame(game);
+    const selected = play.colorsForGame(game).map(canonicalSetupColor);
     const standard = game.openColorPool === true || (game.openColorPool !== false && !game.colors?.length);
     const factions = game.factions ?? Boolean(factionColors(game).length);
     return `<div class="game-setup-grid" data-pool-mode="${standard ? 'all' : 'selected'}" data-first-mode="${esc(rule.firstMode || '')}">

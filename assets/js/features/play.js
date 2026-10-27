@@ -35,7 +35,7 @@
   let selectedGameId = DEFAULT_GAME_ID;
   let isGameListCollapsed = true;
   let selectedPlayerColor = PLAYER_QUICK_COLOR;
-  let selectedOtherColor = OTHER_COLORS.find(color => color.name === "Gray").value;
+  let selectedOtherColor = OTHER_COLORS.find(color => color.name === "Slate").value;
   let gameSearch = "";
   let selectedStarterId = null;
   let tickTimer = null;
@@ -909,7 +909,7 @@
 
   function defaultOtherColorForName(name) {
     if (String(name || "").toLowerCase() === RULE_LOOKUP_NAME.toLowerCase()) return NAMED_COLORS.White;
-    return OTHER_COLORS.find(color => color.name === "Gray")?.value || selectedOtherColor;
+    return OTHER_COLORS.find(color => color.name === "Slate")?.value || selectedOtherColor;
   }
 
   function addEntry(name = "", type = "player", color = colorForIndex(setupEntries.filter(entry => entry.type === "player").length), locked = false, factionName = "", ruleLookupDefault = false) {
@@ -1076,7 +1076,7 @@
     gameSearch = "";
     isGameListCollapsed = true;
     selectedPlayerColor = PLAYER_QUICK_COLOR;
-    selectedOtherColor = OTHER_COLORS.find(color => color.name === "Gray").value;
+    selectedOtherColor = OTHER_COLORS.find(color => color.name === "Slate").value;
     selectedStarterId = null;
     setupEntries = [];
     shuffled(names).slice(0, playerCount).forEach((name, index) => {
@@ -1133,7 +1133,7 @@
     gameSearch = "";
     isGameListCollapsed = true;
     selectedPlayerColor = PLAYER_QUICK_COLOR;
-    selectedOtherColor = OTHER_COLORS.find(color => color.name === "Gray").value;
+    selectedOtherColor = OTHER_COLORS.find(color => color.name === "Slate").value;
     selectedStarterId = null;
     setupEntries = [];
     turnOrderManuallyAdjusted = false;

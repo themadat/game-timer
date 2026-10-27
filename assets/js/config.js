@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-27T01:00:00.000Z",
+        title: "Sixteen standard colors",
+        summary: "Use the ordered sixteen-color palette with darker Slate, and consolidate old Green, Teal and Gray options in the game editor.",
+        features: [], improvements: ["Order standard colors from Red through Black", "Replace Gray with darker Slate"], fixes: ["Avoid duplicate legacy color options in the editor"], knownIssues: []
+      },
+      {
+        version: "2.1.0.44",
         date: "2026-10-26T12:00:00.000-05:00",
         title: "Clockwise seating and Uprising rules",
         summary: "Separate first-player selection from full-order shuffling, with rulebook-backed Dune: Imperium — Uprising setup.",

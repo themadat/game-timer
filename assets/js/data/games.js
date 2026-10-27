@@ -48,7 +48,8 @@
     Pink: "#ec4899",
     White: "#f8fafc",
     Silver: "#c0c7d1",
-    Gray: "#94a3b8",
+    Slate: "#475569",
+    Gray: "#475569",
     Black: "#111827"
   };
   const STANDARD_COLORS = [
@@ -62,14 +63,14 @@
     colorDef("Navy"),
     colorDef("Purple"),
     colorDef("Pink"),
-    colorDef("Tan"),
     colorDef("Brown"),
+    colorDef("Tan"),
     colorDef("White"),
     colorDef("Silver"),
-    colorDef("Gray"),
+    colorDef("Slate"),
     colorDef("Black")
   ];
-  const OTHER_COLORS = STANDARD_COLORS.filter(color => ["White", "Silver", "Gray", "Black"].includes(color.name));
+  const OTHER_COLORS = STANDARD_COLORS.filter(color => ["White", "Silver", "Slate", "Black"].includes(color.name));
   const GAME_PRESETS = [
     {
         id: "custom",
