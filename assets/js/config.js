@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.44";
+  const VERSION = "2.1.0.45";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,14 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-26T12:00:00.000-05:00",
+        title: "Clockwise seating and Uprising rules",
+        summary: "Separate first-player selection from full-order shuffling, with rulebook-backed Dune: Imperium — Uprising setup.",
+        features: ["Clockwise seating checkbox, chosen starter, and one-time full-order shuffle", "Uprising colors, Objective-card starter, clockwise rules and phase timers"],
+        improvements: ["Save turn-order type separately from first-player rules"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.44",
         date: "2026-10-27T00:00:00.000Z",
         title: "Lime and pine colors",
         summary: "The standard palette offers lime and pine, with pine as the default green. Game color editors use four columns.",

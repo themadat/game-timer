@@ -42,6 +42,7 @@
   let autosaveTimer = null;
   let dragState = null;
   let turnOrderManuallyAdjusted = false;
+  let playersInClockwiseOrder = true;
   let sessionDensityFrame = null;
   let randomSelectAnimation = null;
   let randomSelectTimer = null;
@@ -964,8 +965,37 @@
     return null;
   }
 
+  function defaultClockwiseOrder(game = currentPreset()) {
+    const rule = turnOrderRuleForGame(game);
+    return rule?.sequence ? rule.sequence === "clockwise" : rule?.firstMode !== "random-all" && rule?.firstMode !== "faction-order" && !rule?.autoSortFactions;
+  }
+
   function usesRandomAllTurnOrder(game = currentPreset()) {
-    return turnOrderRuleForGame(game)?.firstMode === "random-all";
+    return !playersInClockwiseOrder && (turnOrderRuleForGame(game)?.sequence === "random" || turnOrderRuleForGame(game)?.firstMode === "random-all");
+  }
+
+  function chooseSetupStarter(id) {
+    const players = setupEntries.filter(entry => entry.type === "player");
+    const index = players.findIndex(entry => entry.id === id && entry.name.trim());
+    if (index < 0) return;
+    const others = setupEntries.filter(entry => entry.type !== "player");
+    const ordered = playersInClockwiseOrder
+      ? players.slice(index).concat(players.slice(0, index))
+      : [players[index], ...players.filter(entry => entry.id !== id)];
+    setupEntries = [...ordered, ...others];
+    selectedStarterId = id;
+    turnOrderManuallyAdjusted = true;
+  }
+
+  function shuffleSetupOrder() {
+    if (playersInClockwiseOrder) return;
+    clearRandomSelectAnimation();
+    const players = shuffled(setupEntries.filter(entry => entry.type === "player" && entry.name.trim()));
+    const others = setupEntries.filter(entry => entry.type !== "player" || !entry.name.trim());
+    setupEntries = [...players, ...others];
+    selectedStarterId = turnOrderRuleForGame()?.firstMode === "manual" ? null : players[0]?.id || null;
+    turnOrderManuallyAdjusted = true;
+    render();
   }
 
   function ensureRuleLookup() {
@@ -1071,6 +1101,7 @@
     if (!gameById(gameId)) return;
     const isSwitchingGames = gameId !== selectedGameId;
     selectedGameId = gameId;
+    if (isSwitchingGames) playersInClockwiseOrder = defaultClockwiseOrder();
     state.gameName = currentPreset().name;
     selectedPlayerColor = PLAYER_QUICK_COLOR;
     isGameListCollapsed = true;
@@ -1097,6 +1128,7 @@
   function resetStartPage() {
     clearRandomSelectAnimation();
     selectedGameId = DEFAULT_GAME_ID;
+    playersInClockwiseOrder = true;
     state.gameName = currentPreset().name;
     gameSearch = "";
     isGameListCollapsed = true;
@@ -1173,6 +1205,7 @@
     const realPlayers = setupEntries.filter(entry => entry.type === "player" && entry.name.trim());
     if (!realPlayers.length) return;
     clearRandomSelectAnimation();
+    if (turnOrderRuleForGame()?.firstMode === "manual") return;
     if (usesRandomAllTurnOrder()) {
       const shuffledPlayers = shuffled(realPlayers);
       const others = setupEntries.filter(entry => !(entry.type === "player" && entry.name.trim()));
@@ -1189,8 +1222,7 @@
       return;
     }
     const picked = firstPlayerByTurnRule(realPlayers) || realPlayers[Math.floor(Math.random() * realPlayers.length)];
-    const index = setupEntries.findIndex(entry => entry.id === picked.id);
-    if (index > 0) setupEntries = setupEntries.slice(index).concat(setupEntries.slice(0, index));
+    chooseSetupStarter(picked.id);
     selectedStarterId = null;
     if (realPlayers.length <= 1) {
       selectedStarterId = picked.id;
@@ -1206,6 +1238,11 @@
     clearRandomSelectAnimation();
     applyGameTurnOrderDefaults({ syncOthers: false });
     ensureRuleLookup();
+    if (selectedStarterId) chooseSetupStarter(selectedStarterId);
+    if (turnOrderRuleForGame()?.firstMode === "manual" && !selectedStarterId) {
+      components.toast("Choose the first player according to the game’s setup rules.", { title: "Choose first player", kind: "warning" });
+      return;
+    }
     const realPlayers = setupEntries.filter(entry => entry.type === "player" && entry.name.trim());
     if (!realPlayers.length) return;
     const orderedEntries = [...setupEntries.filter(entry => entry.type === "player"), ...setupEntries.filter(entry => entry.type === "other")];
@@ -1405,6 +1442,7 @@
     }
     const game = gameById(record.gameId);
     selectedGameId = game ? game.id : DEFAULT_GAME_ID;
+    playersInClockwiseOrder = defaultClockwiseOrder();
     setupEntries = record.players.map((player, index) => ({
       id: uid(),
       name: player.name,
@@ -1426,6 +1464,7 @@
 
   function seatPlayers(names) {
     const game = currentPreset();
+    playersInClockwiseOrder = defaultClockwiseOrder(game);
     const options = playerColorOptions().filter(option => option.value !== PLAYER_QUICK_COLOR);
     const others = setupEntries.filter(entry => entry.type !== "player");
     setupEntries = [];
@@ -1451,6 +1490,7 @@
     const seated = names && names.length ? names : setupEntries.filter(entry => entry.type === "player" && entry.name.trim()).map(entry => entry.name.trim());
     clearRandomSelectAnimation();
     selectedGameId = gameId;
+    playersInClockwiseOrder = defaultClockwiseOrder();
     state.gameName = currentPreset().name;
     selectedPlayerColor = PLAYER_QUICK_COLOR;
     isGameListCollapsed = true;
@@ -1727,10 +1767,14 @@
               <div><h3>Turn order</h3><span class="panel-note">${playerCount} ${playerCount === 1 ? "player" : "players"}</span></div>
               <div class="panel-actions">
                 <button class="button small" type="button" data-action="clear-turn-order" data-shortcut="L" ${playerEntries.length ? "" : "disabled"}>${symbol("close")}<span>Clear</span></button>
-                <button class="button small" type="button" data-action="first" data-shortcut="F" ${playerEntries.length && !randomSelectAnimation ? "" : "disabled"}>${symbol("dice")}<span>${randomSelectAnimation ? "Rolling…" : usesRandomAllTurnOrder(preset) ? "Set" : "First"}</span></button>
+                <button class="button small" type="button" data-action="first" data-shortcut="F" ${playerEntries.length && !randomSelectAnimation && turnOrderRuleForGame(preset)?.firstMode !== "manual" ? "" : "disabled"}>${symbol("dice")}<span>${randomSelectAnimation ? "Rolling…" : usesRandomAllTurnOrder(preset) ? "Set" : "First"}</span></button>
               </div>
             </div>
             ${turnOrderRuleMarkup(turnOrderRuleForGame(preset))}
+            <label class="game-setup-check"><input type="checkbox" data-field="clockwise-order" ${playersInClockwiseOrder ? "checked" : ""} ${randomSelectAnimation ? "disabled" : ""}> Names are in clockwise table order</label>
+            <p class="setting-note">${playersInClockwiseOrder ? "Choosing first player rotates the list and preserves clockwise seating." : "Choose a starter for the listed order, or shuffle the full order once if table position does not matter."}</p>
+            ${!playersInClockwiseOrder ? `<button class="button small" type="button" data-action="shuffle-order" ${!playerEntries.length || randomSelectAnimation ? "disabled" : ""}>${symbol("shuffle")}<span>Shuffle full turn order</span></button>` : ""}
+            <label class="field"><span>${turnOrderRuleForGame(preset)?.firstMode === "manual" ? "First player (from game setup)" : "Choose first player"}</span><select data-field="setup-starter" ${randomSelectAnimation ? "disabled" : ""}><option value="">Choose a player…</option>${playerEntries.filter(entry => entry.name.trim()).map(entry => `<option value="${esc(entry.id)}" ${entry.id === selectedStarterId ? "selected" : ""}>${esc(entry.name)}</option>`).join("")}</select></label>
             <div class="roster-list player-list ${randomSelectAnimation ? "is-random-animating" : ""}" data-roster="player">
               ${playerEntries.length ? playerEntries.map(rosterRow).join("") : `<div class="empty-panel">Pick a ${knownChoices && hasFactionColorOptions(colors) ? "faction" : "color"}, then tap a name to add players.${lastGame ? ` <button class="text-link" type="button" data-action="repeat-last">Use last game’s players</button>` : ""}</div>`}
             </div>
@@ -1940,6 +1984,7 @@
       else input?.focus();
     }
     else if (action === "first") pickFirstPlayer();
+    else if (action === "shuffle-order") shuffleSetupOrder();
     else if (action === "clear-turn-order") clearTurnOrder();
     else if (action === "toggle-game-list") {
       isGameListCollapsed = !isGameListCollapsed;
@@ -2021,6 +2066,19 @@
   }
 
   function handleChange(event) {
+    if (event.target.matches('[data-field="clockwise-order"]')) {
+      clearRandomSelectAnimation();
+      playersInClockwiseOrder = event.target.checked;
+      render();
+      saveSession();
+    }
+    if (event.target.matches('[data-field="setup-starter"]')) {
+      clearRandomSelectAnimation();
+      if (event.target.value) chooseSetupStarter(event.target.value);
+      else selectedStarterId = null;
+      render();
+      saveSession();
+    }
     const select = event.target.closest("[data-placement-id]");
     if (select && state.view === "summary") setPlayerPlacement(select.dataset.placementId, select.value);
     if (event.target.matches("input[data-field='name']")) render();
@@ -2106,7 +2164,7 @@
   /* ---------- Persistence ---------- */
 
   function buildSessionSnapshot() {
-    return { v: 1, savedAt: Date.now(), state, setupEntries, selectedGameId, selectedStarterId, turnOrderManuallyAdjusted };
+    return { v: 1, savedAt: Date.now(), state, setupEntries, selectedGameId, selectedStarterId, turnOrderManuallyAdjusted, playersInClockwiseOrder };
   }
 
   function saveSession() {
@@ -2121,6 +2179,7 @@
     clearRandomSelectAnimation();
     setupEntries = [];
     selectedGameId = DEFAULT_GAME_ID;
+    playersInClockwiseOrder = true;
     selectedStarterId = null;
     turnOrderManuallyAdjusted = false;
     state = emptySessionState(currentPreset().name);
@@ -2144,6 +2203,7 @@
     selectedGameId = gameById(snapshot.selectedGameId) ? snapshot.selectedGameId : DEFAULT_GAME_ID;
     selectedStarterId = snapshot.selectedStarterId || null;
     turnOrderManuallyAdjusted = Boolean(snapshot.turnOrderManuallyAdjusted);
+    playersInClockwiseOrder = typeof snapshot.playersInClockwiseOrder === "boolean" ? snapshot.playersInClockwiseOrder : defaultClockwiseOrder();
     if (state.view === "game" && !state.sessionId) state.sessionId = u.uid("game");
     return true;
   }

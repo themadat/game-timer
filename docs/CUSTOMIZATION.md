@@ -7,7 +7,8 @@ For SSH on either laptop, see [Git setup](GIT-SETUP.md).
 Built-in games live in `assets/js/data/games.js` as `GAME_PRESETS`. Each entry has an `id` (stable — history and library ownership reference it), `name` (a trailing `(2019)` renders as a year tag), player range, minutes, `complexityWeight`, `recommendedPlayers`/`bestPlayers`/`avoidPlayers` (counts or ranges such as `3-4` or `2, 5-6`; `--` for none), and optional:
 - `colors`: `colorDef(name, namedColor, hex)` entries. Names that are not plain color names are treated as factions.
 - `openColorPool: true`: use the standard color set and Quick Add.
-- `turnOrder`: `{ icon, label, note, firstMode: "faction-order" | "current-order" | "random-all", autoSortFactions, defaultOthers: ["Bidding"] }`.
+- `turnOrder`: `{ icon, label, note, firstMode: "faction-order" | "current-order" | "random-all" | "random-first" | "manual", sequence: "clockwise" | "random" | "listed", autoSortFactions, defaultOthers: ["Bidding"] }`.
+- `manual` first-player mode requires choosing the starter from the game’s setup (for example an Objective card). `sequence` describes subsequent order independently; clockwise is the normal seating default, while legacy random-all/faction rules retain their defaults. Play can override seating and shuffle the full lineup once.
 - `verified: true` once colors are checked against the box.
 
 Never rename an existing `id`. Users can also add their own games from the Library; those live in their data, not in this file.

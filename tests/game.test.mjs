@@ -9,15 +9,16 @@ function element() {
   return { innerHTML: '', textContent: '', content: { childNodes: [], textContent: '' }, appendChild() {}, setAttribute() {} };
 }
 
-function load() {
+function load({ setupHarness = false, random = Math.random } = {}) {
   let current = null;
   const context = vm.createContext({
     window: { LocalApp: {}, crypto: globalThis.crypto, addEventListener() {}, dispatchEvent() {} },
-    document: { createElement: element, createDocumentFragment: element, createTextNode: element, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
+    document: { documentElement: { dataset: { motion: "reduce" } }, createElement: element, createDocumentFragment: element, createTextNode: element, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
     Node: { TEXT_NODE: 3, ELEMENT_NODE: 1 },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     navigator: {},
     CustomEvent: class { constructor(name, options) { this.type = name; this.detail = options && options.detail; } },
+    Math: Object.assign(Object.create(Math), { random }),
     structuredClone: globalThis.structuredClone,
     console
   });
@@ -27,7 +28,12 @@ function load() {
   current = App.stateModel.createDefaultState({ demo: false });
   App.storage = { getState: () => current, mutate(callback) { callback(current); current = App.stateModel.normalize(current); return current; } };
   App.components = { toast() {}, confirm: async () => true, openDialog() {}, closeDialog() {} };
-  vm.runInContext(`(function (window) { ${read('features/play.js')} })(window);`, context);
+  let playSource = read('features/play.js');
+  if (setupHarness) playSource = playSource.replace('  App.play = {', `
+    render = () => {};
+    App.play = {
+      setupTest: { chooseSetupStarter, shuffleSetupOrder, startGame, pickFirstPlayer, hydrateFromSnapshot, buildSessionSnapshot, handleChange },`);
+  vm.runInContext(`(function (window) { ${playSource} })(window);`, context);
   vm.runInContext(`(function (window) { ${read('features/library.js')} })(window);`, context);
   return { App, setState: next => { current = next; } };
 }
@@ -635,4 +641,102 @@ test('Forest Shuffle correction excludes promo cards including German Promokarte
     assert.deepEqual([...fields.expansions], ['Forest Shuffle: Alpine','Forest Shuffle: Exploration','Forest Shuffle: Woodland Edge','Forest Shuffle: Památná lípa']);
   }
   assert.deepEqual([...App.library.parseBggPaste('Expansion\nForest Shuffle: Maple Promo Card\nExpands').fields.expansions], []);
+});
+
+
+function setupSession(api, { clockwise = true, gameId = 'custom' } = {}) {
+  const players = ['a', 'b', 'c', 'd'].map(id => ({ id, name: id.toUpperCase(), type: 'player', color: '#ffffff' }));
+  const others = [{ id: 'combat', name: 'Combat', type: 'other', color: '#ffffff' }];
+  api.hydrateFromSnapshot({ v: 1, state: { view: 'setup', players: [] }, selectedGameId: gameId,
+    setupEntries: [players[0], others[0], ...players.slice(1)], playersInClockwiseOrder: clockwise });
+}
+
+test('choosing a clockwise starter rotates players, keeps timers separate and starts in that order', () => {
+  const { App } = load({ setupHarness: true });
+  const api = App.play.setupTest;
+  setupSession(api);
+  api.chooseSetupStarter('c');
+  const snapshot = api.buildSessionSnapshot();
+  assert.deepEqual(plain(snapshot.setupEntries.map(p => p.id)), ['c', 'd', 'a', 'b', 'combat']);
+  assert.equal(snapshot.selectedStarterId, 'c');
+  api.hydrateFromSnapshot(JSON.parse(JSON.stringify(snapshot)));
+  api.startGame();
+  assert.deepEqual(plain(api.buildSessionSnapshot().state.players.filter(p => p.type === 'player').map(p => p.id)), ['c', 'd', 'a', 'b']);
+});
+
+test('non-table starter keeps the remaining order; full shuffle preserves player identities and other timers', () => {
+  const { App } = load({ setupHarness: true, random: () => 0 });
+  const api = App.play.setupTest;
+  setupSession(api, { clockwise: false });
+  api.chooseSetupStarter('c');
+  assert.deepEqual(plain(api.buildSessionSnapshot().setupEntries.map(p => p.id)), ['c', 'a', 'b', 'd', 'combat']);
+  api.shuffleSetupOrder();
+  const snapshot = api.buildSessionSnapshot();
+  assert.deepEqual(plain(snapshot.setupEntries.filter(p => p.type === 'player').map(p => p.id).sort()), ['a', 'b', 'c', 'd']);
+  assert.deepEqual(plain(snapshot.setupEntries.filter(p => p.type === 'player').map(p => p.id)), ['a', 'b', 'd', 'c']);
+  assert.equal(snapshot.setupEntries.at(-1).id, 'combat');
+  assert.equal(snapshot.selectedStarterId, snapshot.setupEntries[0].id);
+  assert.equal(snapshot.playersInClockwiseOrder, false);
+  api.hydrateFromSnapshot(JSON.parse(JSON.stringify(snapshot)));
+  assert.equal(api.buildSessionSnapshot().playersInClockwiseOrder, false);
+  api.startGame();
+  assert.deepEqual(plain(api.buildSessionSnapshot().state.players.filter(p => p.type === 'player').map(p => p.id)), plain(snapshot.setupEntries.filter(p => p.type === 'player').map(p => p.id)));
+});
+
+test('clockwise shuffle is guarded and legacy sessions default to table seating', () => {
+  const { App } = load({ setupHarness: true });
+  const api = App.play.setupTest;
+  setupSession(api);
+  const snapshot = api.buildSessionSnapshot();
+  api.shuffleSetupOrder();
+  assert.deepEqual(plain(api.buildSessionSnapshot().setupEntries), plain(snapshot.setupEntries));
+  delete snapshot.playersInClockwiseOrder;
+  api.hydrateFromSnapshot(snapshot);
+  assert.equal(api.buildSessionSnapshot().playersInClockwiseOrder, true);
+  snapshot.selectedGameId = 'dune-2019';
+  api.hydrateFromSnapshot(snapshot);
+  assert.equal(api.buildSessionSnapshot().playersInClockwiseOrder, false);
+});
+
+test('Uprising uses its Objective starter and four colors, independently of influence factions', () => {
+  const { App } = load({ setupHarness: true });
+  const api = App.play.setupTest;
+  const game = App.play.gameById('dune-imperium-uprising');
+  assert.equal(game.turnOrder.firstMode, 'manual');
+  assert.equal(game.turnOrder.sequence, 'clockwise');
+  assert.equal(game.factions, false);
+  assert.deepEqual(plain(App.play.colorsForGame(game).map(c => c.name)), ['Red', 'Blue', 'Green', 'Yellow']);
+  setupSession(api, { gameId: game.id });
+  api.pickFirstPlayer();
+  assert.equal(api.buildSessionSnapshot().selectedStarterId, null);
+  api.startGame();
+  assert.equal(api.buildSessionSnapshot().state.view, 'setup');
+  api.chooseSetupStarter('b');
+  api.startGame();
+  assert.deepEqual(plain(api.buildSessionSnapshot().state.players.filter(p => p.type === 'player').map(p => p.id)), ['b', 'c', 'd', 'a']);
+  assert.equal(App.play.gameById('dune-2019').turnOrder.firstMode, 'faction-order');
+});
+
+test('separate sequence and first-player choices normalize and survive sync', () => {
+  const { App } = load();
+  const state = App.stateModel.createDefaultState({ demo: false });
+  state.workspace.library.games.root = { metadata: { setup: { turnOrder: { firstMode: 'manual', sequence: 'clockwise' } } } };
+  const restored = App.stateModel.prepareSync(App.stateModel.syncPayload(App.stateModel.normalize(state))).state;
+  assert.equal(restored.workspace.library.games.root.metadata.setup.turnOrder.firstMode, 'manual');
+  assert.equal(restored.workspace.library.games.root.metadata.setup.turnOrder.sequence, 'clockwise');
+  state.workspace.library.games.root.metadata.setup.turnOrder = { firstMode: 'random-first', sequence: 'unsafe' };
+  const rule = App.stateModel.normalize(state).workspace.library.games.root.metadata.setup.turnOrder;
+  assert.equal(rule.firstMode, 'random-first');
+  assert.equal(rule.sequence, 'clockwise');
+});
+
+
+test('random first-player roll preserves clockwise order and excludes other timers', () => {
+  const { App } = load({ setupHarness: true, random: () => 0.6 });
+  const api = App.play.setupTest;
+  setupSession(api);
+  api.pickFirstPlayer();
+  const snapshot = api.buildSessionSnapshot();
+  assert.equal(snapshot.selectedStarterId, 'c');
+  assert.deepEqual(plain(snapshot.setupEntries.map(p => p.id)), ['c', 'd', 'a', 'b', 'combat']);
 });

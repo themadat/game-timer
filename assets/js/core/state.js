@@ -150,7 +150,8 @@
     else if (source.turnOrder && typeof source.turnOrder === "object") {
       const rule = source.turnOrder;
       setup.turnOrder = {
-        firstMode: ["", "random-all", "current-order", "faction-order"].includes(rule.firstMode) ? rule.firstMode : "current-order",
+        firstMode: ["", "random-all", "current-order", "faction-order", "manual", "random-first"].includes(rule.firstMode) ? rule.firstMode : "current-order",
+        sequence: ["clockwise", "random", "listed"].includes(rule.sequence) ? rule.sequence : rule.firstMode === "random-all" ? "random" : rule.autoSortFactions === true || rule.firstMode === "faction-order" ? "listed" : "clockwise",
         autoSortFactions: rule.autoSortFactions === true,
         label: u.cleanLine(rule.label, 80) || "First player",
         note: u.cleanText(rule.note, 1000).trim(),

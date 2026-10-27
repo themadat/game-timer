@@ -140,6 +140,34 @@
         ], verified: true
     },
     {
+        id: "dune-imperium-uprising",
+        name: "Dune: Imperium — Uprising (2023)",
+        minPlayers: 1,
+        maxPlayers: 4,
+        minMinutes: null,
+        maxMinutes: null,
+        complexityWeight: null,
+        recommendedPlayers: "--",
+        bestPlayers: "--",
+        avoidPlayers: "--",
+        factions: false,
+        colors: [
+            colorDef("Red", "Red", "#a63846"),
+            colorDef("Blue", "Blue", "#414a9c"),
+            colorDef("Green", "Green", "#398970"),
+            colorDef("Yellow", "Yellow", "#dbbd49")
+        ],
+        verified: true,
+        turnOrder: {
+            icon: "↻",
+            label: "Objective-card first player · clockwise",
+            firstMode: "manual",
+            sequence: "clockwise",
+            note: "Deal player-count-appropriate Objective cards randomly; the card with the First Player marker determines the starter. Agent and Reveal turns proceed clockwise; skip players after their Reveal turn. Combat Intrigue also proceeds clockwise from the marker, only among players with units in the Conflict; stop after all pass consecutively. At Recall, pass the marker clockwise for the next round. Choose leaders separately from colors; Emperor, Spacing Guild, Bene Gesserit and Fremen are influence tracks, not player factions. Exclude Shaddam Corrino IV without CHOAM. Solo/two-player Rivals and six-player team rules need separate supplements. End after Recall at 10+ VP or an empty Conflict deck; resolve Endgame Intrigue, then rank by VP, spice, Solari, water and garrisoned troops.",
+            defaultOthers: ["Combat", "Makers", "Recall", "Scoring"]
+        }
+    },
+    {
         id: "foundations-of-rome",
         name: "Foundations of Rome",
         minPlayers: 1,

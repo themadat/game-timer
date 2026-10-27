@@ -1253,7 +1253,8 @@
         <label class="game-setup-check"><input type="checkbox" data-setup-verified ${game.verified ? 'checked' : ''}> Colors verified</label>
       </section>
       <section><h3>First player & timing</h3>
-        <div class="segmented setup-choices" role="group" aria-label="First player">${[["", "None"], ["random-all", "Random"], ["current-order", "Player order"], ["faction-order", "Faction order"]].map(([value, label]) => `<button type="button" data-setup-first="${value}" aria-pressed="${(rule.firstMode || '') === value}">${label}</button>`).join("")}</div>
+        <div class="segmented setup-choices" role="group" aria-label="First player">${[["", "None"], ["random-first", "Random first player"], ["random-all", "Random full order"], ["manual", "Choose from game"], ["current-order", "Player order"], ["faction-order", "Faction order"]].map(([value, label]) => `<button type="button" data-setup-first="${value}" aria-pressed="${(rule.firstMode || '') === value}">${label}</button>`).join("")}</div>
+        <label class="field"><span>Turn order</span><select data-setup-sequence>${[["clockwise", "Clockwise table order"], ["random", "Random full order"], ["listed", "Listed / faction order"]].map(([value, label]) => `<option value="${value}" ${(rule.sequence || (rule.firstMode === "random-all" ? "random" : rule.autoSortFactions || rule.firstMode === "faction-order" ? "listed" : "clockwise")) === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
         <label class="field"><span>Rule title</span><input data-setup-label maxlength="80" value="${esc(rule.label || '')}" placeholder="First player"></label>
         <label class="game-setup-check"><input type="checkbox" data-setup-sort ${rule.autoSortFactions ? 'checked' : ''}> Seat players in faction order</label>
         <label class="field"><span>First-player / turn-order instructions</span><textarea rows="2" maxlength="1000" data-setup-note placeholder="Youngest player, last winner, clockwise turns…">${esc(rule.note || '')}</textarea></label>
@@ -1288,7 +1289,7 @@
     const colors = options.filter(row => row.querySelector("[data-setup-color]").checked).map(colorValue);
     const firstMode = panel.querySelector("[data-first-mode]").dataset.firstMode;
     const timers = value("timers").split(";").map(name => name.trim()).filter(Boolean);
-    const setup = { openColorPool: panel.querySelector("[data-pool-mode]").dataset.poolMode === "all", colors, palette, factions: checked("factions"), verified: checked("verified"), turnOrder: firstMode || value("label") || value("note") || timers.length || checked("sort") ? { firstMode, label: value("label") || "First player", note: value("note"), autoSortFactions: checked("sort"), defaultOthers: timers } : null };
+    const setup = { openColorPool: panel.querySelector("[data-pool-mode]").dataset.poolMode === "all", colors, palette, factions: checked("factions"), verified: checked("verified"), turnOrder: value("sequence") !== "clockwise" || firstMode || value("label") || value("note") || timers.length || checked("sort") ? { firstMode, sequence: value("sequence"), label: value("label") || "First player", note: value("note"), autoSortFactions: checked("sort"), defaultOthers: timers } : null };
     mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { setup }); });
     if (appState().ui.view === "library") renderLibrary();
     panel.querySelector("[data-setup-status]").textContent = "Saved automatically.";
