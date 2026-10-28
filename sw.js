@@ -25,6 +25,7 @@ const SHELL = [
   versioned("./assets/js/features/session-aids.js"),
   versioned("./assets/js/features/play.js"),
   versioned("./assets/js/features/library.js"),
+  versioned("./assets/js/features/vibe-check.js"),
   versioned("./assets/js/app.js"),
   versioned("./assets/icons/favicon-tab.svg"),
   versioned("./assets/icons/app-icon-light.svg"),

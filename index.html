@@ -32,6 +32,7 @@
   <script type="application/x-app-script" data-app-src="assets/js/features/session-aids.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/features/play.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/features/library.js"></script>
+  <script type="application/x-app-script" data-app-src="assets/js/features/vibe-check.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/app.js"></script>
 </head>
 <body>
@@ -70,6 +71,7 @@
       <span class="floating-status-icon" data-sync-icon data-symbol="icloud" aria-hidden="true"></span>
       <span class="floating-status-copy"><strong data-floating-local-label>Saved locally</strong><small data-floating-sync-label>GitHub setup required</small></span>
     </button>
+      <button id="vibeCheckButton" class="button action-button" type="button" aria-haspopup="dialog" aria-controls="vibeCheckDialog" title="Vibe Check"><span class="button-icon" aria-hidden="true" data-symbol="vibeCheck"></span><span class="button-label">Vibe Check</span></button>
       <button id="updateAppButton" aria-keyshortcuts="Control+Alt+Shift+U" data-shortcut="U" class="button action-button" type="button" title="Check for updates and force refresh"><span class="button-icon" aria-hidden="true" data-symbol="updateApp"></span><span class="button-label">Update</span></button>
       <button id="notesButton" class="button action-button" type="button" aria-haspopup="dialog" aria-controls="notesDialog" aria-keyshortcuts="N Control+Alt+Shift+N" data-shortcut="N">
         <span class="button-icon" aria-hidden="true" data-symbol="notes"></span><span class="button-label">Notes</span>
@@ -107,6 +109,13 @@
     <section id="libraryView" class="view-panel library-view" role="tabpanel" aria-labelledby="libraryTab" hidden></section>
     <section id="historyView" class="view-panel history-view" role="tabpanel" aria-labelledby="historyTab" hidden></section>
   </main>
+
+  <dialog id="vibeCheckDialog" class="app-dialog vibe-dialog" aria-labelledby="vibeCheckTitle" data-backdrop-close="false">
+    <div class="dialog-shell">
+      <header class="dialog-header"><h2 id="vibeCheckTitle" tabindex="-1">Vibe Check</h2><button class="icon-button" type="button" data-close-dialog="vibeCheckDialog" aria-label="End Vibe Check and clear ballots"><span aria-hidden="true" data-symbol="close"></span></button></header>
+      <div class="dialog-body" id="vibeCheckBody"></div>
+    </div>
+  </dialog>
 
   <dialog id="notesDialog" class="app-dialog notes-dialog" aria-labelledby="notesDialogTitle">
     <div class="dialog-shell">

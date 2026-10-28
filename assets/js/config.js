@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.48";
+  const VERSION = "2.1.0.49";
 
   const CONFIG = {
     identity: {
@@ -86,6 +86,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-28T12:00:00.000-05:00",
+        title: "Private Vibe Check",
+        summary: "Pass the device for private Heavy, Light or Sit out choices, then reveal valid table assignments with the host’s setup passcode.",
+        features: ["Vibe Check in the top bar", "Optional games and player limits for each table", "Random answer targets and host-only reveal"], improvements: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.48",
         date: "2026-10-27T13:00:00.000-05:00",
         title: "Compact Play game picker",
         summary: "The game picker shares Library player counts, type labels and tappable rule symbols, with six desktop columns and full available height.",

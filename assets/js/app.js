@@ -1195,6 +1195,7 @@
     portability.init();
     App.play?.init();
     App.library?.init();
+    App.vibeCheck?.init();
     App.sessionAids?.init();
     bindGeneralEvents();
     bindRuntimeEvents();

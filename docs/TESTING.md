@@ -11,11 +11,13 @@ node -e "for (const f of ['manifest.webmanifest','manifest-dark.webmanifest']) J
 git diff --check
 ```
 
-`tests/game.test.mjs` covers player-count fit, placements with ties, totals and awards, state normalization, and BGG clipboard parsing/catalog override persistence. `tests/boot.test.mjs` checks ordered scripts, versioned assets, and that every referenced file exists. `tests/pwa.test.mjs` covers the update flow.
+`tests/game.test.mjs` covers player-count fit, placements with ties, totals and awards, state normalization, and BGG clipboard parsing/catalog override persistence. `tests/boot.test.mjs` checks ordered scripts, versioned assets, and that every referenced file exists. `tests/pwa.test.mjs` covers the update flow. `tests/vibe-check.test.mjs` checks table matching against exhaustive search, accepted choices and player limits, host passcode rejection/cooldown, relocking, private handoffs, and clearing.
 
 Without Node, `osascript -l JavaScript` can syntax-check files with `new Function(source)`.
 
 ## Manual (focus on changed behavior)
+
+- Vibe Check: select attendees and optional Heavy/Light games; confirm missing player limits; mismatched setup codes block voting. Each person takes the same five-tap flow, with shuffled stationary targets or fixed keyboard controls. Verify 7 → 3+4, 6 with one sitting out → one table of 5, impossible splits, and game limits. Wrong reveal codes show no results (including infeasibility), five failures impose a 15-second cooldown, correct code reveals assignments only. Lock or hide the app and confirm the code is needed again. Closing/reloading clears the round without changing saved state, history, or the running game. Check both themes, keyboard focus, and mobile toolbar/dialog fit.
 
 Serve with `python3 -m http.server 8000`; stop afterward. After editing assets without a version bump, hard-reload (or unregister the service worker) to avoid cached files.
 

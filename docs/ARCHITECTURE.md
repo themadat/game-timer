@@ -18,6 +18,7 @@ All runtime modules attach to `window.LocalApp`.
 - `features/session-aids.js`: wake lock, Web Audio chimes, vibration, long-turn warning (`App.sessionAids`).
 - `features/play.js`: setup, live session, statistics, sharing, session snapshot, legacy import (`App.play`). Pure statistics helpers are exposed as `App.play.stats`.
 - `features/library.js`: library, people, history, game/custom-game/history dialogs (`App.library`).
+- `features/vibe-check.js`: private pass-the-device Heavy/Light/Sit out ballots and table matching. The host sets a 4–12 digit reveal passcode during setup; ballots, passcode, and results stay in memory, outside state/session/backup/sync. Closing or reloading clears the round; hiding the app relocks results or discards the unfinished ballot. Matching respects choices and game limits, requires three people per active table, then maximizes players seated, active tables, and balance. Ballots are discarded after the authorized reveal.
 - `app.js`: header, view tabs (Play/Library/History), global search, settings, shortcuts, developer panel.
 
 Views render by replacing their section’s markup and use delegated events. Rendering dispatches `app:viewrendered` so the shell can decorate shortcut controls.
