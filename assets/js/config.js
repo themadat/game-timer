@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.56";
+  const VERSION = "2.1.0.57";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T18:00:00.000-05:00",
+        title: "Rose wishlist accents",
+        summary: "Distinguish wishlist-only games with a subtle rose tint and matching, smaller heart symbols.",
+        features: [], improvements: ["Rose wishlist row and card shading", "Match wishlist hearts and badges; reduce heart symbols by 30%"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.56",
         date: "2026-10-29T17:00:00.000-05:00",
         title: "Vibe Check available game counts",
         summary: "Game Undecided shows how many games match each table’s current weight filter.",
