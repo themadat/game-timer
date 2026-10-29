@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.55";
+  const VERSION = "2.1.0.56";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T17:00:00.000-05:00",
+        title: "Vibe Check available game counts",
+        summary: "Game Undecided shows how many games match each table’s current weight filter.",
+        features: [], improvements: ["Update available game counts as Heavy and Light filters change"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.55",
         date: "2026-10-29T16:00:00.000-05:00",
         title: "Compact game selection",
         summary: "Keep the selected Play game on one line and make wishlist-only Library games easier to distinguish.",

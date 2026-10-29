@@ -93,7 +93,7 @@
   }
   function gameOptions(minimum, selected = "", kind = "heavy") {
     const games = filterGames(App.play.allGames(), minimum, kind === "light" ? "maximum" : "minimum").sort((a, b) => gameName(a).localeCompare(gameName(b)));
-    return '<option value="">Game undecided</option>' + games.map(game => `<option value="${esc(game.id)}" ${game.id === selected ? 'selected' : ''}>${esc(gameName(game))}${Number.isFinite(game.complexityWeight) ? ' · ' + game.complexityWeight.toFixed(2) : ' · Weight unknown'}</option>`).join("");
+    return `<option value="">Game Undecided (${games.length} Available)</option>` + games.map(game => `<option value="${esc(game.id)}" ${game.id === selected ? 'selected' : ''}>${esc(gameName(game))}${Number.isFinite(game.complexityWeight) ? ' · ' + game.complexityWeight.toFixed(2) : ' · Weight unknown'}</option>`).join("");
   }
 
   function defaultAttendees(people) {
