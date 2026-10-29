@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.49";
+  const VERSION = "2.1.0.50";
 
   const CONFIG = {
     identity: {
@@ -29,6 +29,8 @@
       }
     },
 
+    // Public proxy URL only. The BGG token belongs in the service's secret store.
+    bgg: { apiUrl: "" },
     schemaVersion: 4,
     storage: {
       stateKey: "gameTimer.state.v2",
@@ -86,6 +88,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T12:00:00.000-05:00",
+        title: "Fetch game info from BGG",
+        summary: "Search BoardGameGeek or fetch by ID, then review metadata and player recommendations before applying selected fields.",
+        features: ["BGG search and metadata import", "Private-token BGG service with cached requests"], improvements: ["Keep manual paste as an optional fallback"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.49",
         date: "2026-10-28T12:00:00.000-05:00",
         title: "Private Vibe Check",
         summary: "Pass the device for private Heavy, Light or Sit out choices, then reveal valid table assignments with the host’s setup passcode.",

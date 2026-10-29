@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items><item type="boardgame" id="13">
+  <name type="alternate" value="Settlers &amp; Friends"/><name type="primary" value="Catan"/>
+  <yearpublished value="1995"/><minplayers value="3"/><maxplayers value="4"/>
+  <minplaytime value="60"/><maxplaytime value="120"/>
+  <link type="boardgamemechanic" value="Trading"/><link type="boardgamemechanic" value="Dice Rolling"/>
+  <link type="boardgameexpansion" value="Seafarers"/><link type="boardgameexpansion" value="Promo Island"/>
+  <link type="boardgameexpansion" value="Fan-made Expansion"/>
+  <link type="boardgameexpansion" value="Parent game" inbound="true"/>
+  <poll name="suggested_numplayers"><results numplayers="2"><result value="Best" numvotes="1"/><result value="Recommended" numvotes="2"/><result value="Not Recommended" numvotes="10"/></results>
+    <results numplayers="3"><result value="Best" numvotes="4"/><result value="Recommended" numvotes="10"/><result value="Not Recommended" numvotes="1"/></results>
+    <results numplayers="4"><result value="Best" numvotes="10"/><result value="Recommended" numvotes="4"/><result value="Not Recommended" numvotes="1"/></results>
+    <results numplayers="5"><result value="Best" numvotes="10"/><result value="Recommended" numvotes="10"/><result value="Not Recommended" numvotes="1"/></results>
+    <results numplayers="6+"><result value="Best" numvotes="20"/><result value="Recommended" numvotes="0"/><result value="Not Recommended" numvotes="0"/></results>
+  </poll>
+  <statistics><ratings><average value="7.1"/><averageweight value="2.3"/></ratings></statistics>
+</item></items>

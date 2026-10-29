@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>BGG XML parser checks</title>
+<h1>BGG XML parser checks</h1><pre id="results" role="status">Running…</pre>
+<script>window.LocalApp = { config: {} };</script>
+<script src="../assets/js/core/bgg.js"></script>
+<script>
+(async function () {
+  const output = document.querySelector('#results');
+  const api = window.LocalApp.bgg;
+  let checks = 0;
+  function check(value, message) { if (!value) throw new Error(message); checks++; }
+  function rejects(text, message) { try { api.parseThing(text, '13'); } catch (_) { checks++; return; } throw new Error(message); }
+  try {
+    const xml = await fetch('fixtures/bgg-thing.xml').then(response => response.text());
+    const { fields, warnings } = api.parseThing(xml, '13');
+    check(fields.name === 'Catan' && fields.bggId === '13' && fields.year === 1995, 'Primary identity');
+    check(fields.alternativeNames[0] === 'Settlers & Friends', 'Alternate names and XML entities');
+    check(fields.minPlayers === 3 && fields.maxPlayers === 4 && fields.minMinutes === 60 && fields.maxMinutes === 120, 'Player and time limits');
+    check(fields.bggRating === 7.1 && fields.complexityWeight === 2.3, 'Statistics');
+    check(fields.mechanisms.join(',') === 'Trading,Dice Rolling', 'Mechanisms');
+    check(fields.expansions.join(',') === 'Seafarers', 'Outbound expansions, promo and fan filtering');
+    check(fields.bestPlayers === '4' && fields.recommendedPlayers === '3' && fields.avoidPlayers === '2', 'Vote winners');
+    check(warnings.some(value => value.includes('Tied')) && warnings.some(value => value.includes('Open-ended')), 'Neutral ties and skipped open-ended counts');
+    const withoutVotes = api.parseThing(xml.replace(/<poll[\s\S]*?<\/poll>/, ''), '13');
+    check(!('bestPlayers' in withoutVotes.fields), 'Absent polls preserve recommendations');
+    const invalid = api.parseThing(xml.replace('value="3"', 'value="0"').replace('value="2.3"', 'value="0"'), '13');
+    check(!('minPlayers' in invalid.fields) && !('complexityWeight' in invalid.fields), 'Unavailable/out-of-range values are skipped');
+    rejects('<items><item>', 'Malformed XML');
+    rejects('<!DOCTYPE items><items/>', 'Doctype rejected');
+    rejects('<items/>', 'Missing game');
+    rejects(xml.replace('id="13"', 'id="14"'), 'Wrong game');
+    const search = api.parseSearch(await fetch('fixtures/bgg-search.xml').then(response => response.text()));
+    check(search.length === 2 && search[1].id === '325', 'Game and expansion search');
+    check(api.parseSearch('<items/>').length === 0, 'Empty search');
+    output.textContent = checks + ' checks passed.';
+    output.dataset.passed = 'true';
+  } catch (error) { output.textContent = 'FAIL: ' + error.message; output.dataset.passed = 'false'; }
+})();
+</script></html>

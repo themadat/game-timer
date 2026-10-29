@@ -19,6 +19,8 @@ Never rename an existing `id`. Users can also add their own games from the Libra
 
 Edit `assets/js/config.js`: identity, repository/support URLs, flags, Help topics, Roadmap, and releases. Theme defaults (`themeDefaults`) set the accent colors. Keep system appearance and OS reduced motion.
 
+`bgg.apiUrl` can supply the public BGG proxy URL. Store the BGG token only as a service secret; see [BGG setup](BGG.md). No server or runtime dependency is needed for the static app itself.
+
 ## Release
 
 Bump `VERSION` in config once per completed app-change batch, before committing a deployable release. The format is `major.minor.patch.build`; increment build normally, or use build 1 after changing major/minor/patch. Add a dated entry first in `releases` using `version: VERSION`, and replace the previous first entry’s `VERSION` reference with its literal number. Entries may include `sections: [{ title, items }]` in addition to features/improvements/fixes/knownIssues.

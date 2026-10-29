@@ -31,6 +31,7 @@
   <script type="application/x-app-script" data-app-src="assets/js/core/pwa.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/features/session-aids.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/features/play.js"></script>
+  <script type="application/x-app-script" data-app-src="assets/js/core/bgg.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/features/library.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/features/vibe-check.js"></script>
   <script type="application/x-app-script" data-app-src="assets/js/app.js"></script>
@@ -293,7 +294,7 @@
     <form id="customGameForm" class="dialog-shell" novalidate>
       <header class="dialog-header"><div><span class="eyebrow">Library</span><h2 id="customGameTitle">Add a game</h2></div><button type="button" class="icon-button" data-close-dialog="customGameDialog" aria-label="Close"><span aria-hidden="true" data-symbol="close"></span></button></header>
       <div class="dialog-body custom-game-fields">
-        <button class="button wide" type="button" data-custom-game-paste>Paste game info</button>
+        <button class="button wide" type="button" data-custom-game-paste>Get BGG info</button>
         <label class="field wide"><span>Name</span><input id="customGameName" name="name" type="text" maxlength="100" required autocomplete="off" autocapitalize="words"></label>
         <label class="field"><span>Min players</span><input name="minPlayers" type="number" min="1" max="20" step="1" value="2" required></label>
         <label class="field"><span>Max players</span><input name="maxPlayers" type="number" min="1" max="20" step="1" value="4" required></label>
@@ -313,12 +314,17 @@
 
   <dialog id="gamePasteDialog" class="app-dialog game-dialog" aria-labelledby="gamePasteTitle">
     <form id="gamePasteForm" class="dialog-shell">
-      <header class="dialog-header"><div><span class="eyebrow">Library</span><h2 id="gamePasteTitle">Paste game info</h2></div><button type="button" class="icon-button" data-close-dialog="gamePasteDialog" aria-label="Close"><span aria-hidden="true" data-symbol="close"></span></button></header>
+      <header class="dialog-header"><div><span class="eyebrow">Library</span><h2 id="gamePasteTitle">Get BGG info</h2></div><button type="button" class="icon-button" data-close-dialog="gamePasteDialog" aria-label="Close"><span aria-hidden="true" data-symbol="close"></span></button></header>
       <div class="dialog-body game-paste-body">
         <div class="bgg-lookup-row"><label class="field grow-control"><span>Game</span><input id="gamePasteTarget" list="gamePasteTargets" type="text" maxlength="110" placeholder="Choose an existing game or enter a new name" autocomplete="off"></label><label class="field grow-control"><span>BGG ID or page link</span><input id="gamePasteBggId" type="text" maxlength="500" placeholder="Auto-detected, or paste an ID / BGG URL" autocomplete="off" aria-describedby="gamePasteBggHint"></label></div><datalist id="gamePasteTargets"></datalist>
-        <p id="gamePasteBggHint" class="setting-note">Review or correct the ID here. If copied text has no game link, paste the BGG page address from your browser.</p>
+        <p id="gamePasteBggHint" class="setting-note">Fetch by BGG ID or page link, or search for a title below. Review the fields before applying them.</p>
+        <div class="bgg-lookup-row"><button id="gameBggFetch" type="button" class="button primary">Fetch BGG info</button><label class="field grow-control"><span>Search BoardGameGeek</span><input id="gameBggQuery" type="search" maxlength="100" placeholder="Game title" autocomplete="off"></label><button id="gameBggSearch" type="button" class="button">Search BGG</button><button id="gameBggCancel" type="button" class="button" hidden>Cancel request</button></div>
+        <div id="gameBggResults" class="bgg-search-results" aria-label="BoardGameGeek search results"></div>
+        <details id="gameBggConnection"><summary>BGG connection</summary><label class="field"><span>BGG service URL</span><input id="gameBggEndpoint" type="url" maxlength="500" placeholder="https://your-bgg-service.workers.dev" autocomplete="off"></label><button id="gameBggConnect" type="button" class="button small">Save connection</button><p class="setting-note">Saved on this device. The service keeps the BGG token private. <a href="docs/BGG.md" target="_blank" rel="noopener noreferrer">Setup instructions</a></p><p id="gameBggConnectionStatus" class="setting-note" role="status"></p></details>
+        <details><summary>Paste manually instead</summary>
         <div class="game-paste-inputs"><label class="field"><span>1. Game overview</span><textarea id="gamePasteOverview" data-game-paste-input rows="5" maxlength="50000" placeholder="BGG link, rating, players, play time, weight…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label><label class="field"><span>2. Player recommendations</span><textarea id="gamePastePoll" data-game-paste-input rows="5" maxlength="50000" placeholder="Best / Recommended / Not Recommended table…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label><label class="field"><span>3. Correction form</span><textarea id="gamePasteText" data-game-paste-input rows="5" maxlength="50000" placeholder="Names, year, categories, mechanisms, expansions…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label></div>
-        <p id="gamePasteStatus" class="setting-note" role="status"></p>
+        </details>
+        <p id="gamePasteStatus" class="setting-note" role="status" aria-live="polite"></p>
         <div id="gamePastePreview"></div>
       </div>
       <footer class="dialog-footer"><button type="button" class="button" data-close-dialog="gamePasteDialog">Cancel</button><button id="gamePasteApply" type="submit" class="button primary" disabled>Apply to game</button></footer>

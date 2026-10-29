@@ -177,6 +177,55 @@
   let pasteContext = "library";
   let pasteParsed = { fields: {}, warnings: [] };
   let pasteLockedGameId = "";
+  let pasteSource = "paste";
+  let bggRequest = null;
+  let bggMessage = "";
+
+  function cancelBggRequest() {
+    bggRequest?.abort();
+    bggRequest = null;
+    bggMessage = "";
+  }
+  async function fetchBggInfo(command, gameId) {
+    const idInput = document.querySelector("#gamePasteBggId");
+    const id = gameId || bggIdFromInput(idInput.value);
+    const query = document.querySelector("#gameBggQuery").value.trim();
+    cancelBggRequest();
+    if (command === "thing" && !id) { bggMessage = "Enter a BGG game ID or HTTPS page link first, or search by title."; renderPastePreview(); idInput.focus(); return; }
+    if (command === "search" && !query) { bggMessage = "Enter a game title to search."; renderPastePreview(); document.querySelector("#gameBggQuery").focus(); return; }
+    pasteParsed = { fields: {}, warnings: [] };
+    pasteSource = "api";
+    document.querySelector("#gameBggResults").innerHTML = "";
+    const controller = new AbortController();
+    bggRequest = controller;
+    bggMessage = command === "search" ? "Searching BoardGameGeek…" : "Fetching BGG game info and player votes…";
+    renderPastePreview();
+    try {
+      const result = command === "search" ? await App.bgg.search(query, controller.signal) : await App.bgg.thing(id, controller.signal);
+      if (bggRequest !== controller || controller.signal.aborted) return;
+      if (command === "search") {
+        document.querySelector("#gameBggResults").innerHTML = result.map(game => `<button type="button" class="button" data-bgg-result="${esc(game.id)}">${esc(game.name)}${game.year ? ` (${esc(game.year)})` : ""} · BGG ${esc(game.id)}</button>`).join("");
+        bggMessage = result.length ? result.length + " results. Choose a game to fetch its info." : "No games found. Try another title or use a BGG ID.";
+      } else {
+        pasteParsed = result;
+        idInput.value = result.fields.bggId;
+        idInput.dataset.manual = "true";
+        idInput.setCustomValidity("");
+        const target = document.querySelector("#gamePasteTarget");
+        if (!target.readOnly && !target.value.trim()) {
+          const suggested = suggestedPasteGame(result.fields);
+          target.value = suggested ? pasteGameLabel(suggested) : result.fields.name;
+        }
+        bggMessage = "";
+      }
+    } catch (error) {
+      if (bggRequest !== controller || controller.signal.aborted) return;
+      bggMessage = error.message;
+      if (!App.bgg.endpoint()) document.querySelector("#gameBggConnection").open = true;
+    } finally {
+      if (bggRequest === controller) { bggRequest = null; renderPastePreview(); }
+    }
+  }
 
   function pasteGameLabel(game) {
     const year = sheetValue(game, "year");
@@ -201,6 +250,8 @@
     return matches.length === 1 ? matches[0] : null;
   }
   function openGamePaste(gameId, customForm, trigger) {
+    cancelBggRequest();
+    pasteSource = "api";
     pasteContext = customForm ? "custom" : "library";
     pasteLockedGameId = gameId || "";
     const game = gameId ? play.gameById(gameId) : null;
@@ -215,9 +266,13 @@
     idInput.dataset.initial = idInput.value;
     idInput.setCustomValidity("");
     pasteParsed = { fields: {}, warnings: [] };
-    if (bggIdFromInput(idInput.value)) pasteParsed.fields.bggId = bggIdFromInput(idInput.value);
+    document.querySelector("#gameBggQuery").value = customForm ? target.value : game ? sheetValue(game, "name") : "";
+    document.querySelector("#gameBggResults").innerHTML = "";
+    document.querySelector("#gameBggEndpoint").value = App.bgg.endpoint();
+    document.querySelector("#gameBggConnection").open = !App.bgg.endpoint();
+    document.querySelector("#gameBggConnectionStatus").textContent = "";
     renderPastePreview();
-    components.openDialog("#gamePasteDialog", { trigger, focus: "#gamePasteOverview" });
+    components.openDialog("#gamePasteDialog", { trigger, focus: idInput.value ? "#gameBggFetch" : "#gameBggQuery" });
   }
   function renderPastePreview() {
     const game = selectedPasteGame();
@@ -235,19 +290,40 @@
       if (key === "complexityWeight") return Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "—";
       return sheetValue(game, key) ?? "—";
     };
-    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">Pasted</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${key === "alternativeNames" || (mismatch && key === "name") ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(key === "complexityWeight" && Number.isFinite(Number(current(key))) ? Number(current(key)).toFixed(2) : current(key))}</td><td>${esc(Array.isArray(fields[key]) ? fields[key].join("; ") : key === "complexityWeight" ? Number(fields[key]).toFixed(2) : fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
+    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">${pasteSource === "api" ? "BGG" : "Pasted"}</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${key === "alternativeNames" || (mismatch && key === "name") ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(key === "complexityWeight" && Number.isFinite(Number(current(key))) ? Number(current(key)).toFixed(2) : current(key))}</td><td>${esc(Array.isArray(fields[key]) ? fields[key].join("; ") : key === "complexityWeight" ? Number(fields[key]).toFixed(2) : fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
     const status = keys.length ? keys.length + " fields found. Only checked fields will be filled." : gamePasteText().trim() ? "No supported fields found. Paste the correction form, game overview, or player recommendation table." : "Paste a BGG correction form, game overview, or player recommendation table.";
-    document.querySelector("#gamePasteStatus").textContent = [status, ...pasteParsed.warnings, mismatch ? "The pasted name differs from this game; Name is unchecked. Review the other fields before applying." : ""].filter(Boolean).join(" ");
+    document.querySelector("#gamePasteStatus").textContent = [bggMessage || (pasteSource === "api" && !keys.length ? "Search BGG or fetch by ID to preview game info and player recommendations." : status), ...pasteParsed.warnings, mismatch ? "The imported name differs from this game; Name is unchecked. Review the other fields before applying." : ""].filter(Boolean).join(" ");
     const target = document.querySelector("#gamePasteTarget").value.trim();
     const apply = document.querySelector("#gamePasteApply");
-    apply.disabled = !keys.length || !document.querySelector("#gamePasteBggId").checkValidity() || (!target && pasteContext !== "custom");
-    apply.textContent = pasteContext === "custom" ? "Fill form" : game ? "Apply to game" : "Fill new game";
+    apply.disabled = Boolean(bggRequest) || !keys.length || !document.querySelector("#gamePasteBggId").checkValidity() || (!target && pasteContext !== "custom");
+    document.querySelector("#gameBggFetch").disabled = Boolean(bggRequest);
+    document.querySelector("#gameBggSearch").disabled = Boolean(bggRequest);
+    document.querySelector("#gameBggCancel").hidden = !bggRequest;
+    document.querySelector("#gamePastePreview").setAttribute("aria-busy", String(Boolean(bggRequest)));
+    apply.textContent = pasteContext === "custom" ? editingCustomGameId || editingExpansionDraft ? "Apply to game" : "Fill form" : game ? "Apply to game" : "Fill new game";
   }
   function gamePasteText() {
     return Array.from(document.querySelectorAll("[data-game-paste-input]")).map(input => input.value).join("\n\n");
   }
   function updateGamePaste(event) {
+    cancelBggRequest();
+    document.querySelector("#gameBggResults").innerHTML = "";
+    if (pasteSource === "api" && !event.target.matches("[data-game-paste-input]")) {
+      pasteParsed = { fields: {}, warnings: [] };
+      const idInput = document.querySelector("#gamePasteBggId");
+      if (event.target === idInput) idInput.dataset.manual = "true";
+      if (event.target.id === "gamePasteTarget") {
+        const game = selectedPasteGame();
+        idInput.value = game ? sheetValue(game, "bggId") || "" : "";
+        document.querySelector("#gameBggQuery").value = game ? sheetValue(game, "name") : event.target.value;
+      }
+      const id = bggIdFromInput(idInput.value);
+      idInput.setCustomValidity(idInput.value.trim() && !id ? "Enter a BGG game ID or HTTPS game/correction page link." : "");
+      renderPastePreview();
+      return;
+    }
     if (event.target.matches("[data-game-paste-input], #gamePasteBggId")) {
+      pasteSource = "paste";
       const idInput = document.querySelector("#gamePasteBggId");
       if (event.target === idInput) idInput.dataset.manual = "true";
       pasteParsed = parseBggPaste(gamePasteText());
@@ -287,6 +363,7 @@
   }
   function applyGamePaste(event) {
     event.preventDefault();
+    if (bggRequest || document.querySelector("#gamePasteApply").disabled) return;
     const fields = {};
     document.querySelectorAll("[data-paste-field]:checked").forEach(input => { fields[input.dataset.pasteField] = pasteParsed.fields[input.dataset.pasteField]; });
     if (!Object.keys(fields).length) { document.querySelector("#gamePasteStatus").textContent = "Select at least one field to fill."; return; }
@@ -295,7 +372,7 @@
       fillCustomGameFromPaste(fields);
       components.closeDialog("#gamePasteDialog", "filled");
       if (editingCustomGameId || editingExpansionDraft) saveCustomGame({preventDefault() {}, currentTarget: document.querySelector("#customGameForm")}, true);
-      components.toast(editingCustomGameId ? "Game details saved automatically." : "Fields filled. Review them and save the game.", { title: "Paste applied", kind: "success" });
+      components.toast(editingCustomGameId ? "Game details saved automatically." : "Fields filled. Review them and save the game.", { title: "Fields applied", kind: "success" });
     } else if (game) {
       mutateLibrary(game.id, entry => {
         entry.metadata = Object.assign({}, entry.metadata);
@@ -1118,7 +1195,7 @@
 
 
       ` : ''}
-      <button class="button small" type="button" data-open-game-paste>Paste info</button>
+      <button class="button small" type="button" data-open-game-paste>BGG info</button>
       <button class="button small library-add-game" type="button" data-add-game>${symbol("plus")}<span>Add game</span></button>
     </section>`;
   }
@@ -1436,7 +1513,7 @@
     document.querySelector("#gameDialogTitle").innerHTML = play.gameTitleMarkup(game.name);
     document.querySelector("[data-game-dialog-eyebrow]").textContent = game.custom ? "Added game" : game.verified ? "Game · verified colors" : "Game";
     document.querySelector("#gameDialogBody").innerHTML = gameDialogMarkup(game);
-    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Paste game info</button>${game.id !== "custom" ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button>${libraryEntry(game.id).metadata?.expansionOf ? `<button class="button primary" type="button" data-open-base="${esc(libraryEntry(game.id).metadata.expansionOf)}">Open base game</button>` : `<button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`}`;
+    document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Get BGG info</button>${game.id !== "custom" ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button>${libraryEntry(game.id).metadata?.expansionOf ? `<button class="button primary" type="button" data-open-base="${esc(libraryEntry(game.id).metadata.expansionOf)}">Open base game</button>` : `<button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`}`;
     syncSetupControls();
     icons.mount(document.querySelector("#gameDialog"));
   }
@@ -1528,7 +1605,7 @@
     const body = form.querySelector(".dialog-body");
     body.className = "dialog-body custom-game-fields custom-game-editor";
     body.innerHTML = `
-      <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || draft?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Paste game info</button></div>
+      <div class="wide custom-name-row"><label class="field"><span>Name</span><input id="customGameName" name="name" maxlength="100" required autocomplete="off" value="${esc(game?.name || draft?.name || '')}"></label><label class="field"><span>BGG ID or link</span><input name="bggLink" data-bgg-link maxlength="500" value="${esc(game ? sheetValue(game, "bggId") || '' : '')}" placeholder="BGG ID or https://boardgamegeek.com/…"></label><button class="button" type="button" data-custom-game-paste>Get BGG info</button></div>
       ${customOwnershipMarkup(game,draft)}
       <div class="wide">${ratingLevelsMarkup(game ? libraryEntry(game.id).rating : 0,true)}</div>
       <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${baseGameChoices(gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
@@ -2086,6 +2163,42 @@
       [".app-header", "#whatsNewBanner", "#contextHint"].forEach(selector => { const node = document.querySelector(selector); if (node) observer.observe(node); });
     }
     document.querySelector("#gamePasteForm").addEventListener("submit", applyGamePaste);
+    document.querySelector("#gameBggFetch").addEventListener("click", () => fetchBggInfo("thing"));
+    document.querySelector("#gameBggSearch").addEventListener("click", () => fetchBggInfo("search"));
+    document.querySelector("#gameBggResults").addEventListener("click", event => {
+      const button = event.target.closest("[data-bgg-result]");
+      if (button) fetchBggInfo("thing", button.dataset.bggResult);
+    });
+    document.querySelector("#gameBggCancel").addEventListener("click", () => { cancelBggRequest(); bggMessage = "Request canceled."; renderPastePreview(); });
+    document.querySelector("#gamePasteDialog").addEventListener("close", cancelBggRequest);
+    document.querySelector("#gamePasteDialog").addEventListener("cancel", cancelBggRequest);
+    document.querySelector("#gameBggConnect").addEventListener("click", () => {
+      const input = document.querySelector("#gameBggEndpoint");
+      try {
+        App.bgg.setEndpoint(input.value);
+        cancelBggRequest();
+        pasteParsed = { fields: {}, warnings: [] };
+        document.querySelector("#gameBggResults").innerHTML = "";
+        input.value = App.bgg.endpoint();
+        document.querySelector("#gameBggConnectionStatus").textContent = input.value ? "Connection saved. Search or fetch a game to check it." : "Using the app’s default connection, if configured.";
+        renderPastePreview();
+      } catch (error) { document.querySelector("#gameBggConnectionStatus").textContent = error.message; }
+    });
+    document.querySelector("#gameBggQuery").addEventListener("input", () => {
+      if (!bggRequest) return;
+      cancelBggRequest();
+      renderPastePreview();
+    });
+    document.querySelector("#gamePasteForm").addEventListener("keydown", event => {
+      if (event.key !== "Enter" || event.isComposing) return;
+      if (event.target.matches("#gameBggQuery, #gamePasteBggId, #gameBggEndpoint, #gamePasteTarget")) {
+        event.preventDefault();
+        if (event.target.id === "gameBggEndpoint") document.querySelector("#gameBggConnect").click();
+        else if (event.target.id === "gamePasteBggId") fetchBggInfo("thing");
+        else if (event.target.id === "gamePasteTarget") document.querySelector("#gameBggQuery").focus();
+        else fetchBggInfo("search");
+      }
+    });
     document.querySelectorAll("[data-game-paste-input]").forEach(input => {
       input.addEventListener("input", updateGamePaste);
       input.addEventListener("paste", event => {
