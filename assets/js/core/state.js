@@ -43,7 +43,8 @@
       keepAwake: true,
       chime: false,
       haptics: true,
-      longTurnSeconds: 0
+      longTurnSeconds: 0,
+      vibeWeightStep: 0.25
     };
   }
 
@@ -713,7 +714,8 @@
           keepAwake: sourceGame.keepAwake !== false,
           chime: sourceGame.chime === true,
           haptics: sourceGame.haptics !== false,
-          longTurnSeconds: Math.round(cleanNumber(sourceGame.longTurnSeconds, 0, 3600, gameDefaults.longTurnSeconds))
+          longTurnSeconds: Math.round(cleanNumber(sourceGame.longTurnSeconds, 0, 3600, gameDefaults.longTurnSeconds)),
+          vibeWeightStep: [0.1, 0.25, 0.5, 1].includes(Number(sourceGame.vibeWeightStep)) ? Number(sourceGame.vibeWeightStep) : gameDefaults.vibeWeightStep
         }
       },
       ui: {

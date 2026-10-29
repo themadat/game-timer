@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.53";
+  const VERSION = "2.1.0.54";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T15:00:00.000-05:00",
+        title: "Quicker Vibe Check setup",
+        summary: "Start with the usual group, select large highlighted people chips, and set Heavy minimum or Light maximum weights without scrolling setup.",
+        features: ["Default group selection", "Configurable weight step in Settings"], improvements: ["Move Vibe Check between Update and Notes", "Keep game and weight controls together", "Use People and Tables setup steps with paged attendee chips"], fixes: ["Keep player-limit fields from changing setup height"], knownIssues: []
+      },
+      {
+        version: "2.1.0.53",
         date: "2026-10-29T14:00:00.000-05:00",
         title: "Richer BGG game lookup",
         summary: "Identify search results by their covers, import BGG classifications, and find stores for wishlist games.",

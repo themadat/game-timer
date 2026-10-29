@@ -105,15 +105,16 @@ test('dynamic matching agrees with exhaustive search on mixed ballots and limits
 function flow({ confirm = true } = {}) {
   const listeners = {}, visibility = {}, status = { textContent: '' };
   let markup = '', clock = 1000;
-  const node = { focus() {}, textContent: "" };
+  const node = { focus() {}, setAttribute() {}, textContent: "", dataset: {}, style: {}, clientWidth: 600, clientHeight: 304 };
   const body = {
     get innerHTML() { return markup; }, set innerHTML(value) { markup = value; },
     querySelector(selector) { return selector === '[data-vibe-error]' ? status : node; },
+    querySelectorAll() { return []; },
     addEventListener(name, handler) { listeners[name] = handler; }
   };
   const dialog = { dataset: {}, addEventListener(name, handler) { visibility[name] = handler; } };
   const button = { addEventListener(name, handler) { listeners.open = handler; } };
-  const state = { workspace: { people: ['A', 'B', 'C'].map((name, i) => ({ name, color: ['#ff0000', '#00ff00', '#0000ff'][i] })) } };
+  const state = { preferences: { game: { vibeWeightStep: .25 } }, workspace: { people: ['A', 'B', 'C'].map((name, i) => ({ name, color: ['#ff0000', '#00ff00', '#0000ff'][i] })) } };
   const App = {
     utils: { normalizeColor: (value, fallback) => /^#[0-9a-f]{6}$/.test(value || '') ? value : fallback, escapeHtml: value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;') },
     icons: { markup: () => '' }, config: { controls: { maxPeople: 200 } },
@@ -126,7 +127,7 @@ function flow({ confirm = true } = {}) {
     querySelector: selector => ({ '#vibeCheckDialog': dialog, '#vibeCheckBody': body, '#vibeCheckButton': button })[selector],
     addEventListener(name, handler) { visibility[name] = handler; }
   };
-  const sandbox = vm.createContext({ window: { LocalApp: App, addEventListener() {} }, document, Math, Date: { now: () => clock } });
+  const sandbox = vm.createContext({ window: { LocalApp: App, addEventListener() {} }, document, Math, requestAnimationFrame: callback => callback(), Date: { now: () => clock } });
   vm.runInContext(source, sandbox);
   App.vibeCheck.init();
   listeners.open({ currentTarget: button });
@@ -136,15 +137,17 @@ function flow({ confirm = true } = {}) {
     elements: { fixed: { checked: true }, heavyGame: { value: '' }, lightGame: { value: '' } }
   };
   const submit = target => listeners.submit({ preventDefault() {}, target });
-  submit(form);
   const click = (action, answer, digit) => listeners.click({
     detail: 1,
     target: { closest: selector => {
       if (selector === '[data-vibe-digit]') return digit === undefined ? null : { dataset: { vibeDigit: digit } };
       if (selector === '[data-vibe-answer]') return answer === undefined ? null : { dataset: { vibeAnswer: String(answer) } };
-      return { dataset: { vibe: action } };
+      if (selector === '[data-vibe]') return { dataset: { vibe: action }, setAttribute() {} };
+      return null;
     } }
   });
+  for (let i = 0; i < 3; i++) listeners.click({ target: { closest: selector => selector === '[data-vibe-person]' ? { dataset: { vibePerson: String(i) }, setAttribute() {} } : null } });
+  click('fixed'); click('setup-tables'); submit(form);
   const pin = code => { for (const digit of code) click(null, undefined, digit); };
   if (confirm) { pin('2468'); pin('2468'); }
   const vote = answers => { click('ready'); answers.forEach(answer => click(null, answer)); click('submit'); };
@@ -286,4 +289,20 @@ test('hiding during PIN confirmation discards partial PINs and requires a fresh 
   assert.doesNotMatch(f.html(), /Tonight’s tables/);
   f.unlock('9753');
   assert.match(f.html(), /Tonight’s tables/);
+});
+
+test('default attendee selection matches only the named regulars without adding people', () => {
+  const names = ['ADAM', ' Austin ', 'Bryson', 'Johanna', 'Tristen', 'Kathleen', 'Jake', 'Kacie', 'Someone else'];
+  const people = names.map(name => ({ name }));
+  assert.deepEqual(Array.from(context.window.LocalApp.vibeCheck.defaultAttendees(people)), [0,1,2,3,4,5,6,7]);
+  assert.equal(people.length, 9);
+  assert.deepEqual(Array.from(context.window.LocalApp.vibeCheck.defaultAttendees([{ name: 'Other' }])), []);
+});
+
+test('Light uses an inclusive maximum and zero disables either weight filter', () => {
+  const games = [{ id: 'a', complexityWeight: 1 }, { id: 'b', complexityWeight: 2.5 }, { id: 'c', complexityWeight: 4 }, { id: 'unknown', complexityWeight: null }];
+  const filter = (weight, direction) => Array.from(context.window.LocalApp.vibeCheck.filterGames(games, weight, direction), game => game.id);
+  assert.deepEqual(filter('2.5', 'maximum'), ['a', 'b']);
+  assert.deepEqual(filter('0.0', 'maximum'), ['a', 'b', 'c', 'unknown']);
+  assert.deepEqual(filter('0.0', 'minimum'), ['a', 'b', 'c', 'unknown']);
 });

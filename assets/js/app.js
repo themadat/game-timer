@@ -492,6 +492,7 @@
       button.setAttribute("aria-pressed", String(current === value));
     });
     setInputValue($("#longTurnSeconds"), game.longTurnSeconds ? Math.round(game.longTurnSeconds / 60 * 10) / 10 : "");
+    setInputValue($("#vibeWeightStep"), game.vibeWeightStep);
     const aids = App.sessionAids;
     $("#keepAwakeSupport").textContent = aids && aids.wakeLockSupported() ? "Keeps phones and tablets from dimming while a session runs." : "This browser does not support keeping the screen awake.";
     $("#hapticsSupport").textContent = aids && aids.hapticsSupported() ? "Short vibrations on turn changes and long-turn warnings." : "Vibration is not supported here (for example Safari on iPhone).";
@@ -866,6 +867,7 @@
         if (button.dataset.gamePref === "haptics" && raw === "true") App.sessionAids?.preview("haptic");
       });
     });
+    $("#vibeWeightStep").addEventListener("change", function () { setGamePreference("vibeWeightStep", Number(this.value)); });
     $("#longTurnSeconds").addEventListener("change", function () {
       if (!this.reportValidity()) return;
       const minutes = Number(this.value);

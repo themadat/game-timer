@@ -857,3 +857,21 @@ test('deletion clears setup selection but preserves a running session and its ga
   assert.equal(api.buildSessionSnapshot().selectedGameId, 'root');
   assert.equal(api.buildSessionSnapshot().state.gameName, 'Root');
 });
+
+test('Vibe Check weight step defaults safely and normalizes supported saved settings', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  assert.equal(model.createDefaultState({ demo: false }).preferences.game.vibeWeightStep, 0.25);
+  for (const value of [0.1, 0.25, 0.5, 1, '0.5']) {
+    const state = model.createDefaultState({ demo: false });
+    state.preferences.game.vibeWeightStep = value;
+    assert.equal(model.normalize(state).preferences.game.vibeWeightStep, Number(value));
+  }
+  for (const value of [undefined, null, 0, -1, 3, 'bad']) {
+    const state = model.createDefaultState({ demo: false });
+    state.preferences.game.vibeWeightStep = value;
+    const normalized = model.normalize(state);
+    assert.equal(normalized.preferences.game.vibeWeightStep, 0.25);
+    assert.deepEqual(normalized.workspace.history, state.workspace.history);
+  }
+});

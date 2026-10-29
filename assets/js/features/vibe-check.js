@@ -6,7 +6,8 @@
   const LABELS = { heavy: "Heavy", light: "Light", out: "Sit out" };
   const esc = value => App.utils.escapeHtml(String(value));
   let dialog, body, round = null, draft = null;
-  let pinDigits = "", firstPin = "";
+  let pinDigits = "", firstPin = "", setupStep = "people", peoplePage = 0;
+  const DEFAULT_ATTENDEES = new Set(["adam", "austin", "bryson", "johanna", "tristen", "kathleen", "jake", "kacie"]);
 
   // Counts form a small dynamic program instead of enumerating all 3^n ballots.
   // Weighted reservoir sampling preserves random ties without retaining every split.
@@ -51,9 +52,9 @@
     return assignments.reverse();
   }
 
-  function filterGames(games, minimum) {
+  function filterGames(games, minimum, direction = "minimum") {
     const threshold = Number(minimum) || 0;
-    return games.filter(game => game.id !== "custom" && (!threshold || (Number.isFinite(game.complexityWeight) && game.complexityWeight >= threshold)));
+    return games.filter(game => game.id !== "custom" && (!threshold || (Number.isFinite(game.complexityWeight) && (direction === "maximum" ? game.complexityWeight <= threshold : game.complexityWeight >= threshold))));
   }
 
   // Continuous positions, with rejection sampling to keep both targets separated.
@@ -76,7 +77,6 @@
     focus(selector);
   }
   function error(message) { body.querySelector("[data-vibe-error]").textContent = message; }
-  function notice() { return '<p class="panel-note">Choices and PIN stay in memory. Ending or reloading clears this round. Keep the screen private; assignments may imply a preference.</p>'; }
   function personStyle(person) {
     const color = App.utils.normalizeColor(person.color, "#94a3b8");
     const channels = color.slice(1).match(/../g).map(hex => {
@@ -91,23 +91,62 @@
   function tableSummary() {
     return '<div class="vibe-table-summary">' + ["heavy", "light"].map(kind => '<span>' + icon(kind) + '<strong>' + LABELS[kind] + '</strong> · ' + esc(round.tables[kind].name) + '</span>').join("") + '</div>';
   }
-  function gameOptions(minimum, selected = "") {
-    const games = filterGames(App.play.allGames(), minimum).sort((a, b) => gameName(a).localeCompare(gameName(b)));
+  function gameOptions(minimum, selected = "", kind = "heavy") {
+    const games = filterGames(App.play.allGames(), minimum, kind === "light" ? "maximum" : "minimum").sort((a, b) => gameName(a).localeCompare(gameName(b)));
     return '<option value="">Game undecided</option>' + games.map(game => `<option value="${esc(game.id)}" ${game.id === selected ? 'selected' : ''}>${esc(gameName(game))}${Number.isFinite(game.complexityWeight) ? ' · ' + game.complexityWeight.toFixed(2) : ' · Weight unknown'}</option>`).join("");
   }
 
-  function setup(saved = null) {
-    round = null; pinDigits = ""; firstPin = ""; draft = saved;
+  function defaultAttendees(people) {
+    return people.map((person, i) => DEFAULT_ATTENDEES.has(person.name.trim().toLowerCase()) ? i : -1).filter(i => i >= 0);
+  }
+  function weightStep() { return App.storage.getState().preferences.game.vibeWeightStep; }
+
+  function renderPeople() {
+    if (round || !draft || setupStep !== "people") return;
     const people = App.storage.getState().workspace.people;
-    show(`<form id="vibeSetup" class="vibe-form" autocomplete="off">
-      <p>Select who is here, then pass the device so everyone can privately choose what they would enjoy.</p>
-      <fieldset><legend>Who is here?</legend><div class="vibe-people">${people.map((person, i) => `<label style="${personStyle(person)}"><input type="checkbox" name="attendee" value="${i}" ${saved?.attendees.includes(i) ? 'checked' : ''}><span class="vibe-person-dot" aria-hidden="true"></span><span>${esc(person.name)}</span></label>`).join("") || '<p>Add people in Library → People first.</p>'}</div></fieldset>
-      <div class="vibe-tables">${["heavy", "light"].map(kind => `<fieldset><legend>${icon(kind)} ${LABELS[kind]}</legend><label>Weight at least<input name="${kind}Weight" type="number" min="1" max="5" step="0.01" placeholder="All weights" value="${esc(saved?.[kind + 'Weight'] || '')}"></label><p class="panel-note">This weight and above. Leave blank for all games; unknown weights are hidden when filtering.</p><label>Game (optional)<select name="${kind}Game">${gameOptions(saved?.[kind + 'Weight'], saved?.[kind + 'Game'])}</select></label><p class="panel-note" data-vibe-filter-note="${kind}" aria-live="polite"></p><div data-vibe-limits="${kind}"></div></fieldset>`).join("")}</div>
-      <fieldset><legend>Host reveal PIN</legend><p>Next, choose and confirm a four-digit PIN on the number pad. Remember it: only this PIN reveals the result, and there is no recovery.</p></fieldset>
-      <label class="vibe-check"><input type="checkbox" name="fixed" ${saved?.fixed ? 'checked' : ''}> Use fixed answer positions (keyboard and accessibility mode)</label>
-      <p class="panel-note">Every person answers Heavy, Light and Sit out. Select every acceptable option. Each active table needs at least three people; one table is allowed.</p>
-      ${notice()}<p class="vibe-error" role="alert" data-vibe-error></p><button class="button primary" type="submit">Next: set host PIN</button>
-    </form>`, "input[name='attendee']");
+    const grid = body.querySelector(".vibe-people");
+    const columns = Math.max(1, Math.min(6, Math.floor((grid.clientWidth + 8) / 152)));
+    const rows = Math.max(1, Math.floor((grid.clientHeight + 8) / 76));
+    const capacity = columns * rows;
+    const pages = Math.max(1, Math.ceil(people.length / capacity));
+    peoplePage = Math.min(peoplePage, pages - 1);
+    grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+    grid.innerHTML = people.slice(peoplePage * capacity, (peoplePage + 1) * capacity).map((person, offset) => {
+      const i = peoplePage * capacity + offset;
+      return `<button type="button" class="vibe-person-chip" data-vibe-person="${i}" aria-pressed="${draft.attendees.includes(i)}" style="${personStyle(person)}"><span class="vibe-person-dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`;
+    }).join("") || '<p>Add people in Library → People first.</p>';
+    body.querySelector("[data-vibe-people-page]").textContent = `Page ${peoplePage + 1} of ${pages}`;
+    body.querySelector("[data-vibe='people-prev']").disabled = peoplePage === 0;
+    body.querySelector("[data-vibe='people-next']").disabled = peoplePage === pages - 1;
+    body.querySelector("[data-vibe-selected]").textContent = `${draft.attendees.length} selected`;
+  }
+
+  function setSetupStep(step) {
+    if (step === "tables" && draft.attendees.length < 3) { error("Select at least three people."); return; }
+    setupStep = step;
+    draft.step = step;
+    for (const kind of ["people", "tables"]) {
+      body.querySelector(`[data-vibe-panel="${kind}"]`).hidden = kind !== step;
+      body.querySelector(`[data-vibe-setup="${kind}"]`).setAttribute("aria-pressed", String(kind === step));
+    }
+    const next = body.querySelector("[data-vibe-continue]");
+    next.type = step === "people" ? "button" : "submit";
+    next.textContent = step === "people" ? "Next: tables" : "Next: set host PIN";
+    next.dataset.vibe = step === "people" ? "setup-tables" : "setup-start";
+    error("");
+    if (step === "people") renderPeople();
+  }
+
+  function setup(saved = null) {
+    round = null; pinDigits = ""; firstPin = ""; peoplePage = 0;
+    const people = App.storage.getState().workspace.people;
+    draft = saved || { attendees: defaultAttendees(people), fixed: false, heavyWeight: "2.5", lightWeight: "0.0", step: "people" };
+    show(`<form id="vibeSetup" class="vibe-form vibe-setup" autocomplete="off">
+      <nav class="vibe-setup-nav" aria-label="Vibe Check setup"><button type="button" class="button" data-vibe-setup="people">People</button><button type="button" class="button" data-vibe-setup="tables">Tables</button></nav>
+      <section class="vibe-setup-panel" data-vibe-panel="people"><h3>Who is here? <span data-vibe-selected></span></h3><div class="vibe-people" aria-label="People present"></div><div class="vibe-people-pager"><button type="button" class="button" data-vibe="people-prev" aria-label="Previous people page">Previous</button><span data-vibe-people-page></span><button type="button" class="button" data-vibe="people-next" aria-label="Next people page">Next</button></div></section>
+      <section class="vibe-setup-panel" data-vibe-panel="tables" hidden><div class="vibe-tables">${["heavy", "light"].map(kind => `<fieldset><legend>${icon(kind)} ${LABELS[kind]}</legend><div class="vibe-game-row"><label>Game (optional)<select name="${kind}Game">${gameOptions(draft[kind + 'Weight'], draft[kind + 'Game'], kind)}</select></label><label>Weight ${kind === 'heavy' ? 'at least' : 'at most'}<span class="vibe-weight-control"><button type="button" data-vibe-weight="${kind}" data-delta="-1" aria-label="Decrease ${kind} weight">−</button><input aria-label="${LABELS[kind]} weight ${kind === 'heavy' ? 'at least' : 'at most'}" name="${kind}Weight" type="number" min="0" max="5" step="any" inputmode="decimal" value="${esc(draft[kind + 'Weight'] || '0.0')}"><button type="button" data-vibe-weight="${kind}" data-delta="1" aria-label="Increase ${kind} weight">+</button></span></label></div><p class="visually-hidden" data-vibe-filter-note="${kind}" aria-live="polite"></p><div class="vibe-limits" data-vibe-limits="${kind}"></div></fieldset>`).join("")}</div></section>
+      <p class="vibe-error vibe-setup-error" role="alert" data-vibe-error></p><footer class="vibe-setup-footer"><button type="button" class="button" data-vibe="fixed" aria-pressed="${draft.fixed}" title="Use fixed answer positions for keyboard and accessibility">Fixed answers</button><button class="button primary" type="button" data-vibe-continue>Next: tables</button></footer>
+    </form>`, "[data-vibe-setup='people']");
     if (saved) {
       for (const kind of ["heavy", "light"]) {
         gameChanged(body.querySelector(`[name="${kind}Game"]`));
@@ -117,6 +156,13 @@
         }
       }
     }
+    setSetupStep(draft.step || "people");
+  }
+
+  function adjustWeight(kind, delta) {
+    const input = body.querySelector(`[name="${kind}Weight"]`);
+    input.value = (Math.round(Math.max(0, Math.min(5, (Number(input.value) || 0) + delta * weightStep())) * 100) / 100).toFixed(2);
+    weightChanged(input);
   }
 
   function weightChanged(input) {
@@ -124,25 +170,25 @@
     const kind = input.name === "heavyWeight" ? "heavy" : "light";
     const select = body.querySelector(`[name="${kind}Game"]`);
     const previous = select.value;
-    select.innerHTML = gameOptions(input.value, previous);
+    select.innerHTML = gameOptions(input.value, previous, kind);
     if (select.value !== previous) gameChanged(select);
     const count = select.options.length - 1;
-    body.querySelector(`[data-vibe-filter-note="${kind}"]`).textContent = `${count} game${count === 1 ? '' : 's'} available.${previous && select.value !== previous ? ' Previous game cleared because it is below the filter or its weight is unknown.' : ''}`;
+    body.querySelector(`[data-vibe-filter-note="${kind}"]`).textContent = `${count} game${count === 1 ? '' : 's'} available.${previous && select.value !== previous ? ' Previous game cleared by the weight filter.' : ''}`;
   }
 
   function gameChanged(select) {
     const kind = select.name === "heavyGame" ? "heavy" : "light";
     const game = App.play.gameById(select.value);
     const target = body.querySelector(`[data-vibe-limits="${kind}"]`);
-    if (!game) { target.innerHTML = ""; return; }
+    if (!game) { target.innerHTML = '<p class="panel-note">No game assigned</p>'; return; }
     const minKnown = Number.isInteger(game.minPlayers) && game.minPlayers >= 1;
     const maxKnown = Number.isInteger(game.maxPlayers) && game.maxPlayers >= 1;
-    target.innerHTML = `<p class="panel-note">${minKnown && maxKnown ? 'Game player limits' : 'Confirm missing game limits before voting'}</p><div class="vibe-tables"><label>Minimum players<input name="${kind}Min" type="number" min="1" max="${App.config.controls.maxPeople}" step="1" required value="${minKnown ? game.minPlayers : ''}" ${minKnown ? 'readonly' : ''}></label><label>Maximum players<input name="${kind}Max" type="number" min="1" max="${App.config.controls.maxPeople}" step="1" required value="${maxKnown ? game.maxPlayers : ''}" ${maxKnown ? 'readonly' : ''}></label></div>`;
+    target.innerHTML = `<div class="vibe-player-limits" aria-label="${minKnown && maxKnown ? 'Game player limits' : 'Confirm missing game limits before voting'}"><label>Minimum players<input name="${kind}Min" type="number" min="1" max="${App.config.controls.maxPeople}" step="1" required value="${minKnown ? game.minPlayers : ''}" ${minKnown ? 'readonly' : ''}></label><label>Maximum players<input name="${kind}Max" type="number" min="1" max="${App.config.controls.maxPeople}" step="1" required value="${maxKnown ? game.maxPlayers : ''}" ${maxKnown ? 'readonly' : ''}></label></div>`;
   }
 
   function begin(form) {
     const people = App.storage.getState().workspace.people;
-    const attendees = Array.from(form.querySelectorAll("[name='attendee']:checked"), input => Number(input.value));
+    const attendees = draft.attendees;
     if (attendees.length < 3) { error("Select at least three people."); return; }
     const tables = {};
     for (const kind of ["heavy", "light"]) {
@@ -152,9 +198,9 @@
       if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min) { error("Check the game player limits: maximum must be at least minimum."); return; }
       tables[kind] = { name: game ? gameName(game) : "Game undecided", min, max };
     }
-    draft = { attendees, fixed: form.elements.fixed.checked };
+    draft = { attendees, fixed: draft.fixed, step: "tables" };
     for (const kind of ["heavy", "light"]) for (const suffix of ["Game", "Weight", "Min", "Max"]) draft[kind + suffix] = form.elements[kind + suffix]?.value || "";
-    round = { people: attendees.map(i => ({ name: people[i].name, color: people[i].color })), tables, passcode: "", fixed: form.elements.fixed.checked, ballots: [], ballot: [], question: 0, stage: "pin-create", result: null, failures: 0, retryAt: 0 };
+    round = { people: attendees.map(i => ({ name: people[i].name, color: people[i].color })), tables, passcode: "", fixed: draft.fixed, ballots: [], ballot: [], question: 0, stage: "pin-create", result: null, failures: 0, retryAt: 0 };
     firstPin = "";
     pinScreen("pin-create");
   }
@@ -164,7 +210,7 @@
     round.stage = stage; pinDigits = "";
     const heading = stage === "pin-create" ? "Choose host PIN" : stage === "pin-confirm" ? "Confirm host PIN" : "Return to the host";
     const description = stage === "pin-create" ? "Choose four digits to unlock the results." : stage === "pin-confirm" ? "Enter the same four digits again. Voting begins after confirmation." : "Enter your four-digit host PIN to reveal table assignments.";
-    show(`<section class="vibe-pin-page" data-vibe-pin tabindex="0" aria-label="${heading}. Use the number pad or type four digits."><h3>${heading}</h3><p>${description}</p><div class="vibe-pin-dots" data-vibe-dots aria-hidden="true">○ ○ ○ ○</div><span class="visually-hidden" data-vibe-pin-status role="status">0 of 4 digits entered</span><div class="vibe-keypad">${[1,2,3,4,5,6,7,8,9].map(digit => `<button class="button" type="button" data-vibe-digit="${digit}" aria-label="Digit ${digit}">${digit}</button>`).join('')}<button class="button" type="button" data-vibe="pin-clear">Clear</button><button class="button" type="button" data-vibe-digit="0" aria-label="Digit 0">0</button><button class="button" type="button" data-vibe="pin-delete" aria-label="Delete last digit">⌫</button></div><p class="vibe-error" role="alert" data-vibe-error>${esc(message)}</p>${stage !== "locked" ? `<div class="vibe-actions"><button class="button" type="button" data-vibe="pin-back">Back to setup</button>${stage === 'pin-confirm' ? '<button class="button" type="button" data-vibe="pin-change">Choose a different PIN</button>' : ''}</div>` : notice()}</section>`, "[data-vibe-pin]");
+    show(`<section class="vibe-pin-page" data-vibe-pin tabindex="0" aria-label="${heading}. Use the number pad or type four digits."><h3>${heading}</h3><p>${description}</p><div class="vibe-pin-dots" data-vibe-dots aria-hidden="true">○ ○ ○ ○</div><span class="visually-hidden" data-vibe-pin-status role="status">0 of 4 digits entered</span><div class="vibe-keypad">${[1,2,3,4,5,6,7,8,9].map(digit => `<button class="button" type="button" data-vibe-digit="${digit}" aria-label="Digit ${digit}">${digit}</button>`).join('')}<button class="button" type="button" data-vibe="pin-clear">Clear</button><button class="button" type="button" data-vibe-digit="0" aria-label="Digit 0">0</button><button class="button" type="button" data-vibe="pin-delete" aria-label="Delete last digit">⌫</button></div><p class="vibe-error" role="alert" data-vibe-error>${esc(message)}</p>${stage !== "locked" ? `<div class="vibe-actions"><button class="button" type="button" data-vibe="pin-back">Back to setup</button>${stage === 'pin-confirm' ? '<button class="button" type="button" data-vibe="pin-change">Choose a different PIN</button>' : ''}</div>` : ''}</section>`, "[data-vibe-pin]");
   }
 
   function updatePin() {
@@ -231,6 +277,31 @@
       const members = round.people.filter((person, i) => assignments[i] === kind);
       return `<section class="vibe-result-${kind}"><h4>${icon(kind)} ${kind === "out" ? 'Out' : LABELS[kind]} <span>${members.length}</span></h4>${kind !== "out" ? `<p>${esc(round.tables[kind].name)}</p>` : '<p>Sitting out</p>'}<ul>${members.map(person => `<li>${personMarkup(person)}</li>`).join('')}</ul>${!members.length ? '<p class="vibe-empty">Nobody here</p>' : ''}</section>`;
     }).join('')}</div>` : '<p>No split respects everyone’s choices and the game player limits while keeping at least three people at each active table. Start a fresh round with different games or attendees; no one has been assigned against their choices.</p>'}<p class="panel-note">Every assignment respects accepted choices. Ballots have been cleared; assignments may imply a preference.</p><div class="vibe-actions"><button class="button" type="button" data-vibe="lock">Lock results</button><button class="button" type="button" data-vibe="new">New round</button><button class="button primary" type="button" data-close-dialog="vibeCheckDialog">End and clear</button></div></div>`);
+    fitResults();
+  }
+
+  function fitResults() {
+    if (round?.stage !== "revealed") return;
+    body.querySelectorAll(".vibe-results section").forEach(section => {
+      const list = section.querySelector("ul");
+      const names = Array.from(list.querySelectorAll(".vibe-name"));
+      if (!names.length) return;
+      names.forEach(name => { name.style.fontSize = ""; });
+      list.style.gap = "";
+      const desired = parseFloat(getComputedStyle(names[0]).fontSize);
+      let gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+      if (names.length * desired * 1.95 + gap * (names.length - 1) > list.clientHeight) gap = Math.min(gap, 4);
+      list.style.gap = gap + "px";
+      const row = Math.max(14, Math.min(desired * 1.95, (list.clientHeight - gap * (names.length - 1)) / names.length));
+      list.style.gridAutoRows = row + "px";
+      names.forEach(name => {
+        let size = desired;
+        name.style.fontSize = size + "px";
+        while (size > 10 && (name.scrollHeight > name.clientHeight + 1 || name.scrollWidth > name.clientWidth + 1)) {
+          size -= 1; name.style.fontSize = size + "px";
+        }
+      });
+    });
   }
 
   function init() {
@@ -239,6 +310,7 @@
     document.querySelector("#vibeCheckButton").addEventListener("click", event => {
       setup();
       App.components.openDialog(dialog, { trigger: event.currentTarget, focus: "#vibeCheckTitle" });
+      requestAnimationFrame(renderPeople);
     });
     dialog.addEventListener("close", () => { round = null; draft = null; pinDigits = ""; firstPin = ""; body.innerHTML = ""; delete dialog.dataset.vibeStage; });
     body.addEventListener("input", event => {
@@ -249,9 +321,16 @@
     });
     body.addEventListener("submit", event => {
       event.preventDefault();
-      if (event.target.id === "vibeSetup" && !round) begin(event.target);
+      if (event.target.id === "vibeSetup" && !round) {
+        if (setupStep === "people") setSetupStep("tables"); else begin(event.target);
+      }
     });
     body.addEventListener("keydown", event => {
+      if (!round && ["ArrowUp", "ArrowDown"].includes(event.key) && event.target.matches("[name='heavyWeight'], [name='lightWeight']")) {
+        event.preventDefault();
+        adjustWeight(event.target.name === "heavyWeight" ? "heavy" : "light", event.key === "ArrowUp" ? 1 : -1);
+        return;
+      }
       if (!round || !["pin-create", "pin-confirm", "locked"].includes(round.stage)) return;
       if (/^[0-9]$/.test(event.key) || ["Backspace", "Delete"].includes(event.key)) {
         event.preventDefault(); event.stopPropagation();
@@ -261,6 +340,26 @@
       }
     });
     body.addEventListener("click", event => {
+      if (!round && draft) {
+        const person = event.target.closest("[data-vibe-person]");
+        const step = event.target.closest("[data-vibe-setup]")?.dataset.vibeSetup;
+        const weight = event.target.closest("[data-vibe-weight]");
+        const setupAction = event.target.closest("[data-vibe]")?.dataset.vibe;
+        if (person) {
+          const index = Number(person.dataset.vibePerson);
+          draft.attendees = draft.attendees.includes(index) ? draft.attendees.filter(i => i !== index) : draft.attendees.concat(index);
+          person.setAttribute("aria-pressed", String(draft.attendees.includes(index)));
+          body.querySelector("[data-vibe-selected]").textContent = `${draft.attendees.length} selected`;
+          return;
+        }
+        if (step) { setSetupStep(step); return; }
+        if (weight) {
+          adjustWeight(weight.dataset.vibeWeight, Number(weight.dataset.delta)); return;
+        }
+        if (setupAction === "fixed") { draft.fixed = !draft.fixed; event.target.closest("[data-vibe]").setAttribute("aria-pressed", String(draft.fixed)); return; }
+        if (setupAction === "setup-tables") { setSetupStep("tables"); return; }
+        if (setupAction === "people-prev" || setupAction === "people-next") { peoplePage += setupAction === "people-next" ? 1 : -1; renderPeople(); return; }
+      }
       const digit = event.target.closest("[data-vibe-digit]")?.dataset.vibeDigit;
       if (digit !== undefined) { enterDigit(digit); return; }
       const answer = event.target.closest("[data-vibe-answer]");
@@ -288,7 +387,7 @@
       } else if (action === "lock" && round.stage === "revealed") gate();
       else if (action === "new" && round.stage === "revealed") setup();
     });
-    window.addEventListener("resize", placeAnswers);
+    window.addEventListener("resize", () => { if (!round) renderPeople(); else if (round.stage === "revealed") fitResults(); else placeAnswers(); });
     document.addEventListener("visibilitychange", () => {
       if (!round || !document.hidden) return;
       if (["revealed", "locked"].includes(round.stage)) gate();
@@ -296,5 +395,5 @@
       else if (["question", "submit"].includes(round.stage)) handoff("The screen was hidden. Please answer again.");
     });
   }
-  App.vibeCheck = { init, solve, filterGames, answerPositions };
+  App.vibeCheck = { init, solve, filterGames, answerPositions, defaultAttendees };
 })();
