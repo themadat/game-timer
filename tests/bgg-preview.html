@@ -12,11 +12,17 @@
   function rejects(text, message) { try { api.parseThing(text, '13'); } catch (_) { checks++; return; } throw new Error(message); }
   try {
     const xml = await fetch('fixtures/bgg-thing.xml').then(response => response.text());
-    const { fields, warnings } = api.parseThing(xml, '13');
+    const { fields, warnings, image } = api.parseThing(xml, '13');
     check(fields.name === 'Catan' && fields.bggId === '13' && fields.year === 1995, 'Primary identity');
     check(fields.alternativeNames[0] === 'Settlers & Friends', 'Alternate names and XML entities');
     check(fields.minPlayers === 3 && fields.maxPlayers === 4 && fields.minMinutes === 60 && fields.maxMinutes === 120, 'Player and time limits');
     check(fields.bggRating === 7.1 && fields.complexityWeight === 2.3, 'Statistics');
+    check(image === 'https://cf.geekdo-images.com/test-catan.png', 'BGG thumbnail');
+    check(fields.additionalTypes.join(',') === 'Family,Strategy', 'Recognized BGG classifications');
+    check(api.parseThing(xml.replace('name="unknown"', 'name="constructor"'), '13').fields.additionalTypes.join(',') === 'Family,Strategy', 'Unsupported classification names are ignored');
+    check(!api.parseThing(xml.replace(/<ranks>[\s\S]*?<\/ranks>/, ''), '13').fields.additionalTypes, 'Missing classifications preserve existing types');
+    const unsafeImages = xml.replace(/<thumbnail>[\s\S]*?<\/thumbnail>/, '<thumbnail>javascript:alert(1)</thumbnail>').replace(/<image>[\s\S]*?<\/image>/, '<image>https://untrusted.example/pixel.png</image>');
+    check(!api.parseThing(unsafeImages, '13').image, 'Unsafe image URLs are ignored');
     check(fields.mechanisms.join(',') === 'Trading,Dice Rolling', 'Mechanisms');
     check(fields.expansions.join(',') === 'Seafarers', 'Outbound expansions, promo and fan filtering');
     check(fields.bestPlayers === '4' && fields.recommendedPlayers === '3' && fields.avoidPlayers === '2', 'Vote winners');
@@ -32,6 +38,8 @@
     const search = api.parseSearch(await fetch('fixtures/bgg-search.xml').then(response => response.text()));
     check(search.length === 2 && search[1].id === '325', 'Game and expansion search');
     check(api.parseSearch('<items/>').length === 0, 'Empty search');
+    const normalizedMap = { abstracts: 'Abstract', cgs: 'Customizable', thematic: 'Thematic', familygames: 'Family', childrensgames: "Children's", partygames: 'Party', strategygames: 'Strategy', wargames: 'Wargames' };
+    for (const [key, label] of Object.entries(normalizedMap)) check(api.parseThing(xml.replace(/<ranks>[\s\S]*?<\/ranks>/, '<ranks><rank name="' + key + '"/></ranks>'), '13').fields.additionalTypes[0] === label, label + ' classification');
     output.textContent = checks + ' checks passed.';
     output.dataset.passed = 'true';
   } catch (error) { output.textContent = 'FAIL: ' + error.message; output.dataset.passed = 'false'; }

@@ -41,6 +41,23 @@ function load({ setupHarness = false, random = Math.random } = {}) {
 
 const turn = (start, duration) => ({ startedAt: start, duration, endedAt: start + duration });
 
+test('weight and BGG rating preserve full decimal precision through normalization and sync', () => {
+  const { App } = load();
+  const model = App.stateModel;
+  const state = model.createDefaultState({ demo: false });
+  state.workspace.library.customGames.push({ id: 'custom-decimal', name: 'Decimal game', complexityWeight: 2.3456789 });
+  state.workspace.library.games['custom-decimal'] = { metadata: { bggRating: 7.44999, additionalTypes: ['Family', 'Strategy'], catalog: { complexityWeight: 3.99991 } } };
+  const normalized = model.normalize(state);
+  const game = normalized.workspace.library.customGames.find(game => game.id === 'custom-decimal');
+  assert.equal(game.complexityWeight, 2.3456789);
+  const entry = normalized.workspace.library.games['custom-decimal'];
+  assert.equal(entry.metadata.catalog.complexityWeight, 3.99991);
+  assert.equal(entry.metadata.bggRating, 7.44999);
+  assert.deepEqual([...entry.metadata.additionalTypes], ['Family', 'Strategy']);
+  const roundTrip = model.prepareSync(model.syncPayload(normalized)).state;
+  assert.deepEqual(roundTrip.workspace.library.games['custom-decimal'].metadata, entry.metadata);
+});
+
 test('player-count fit ranks best, recommended, avoided, and unsupported counts', () => {
   const { App } = load();
   const root = App.play.gameById('root');
@@ -148,7 +165,7 @@ test('library sheet metadata survives normalization and sync without changing hi
   state.workspace.library.games.catan = { metadata: { year: 'oops', bggRating: 15, bggId: 'javascript:alert(1)' }, owned: true, rating: 4, note: 'Keep' };
   Object.assign(state.modules.library, { sortBy: 'bggRating', category: 'Strategy', verified: 'yes' });
   const normalized = model.normalize(state);
-  assert.deepEqual(JSON.parse(JSON.stringify(normalized.workspace.library.games.root.metadata)), { year: 2018, bggRating: 8.13, category: 'Strategy', bggId: '237182' });
+  assert.deepEqual(JSON.parse(JSON.stringify(normalized.workspace.library.games.root.metadata)), { year: 2018, bggRating: 8.125, category: 'Strategy', bggId: '237182' });
   assert.equal(normalized.workspace.library.games.catan.metadata.year, null);
   assert.equal(normalized.workspace.library.games.catan.metadata.bggRating, null);
   assert.equal(normalized.workspace.library.games.catan.metadata.bggId, '');

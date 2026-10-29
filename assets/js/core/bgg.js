@@ -8,6 +8,15 @@
   let nextRequestAt = 0;
   const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   const children = (node, tag) => Array.from(node.children).filter(child => child.tagName === tag);
+  function gameImage(item) {
+    for (const tag of ["thumbnail", "image"]) {
+      try {
+        const url = new URL(children(item, tag)[0]?.textContent.trim());
+        if (url.protocol === "https:" && !url.username && !url.password && ["cf.geekdo-images.com", "images.boardgamegeek.com", "cf.geekdo-static.com"].includes(url.hostname)) return url.href;
+      } catch (_) { /* No supported image for this item. */ }
+    }
+    return "";
+  }
   function xmlDocument(text) {
     if (!text || text.length > 2000000 || /<!DOCTYPE|<!ENTITY/i.test(text)) throw new Error("BGG returned unsupported XML. Try again later.");
     const doc = new DOMParser().parseFromString(text, "application/xml");
@@ -45,6 +54,9 @@
     const ratings = item.querySelector("statistics > ratings");
     number("bggRating", ratings?.querySelector("average"), 1, 10);
     number("complexityWeight", ratings?.querySelector("averageweight"), 1, 5);
+    const typeNames = { abstracts: "Abstract", cgs: "Customizable", thematic: "Thematic", familygames: "Family", childrensgames: "Children's", partygames: "Party", strategygames: "Strategy", wargames: "Wargames" };
+    const types = [...new Set(Array.from(ratings?.querySelectorAll("ranks > rank") || []).map(rank => typeNames[rank.getAttribute("name")]).filter(type => typeof type === "string"))];
+    if (types.length) fields.additionalTypes = types;
     const links = children(item, "link");
     fields.mechanisms = [...new Set(links.filter(link => link.getAttribute("type") === "boardgamemechanic").map(link => clean(link.getAttribute("value")).slice(0, 150)).filter(Boolean))].slice(0, 100);
     // inbound expansions point to the base game; they must not become its expansions.
@@ -70,7 +82,7 @@
     }
     if (rows) for (const key of Object.keys(votes)) fields[key] = [...new Set(votes[key])].sort((a, b) => a - b).join(", ") || "--";
     else warnings.push("No usable player-count votes were returned; existing recommendations will be kept.");
-    return { fields, warnings: [...new Set(warnings)] };
+    return { fields, warnings: [...new Set(warnings)], image: gameImage(item) };
   }
   function getToken() {
     try { return localStorage.getItem(tokenKey) || ""; } catch (_) { return ""; }
@@ -100,7 +112,7 @@
       if (signal.aborted) abort();
     });
   }
-  async function request(command, params, signal) {
+  async function request(command, params, signal, parser) {
     const token = getToken();
     if (!token) throw new Error("Add your BGG API key in Settings → Data Sync before searching or fetching.");
     if (navigator.onLine === false) throw new Error("Reconnect to fetch BGG info. Your saved games are available offline.");
@@ -109,7 +121,7 @@
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
     if (command === "thing") url.searchParams.set("stats", "1");
     else url.searchParams.set("type", "boardgame,boardgameexpansion");
-    const parse = text => command === "search" ? parseSearch(text) : parseThing(text, params.id);
+    const parse = parser || (text => command === "search" ? parseSearch(text) : parseThing(text, params.id));
     const cached = cache.get(url.href);
     if (cached && cached.expires > Date.now()) return parse(cached.text);
     const controller = new AbortController();
@@ -131,6 +143,7 @@
       if (response.status === 429 || response.status === 503) throw new Error("BGG is busy or requests are too frequent. Wait a few seconds, then try again.");
       if (!response.ok) throw new Error("BGG could not fetch data (" + response.status + "). Try again later.");
       const text = await response.text();
+      if (controller.signal.aborted) throw controller.signal.reason;
       const result = parse(text);
       if (controller.signal.aborted) throw controller.signal.reason;
       if (cache.size >= 100) cache.delete(cache.keys().next().value);
@@ -146,7 +159,22 @@
       active.delete(controller); clearTimeout(timeout); signal?.removeEventListener("abort", abort);
     }
   }
-  App.bgg = { hasToken: () => Boolean(getToken()), setToken, clearToken, parseSearch, parseThing,
+  async function previews(games, signal) {
+    const ids = games.slice(0, 20).map(game => game.id).filter(id => /^\d{1,12}$/.test(id) && Number(id) > 0);
+    if (!ids.length) return [];
+    return request("thing", { id: ids.join(",") }, signal, text => {
+      const items = children(xmlDocument(text), "item").filter(item => ids.includes(item.getAttribute("id")) && ["boardgame", "boardgameexpansion"].includes(item.getAttribute("type")));
+      return items.map(item => {
+        const id = item.getAttribute("id");
+        // Reuse the fetched detail when the user selects this search result.
+        const single = "<items>" + new XMLSerializer().serializeToString(item) + "</items>";
+        if (cache.size >= 100) cache.delete(cache.keys().next().value);
+        cache.set("https://boardgamegeek.com/xmlapi2/thing?id=" + id + "&stats=1", { text: single, expires: Date.now() + 86400000 });
+        return { id, image: gameImage(item) };
+      });
+    });
+  }
+  App.bgg = { hasToken: () => Boolean(getToken()), setToken, clearToken, parseSearch, parseThing, previews,
     search: (query, signal) => request("search", { query: clean(query).slice(0, 100) }, signal),
     thing: (id, signal) => request("thing", { id }, signal)
   };

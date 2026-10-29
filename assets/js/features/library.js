@@ -25,7 +25,34 @@
   const SORT_LABELS = { fit: "Best fit", name: "Name", plays: "Most played", recent: "Recently played", length: "Play time", weight: "Weight" };
 
   const PASTE_CATALOG_FIELDS = ["name", "minPlayers", "maxPlayers", "minMinutes", "maxMinutes", "complexityWeight", "bestPlayers", "recommendedPlayers", "avoidPlayers"];
-  const PASTE_LABELS = { name: "Name", alternativeNames: "Alternative names", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
+  const PASTE_LABELS = { name: "Name", alternativeNames: "Alternative names", year: "Published year", bggId: "BGG game ID", bggRating: "BGG rating", minPlayers: "Minimum players", maxPlayers: "Maximum players", minMinutes: "Shortest time (min)", maxMinutes: "Longest time (min)", complexityWeight: "Weight", additionalTypes: "Additional Types", mechanisms: "Mechanisms", expansions: "Expansions", bestPlayers: "Best player counts", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts" };
+  const DECIMAL_PLACES = { complexityWeight: 2, bggRating: 1, pasteBggRating: 1 };
+  function fieldText(key, value) {
+    if (Array.isArray(value)) return value.join("; ") || "—";
+    if (value === null || value === undefined || value === "") return "—";
+    return DECIMAL_PLACES[key] !== undefined && Number.isFinite(Number(value)) ? Number(value).toFixed(DECIMAL_PLACES[key]) : value;
+  }
+  function decimalInputKey(input) { return input.name || input.dataset.detailMetadata; }
+  function decimalInputValue(input) { return input.dataset.decimalDisplay === input.value ? input.dataset.decimalValue : input.value; }
+  function formatDecimalInput(input, raw = decimalInputValue(input)) {
+    const key = decimalInputKey(input);
+    input.value = raw === "" || raw === null || raw === undefined ? "" : fieldText(key, raw);
+    input.dataset.decimalValue = raw == null ? "" : String(raw);
+    input.dataset.decimalDisplay = input.value;
+  }
+  function imageMarkup(image, name) {
+    return `<span class="bgg-game-image">${image ? `<img src="${esc(image)}" alt="${esc(name)} box cover" loading="lazy" referrerpolicy="no-referrer">` : ""}<span ${image ? 'hidden' : ''}>No image</span></span>`;
+  }
+  function renderBggResults(games, query) {
+    const root = document.querySelector("#gameBggResults");
+    const focused = root.contains(document.activeElement) ? document.activeElement.dataset.bggResult : "";
+    root.innerHTML = games.length ? games.map(game => `<button type="button" class="button bgg-result" data-bgg-result="${esc(game.id)}">${imageMarkup(game.image, game.name)}<span>${esc(game.name)}${game.year ? ` (${esc(game.year)})` : ""}<small>BGG ${esc(game.id)}</small></span></button>`).join("") : `<a class="button" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=${encodeURIComponent(query + " site:boardgamegeek.com/boardgame")}">Search Google for this title on BGG</a>`;
+    if (focused) root.querySelector(`[data-bgg-result="${CSS.escape(focused)}"]`)?.focus();
+  }
+  function buyLinksMarkup(name, year) {
+    const query = encodeURIComponent([name, year, "board game"].filter(Boolean).join(" "));
+    return `<a class="button small" href="https://www.google.com/search?tbm=shop&amp;q=${query}" target="_blank" rel="noopener noreferrer">Find stores</a><a class="button small" href="https://www.ebay.com/sch/i.html?_nkw=${query}" target="_blank" rel="noopener noreferrer">Find on eBay</a>`;
+  }
 
   function importedExpansions(value) {
     const names = Array.isArray(value) ? value : String(value || "").split(/[;\n]/);
@@ -204,8 +231,21 @@
       const result = command === "search" ? await App.bgg.search(query, controller.signal) : await App.bgg.thing(id, controller.signal);
       if (bggRequest !== controller || controller.signal.aborted) return;
       if (command === "search") {
-        document.querySelector("#gameBggResults").innerHTML = result.map(game => `<button type="button" class="button" data-bgg-result="${esc(game.id)}">${esc(game.name)}${game.year ? ` (${esc(game.year)})` : ""} · BGG ${esc(game.id)}</button>`).join("");
-        bggMessage = result.length ? result.length + " results. Choose a game to fetch its info." : "No games found. Try another title or use a BGG ID.";
+        const games = result.slice(0, 20);
+        renderBggResults(games, query);
+        bggMessage = games.length ? "Loading game images… You can select a result now." : "No games found. Try another title, use a BGG ID, or search Google.";
+        renderPastePreview();
+        if (games.length) {
+          try {
+            const previews = await App.bgg.previews(games, controller.signal);
+            if (bggRequest !== controller || controller.signal.aborted) return;
+            renderBggResults(games.map(game => ({ ...game, image: previews.find(preview => preview.id === game.id)?.image || "" })), query);
+            bggMessage = (result.length > games.length ? "Showing the first 20 results; refine your title to narrow them down." : games.length + " results.") + " Choose a game to review its info.";
+          } catch (error) {
+            if (bggRequest !== controller || controller.signal.aborted) return;
+            bggMessage = "Game images could not be loaded. You can still select a result to fetch its info.";
+          }
+        }
       } else {
         pasteParsed = result;
         idInput.value = result.fields.bggId;
@@ -278,15 +318,17 @@
     const current = key => {
       if (pasteContext === "custom") {
         const form = document.querySelector("#customGameForm");
+        if (key === "additionalTypes") return Array.from(form.querySelectorAll('[name="additionalTypes"]:checked')).map(input => input.dataset.additionalType);
         const inputName = ({ year: "pasteYear", bggRating: "pasteBggRating", alternativeNames: "alternativeNames", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
         return form.elements[inputName]?.value || "—";
       }
       if (!game) return "—";
+      if (key === "additionalTypes") return libraryEntry(game.id).metadata?.additionalTypes || [];
       if (key === "name") return sheetValue(game, "name");
       if (key === "complexityWeight") return Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "—";
       return sheetValue(game, key) ?? "—";
     };
-    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">${pasteSource === "api" ? "BGG" : "Pasted"}</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${key === "alternativeNames" || (mismatch && key === "name") ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(key === "complexityWeight" && Number.isFinite(Number(current(key))) ? Number(current(key)).toFixed(2) : current(key))}</td><td>${esc(Array.isArray(fields[key]) ? fields[key].join("; ") : key === "complexityWeight" ? Number(fields[key]).toFixed(2) : fields[key])}</td></tr>`).join("")}</tbody></table></div>` : "";
+    document.querySelector("#gamePastePreview").innerHTML = keys.length ? `${pasteParsed.image ? `<div class="bgg-preview-cover">${imageMarkup(pasteParsed.image, fields.name || "Game")}</div>` : ""}<div class="paste-preview-table"><table><thead><tr><th scope="col">Use</th><th scope="col">Field</th><th scope="col">Current</th><th scope="col">${pasteSource === "api" ? "BGG" : "Pasted"}</th></tr></thead><tbody>${keys.map(key => `<tr><td><input type="checkbox" data-paste-field="${key}" ${key === "alternativeNames" || (mismatch && key === "name") ? '' : 'checked'} aria-label="Use ${PASTE_LABELS[key]}"></td><th scope="row">${PASTE_LABELS[key]}</th><td>${esc(fieldText(key, current(key)))}</td><td>${esc(fieldText(key, fields[key]))}</td></tr>`).join("")}</tbody></table></div>` : "";
     const status = keys.length ? keys.length + " fields found. Only checked fields will be filled." : gamePasteText().trim() ? "No supported fields found. Paste the correction form, game overview, or player recommendation table." : "Paste a BGG correction form, game overview, or player recommendation table.";
     document.querySelector("#gamePasteStatus").textContent = [bggMessage || (pasteSource === "api" && !keys.length ? "Search BGG or fetch by ID to preview game info and player recommendations." : status), ...pasteParsed.warnings, mismatch ? "The imported name differs from this game; Name is unchecked. Review the other fields before applying." : ""].filter(Boolean).join(" ");
     const target = document.querySelector("#gamePasteTarget").value.trim();
@@ -341,10 +383,12 @@
   function fillCustomGameFromPaste(fields) {
     const form = document.querySelector("#customGameForm");
     Object.entries(fields).forEach(([key, value]) => {
+      if (key === "additionalTypes") { form.querySelectorAll('[name="additionalTypes"]').forEach(input => { input.checked = value.includes(input.dataset.additionalType); }); return; }
       const name = ({ year: "pasteYear", bggRating: "pasteBggRating", alternativeNames: "alternativeNames", mechanisms: "pasteMechanisms", expansions: "pasteExpansions", bggId: "bggLink" })[key] || key;
-      if (form.elements[name]) { form.elements[name].value = Array.isArray(value) ? value.join("\n") : value; form.elements[name].dataset.fieldKnown = "true"; }
+      if (form.elements[name]) { form.elements[name].value = Array.isArray(value) ? value.join("\n") : value; if (DECIMAL_PLACES[name] !== undefined) formatDecimalInput(form.elements[name], value); form.elements[name].dataset.fieldKnown = "true"; }
     });
     Object.keys(PASTE_LABELS).forEach(key => {
+      if (key === "additionalTypes") return;
       const name = ({ year:"pasteYear",bggRating:"pasteBggRating",mechanisms:"pasteMechanisms",expansions:"pasteExpansions",bggId:"bggLink" })[key] || key;
       const input = form.elements[name];
       if (!input) return;
@@ -415,7 +459,7 @@
     if (game.id === "custom") return '<span class="game-summary">Any game · any player count</span>';
     const time = Number.isFinite(game.minMinutes) && Number.isFinite(game.maxMinutes)
       ? `${game.minMinutes}${game.minMinutes === game.maxMinutes ? "" : "–" + game.maxMinutes} min` : "Time unknown";
-    const weight = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(1) : "?";
+    const weight = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "?";
     return `<span class="game-summary">${playerCountBadges(game)} <span aria-hidden="true">·</span> <span class="summary-time time-band-${Math.min(6, Math.max(1, Math.ceil((game.maxMinutes || 0) / 30)))}">${esc(time)}</span> <span aria-hidden="true">·</span> <span class="summary-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(game.complexityWeight || 1)))}" title="Complexity out of 5">Weight ${esc(weight)}</span> <span aria-hidden="true">·</span> <span class="summary-type">${esc(combinedGameType(game))}</span></span>`;
   }
 
@@ -1478,12 +1522,13 @@
           </div>
           <button type="button" class="button wishlist-choice" data-detail-wishlist aria-pressed="${entry.wishlist}">${symbol("heart")}<span>On my wishlist</span></button>
           <p class="setting-note wishlist-note">Keep this on your wishlist even when someone else owns a copy.</p>
+          ${entry.wishlist ? `<div class="button-row wishlist-buy-links" aria-label="Find this wishlist game to buy">${buyLinksMarkup(sheetValue(game, "name"), sheetValue(game, "year"))}</div>` : ""}
           ${ratingLevelsMarkup(entry.rating,false)}
           <label class="field"><span>Notes</span><textarea data-detail-note rows="2" maxlength="1000" placeholder="House rules, missing pieces, expansions…">${esc(entry.note)}</textarea></label>
         </section>
         </div>
         <div role="tabpanel" id="game-panel-catalog" aria-labelledby="game-tab-catalog" ${gameDetailTab !== "catalog" ? 'hidden' : ''} class="game-details-grid">
-        <div class="game-linking-panel">${bggLookupMarkup(game, false)}${expansionParentMarkup(game)}<div class="catalog-compact-fields">${tagSectionsMarkup(game)}${[["year","Published year",'-9999','9999','1'],["bggRating","BGG rating",'1','10','0.01']].map(([key,label,min,max,step]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${esc(sheetValue(game,key) ?? '')}"></label>`).join("")}</div></div>
+        <div class="game-linking-panel">${bggLookupMarkup(game, false)}${expansionParentMarkup(game)}<div class="catalog-compact-fields">${tagSectionsMarkup(game)}${[["year","Published year",'-9999','9999','1'],["bggRating","BGG rating",'1','10','any']].map(([key,label,min,max,step]) => `<label class="field"><span>${label}</span><input data-detail-metadata="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${esc(sheetValue(game,key) ?? '')}"></label>`).join("")}</div></div>
         <section class="catalog-list-columns" aria-label="Catalog lists">${[["alternativeNames","Alternative names"],["mechanisms","Mechanisms"],["expansions","Expansions"]].map(([key,label]) => `<label class="field"><span>${label}</span><textarea data-detail-metadata="${key}" rows="16" maxlength="10000" placeholder="One per line">${esc((entry.metadata?.[key] || []).join("\n"))}</textarea></label>`).join("")}</section>
         </div>
         <section class="detail-section" role="tabpanel" id="game-panel-plays" aria-labelledby="game-tab-plays" ${gameDetailTab !== "plays" ? 'hidden' : ''}>
@@ -1510,6 +1555,8 @@
     document.querySelector("#gameDialogTitle").innerHTML = play.gameTitleMarkup(game.name);
     document.querySelector("[data-game-dialog-eyebrow]").textContent = game.custom ? "Added game" : game.verified ? "Game · verified colors" : "Game";
     document.querySelector("#gameDialogBody").innerHTML = gameDialogMarkup(game);
+    const bggRatingInput = document.querySelector('[data-detail-metadata="bggRating"]');
+    if (bggRatingInput) formatDecimalInput(bggRatingInput, sheetValue(game, "bggRating"));
     document.querySelector("#gameDialogFooter").innerHTML = `<button class="button" type="button" data-open-game-paste="${esc(game.id)}">Get BGG info</button>${game.id !== "custom" ? `<button class="button" type="button" data-edit-custom="${esc(game.id)}">${symbol("pencil")}<span>Edit game</span></button>` : ""}<span class="dialog-footer-spacer"></span><button class="button" type="button" data-close-dialog="gameDialog">Close</button>${libraryEntry(game.id).metadata?.expansionOf ? `<button class="button primary" type="button" data-open-base="${esc(libraryEntry(game.id).metadata.expansionOf)}">Open base game</button>` : `<button class="button primary" type="button" data-play-game="${esc(game.id)}">${symbol("play")}<span>Play this game</span></button>`}`;
     syncSetupControls();
     icons.mount(document.querySelector("#gameDialog"));
@@ -1607,7 +1654,7 @@
       <div class="wide">${ratingLevelsMarkup(game ? libraryEntry(game.id).rating : 0,true)}</div>
       <div class="wide custom-game-fields" data-game-kind-fields><label class="field"><span>Add as</span><select name="gameKind"><option value="standalone" ${!parentId ? 'selected' : ''}>Standalone game</option><option value="expansion" ${parentId ? 'selected' : ''}>Expansion</option></select></label><label class="field" data-expansion-parent-field ${parentId ? '' : 'hidden'}><span>Expansion of</span><select name="expansionOf" ${parentId ? 'required' : ''}><option value="">Choose a base game</option>${baseGameChoices(gameId).map(parent => `<option value="${esc(parent.id)}" ${parent.id === parentId ? 'selected' : ''}>${esc(parent.name)}</option>`).join("")}</select></label></div>
       <div class="wide custom-player-fields" role="group" aria-label="Players">${[["minPlayers","Min players","number",'min="1" max="20" step="1"',""], ["maxPlayers","Max players","number",'min="1" max="20" step="1"',""], ["bestPlayers","Best at","text",'maxlength="40"',""], ["recommendedPlayers","Recommended","text",'maxlength="40"',""], ["avoidPlayers","Avoid at","text",'maxlength="40"',""]].map(([name,label,type,attrs,fallback]) => field(name,label,type,attrs,value(name,fallback))).join("")}</div>
-      <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1"',value("minMinutes",""))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1"',value("maxMinutes",""))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="0.01"',game && Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "","Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="0.01"',game ? sheetValue(game,"bggRating") : "")}</div>
+      <div class="wide custom-timing-fields">${field("minMinutes","Min minutes","number",'min="1" max="1440" step="1"',value("minMinutes",""))}${field("maxMinutes","Max minutes","number",'min="1" max="1440" step="1"',value("maxMinutes",""))}${field("complexityWeight","Weight (1–5)","number",'min="1" max="5" step="any"',game && Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "","Optional")}${field("pasteYear","Published year","number",'min="-9999" max="9999" step="1"',game ? sheetValue(game,"year") : "")}${field("pasteBggRating","BGG rating","number",'min="1" max="10" step="any"',game ? sheetValue(game,"bggRating") : "")}</div>
       <div class="wide custom-types-row" data-custom-paste-fields><label class="field"><span>Main Type</span><select name="pasteMainType">${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${game && mainGameTag(game) === type ? 'selected' : ''}>${type}</option>`).join("")}</select></label>${additionalTypesMarkup(game,true)}</div>
       <div class="wide custom-catalog-fields">${[["alternativeNames","Alternative names","alternativeNames"],["pasteMechanisms","Mechanisms","mechanisms"],["pasteExpansions","Expansions","expansions"]].map(([name,label,key]) => `<label class="field"><span>${label}</span><textarea name="${name}" rows="8" maxlength="10000" placeholder="One per line">${esc(game ? (libraryEntry(game.id).metadata?.[key] || []).join("\n") : "")}</textarea></label>`).join("")}</div>
       ${bggLookupMarkup(game,true)}
@@ -1617,6 +1664,15 @@
       <p class="setting-note wide" id="customGameSaveStatus" role="status">${game || draft ? "Edits save automatically on this device." : "Save the game to add it; later edits save automatically."}</p>`;
     form.querySelector(".dialog-footer").prepend(body.querySelector("#customGameSaveStatus"));
     body.querySelector("[data-bgg-lookup] [data-bgg-link]").closest(".bgg-lookup-row").remove();
+    formatDecimalInput(form.elements.complexityWeight, game?.complexityWeight ?? "");
+    formatDecimalInput(form.elements.pasteBggRating, game ? sheetValue(game, "bggRating") : "");
+    const buyLinks = document.createElement("div");
+    buyLinks.className = "button-row wishlist-buy-links";
+    buyLinks.setAttribute("data-custom-buy-links", "");
+    buyLinks.setAttribute("aria-label", "Find this wishlist game to buy");
+    buyLinks.hidden = !form.elements.customWishlist.checked;
+    buyLinks.innerHTML = buyLinksMarkup(form.elements.name.value, form.elements.pasteYear.value);
+    form.querySelector(".custom-ownership").appendChild(buyLinks);
     if (draft) fillCustomGameFromPaste({name:draft.name});
     highlightGameMissingFields(form);
     components.openDialog("#customGameDialog", { focus: "#customGameName" });
@@ -1653,6 +1709,8 @@
       return;
     }
     const values = Object.fromEntries(new FormData(form).entries());
+    values.complexityWeight = decimalInputValue(form.elements.complexityWeight);
+    values.pasteBggRating = decimalInputValue(form.elements.pasteBggRating);
     const validation = document.querySelector("#customGameValidation");
     const name = u.cleanLine(values.name, 100);
     const minPlayers = values.minPlayers ? Number(values.minPlayers) : null;
@@ -2166,6 +2224,11 @@
       const button = event.target.closest("[data-bgg-result]");
       if (button) fetchBggInfo("thing", button.dataset.bggResult);
     });
+    document.querySelector("#gamePasteDialog").addEventListener("error", event => {
+      if (!event.target.matches(".bgg-game-image img")) return;
+      event.target.hidden = true;
+      event.target.nextElementSibling.hidden = false;
+    }, true);
     document.querySelector("#gameBggCancel").addEventListener("click", () => { cancelBggRequest(); bggMessage = "Request canceled."; renderPastePreview(); });
     document.querySelector("#gamePasteDialog").addEventListener("close", cancelBggRequest);
     document.querySelector("#gamePasteDialog").addEventListener("cancel", cancelBggRequest);
@@ -2276,6 +2339,13 @@
     document.querySelector("#gameDialogFooter").addEventListener("click", handleGameDialogClick);
     document.querySelector("#gameDialogBody").addEventListener("input", updateBggSearch);
     document.querySelector("#customGameForm").addEventListener("input", event => {
+      const decimalKey = decimalInputKey(event.target);
+      if (DECIMAL_PLACES[decimalKey] !== undefined) { event.target.dataset.decimalValue = event.target.value; event.target.dataset.decimalDisplay = event.target.value; }
+      if (["customWishlist", "name", "pasteYear"].includes(event.target.name)) {
+        const links = event.currentTarget.querySelector("[data-custom-buy-links]");
+        links.hidden = !event.currentTarget.elements.customWishlist.checked;
+        links.innerHTML = buyLinksMarkup(event.currentTarget.elements.name.value, event.currentTarget.elements.pasteYear.value);
+      }
       if (event.target.name === "additionalOwners" && event.target.value.trim()) event.currentTarget.elements.customOwned.checked = true;
       if (event.target.name === "gameOwners" && event.target.checked) event.currentTarget.elements.customOwned.checked = true;
       if (event.target.name === "customOwned" && !event.target.checked) { event.currentTarget.querySelectorAll('[name="gameOwners"]').forEach(input => { input.checked = false; }); event.currentTarget.elements.additionalOwners.value = ""; }
@@ -2305,6 +2375,7 @@
       tabs[index].click();
     });
     document.querySelector("#gameDialogBody").addEventListener("input", event => {
+      if (event.target.matches('[data-detail-metadata="bggRating"]')) { event.target.dataset.decimalValue = event.target.value; event.target.dataset.decimalDisplay = event.target.value; }
       if (event.target.matches("[data-new-color-hex]")) event.target.setCustomValidity("");
       if (event.target.matches("[data-bgg-link]")) { const raw = event.target.value.trim(); const bggId = bggIdFromInput(raw); if (!raw || bggId) { mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { bggId }); }); if (appState().ui.view === "library") renderLibrary(); } }
       if (event.target.matches("[data-color-name], [data-setup-label], [data-setup-note], [data-setup-timers]")) saveGameSetup(false);
@@ -2323,7 +2394,7 @@
       if (event.target.matches("[data-detail-metadata]")) {
         if (!event.target.checkValidity()) { event.target.reportValidity(); return; }
         const key = event.target.dataset.detailMetadata;
-        const value = event.target.value.trim();
+        const value = (key === "bggRating" ? decimalInputValue(event.target) : event.target.value).trim();
         mutateLibrary(openGameId, entry => { entry.metadata = Object.assign({}, entry.metadata, { [key]: key === "expansions" ? importedExpansions(value) : value }); });
         if (appState().ui.view === "library") renderLibrary();
       }
@@ -2334,6 +2405,9 @@
       }
     });
     document.querySelector("#customGameForm").addEventListener("change", event => { if ((editingCustomGameId || editingExpansionDraft) && event.target.name) saveCustomGame(event, true); });
+    ["#customGameForm", "#gameDialogBody"].forEach(selector => document.querySelector(selector).addEventListener("focusout", event => {
+      if (event.target.matches("input") && DECIMAL_PLACES[decimalInputKey(event.target)] !== undefined && event.target.checkValidity()) formatDecimalInput(event.target);
+    }));
     document.querySelector("#customGameForm").addEventListener("submit", saveCustomGame);
     document.querySelector("#customGameDialog").addEventListener("close", () => { if (editingCustomGameId) { storage.saveNow(); renderLibrary(); } });
     document.querySelector("#customGameDelete").addEventListener("click", deleteCustomGame);

@@ -119,3 +119,15 @@ test('changing the key cancels an in-flight request', async () => {
   api.setToken('replacement');
   await assert.rejects(pending, /key changed/);
 });
+
+test('BGG image lookups batch at most twenty IDs with statistics for reuse', async () => {
+  let call;
+  const { api } = client(async (...args) => { call = args; return new Response('', { status: 401 }); });
+  api.setToken('test-key');
+  await assert.rejects(api.previews(Array.from({ length: 25 }, (_, index) => ({ id: String(index + 1) }))), /access was refused/);
+  const url = new URL(call[0]);
+  assert.equal(url.pathname, '/xmlapi2/thing');
+  assert.equal(url.searchParams.get('id').split(',').length, 20);
+  assert.equal(url.searchParams.get('stats'), '1');
+  assert.equal((await api.previews([])).length, 0);
+});

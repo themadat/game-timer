@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.52";
+  const VERSION = "2.1.0.53";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T14:00:00.000-05:00",
+        title: "Richer BGG game lookup",
+        summary: "Identify search results by their covers, import BGG classifications, and find stores for wishlist games.",
+        features: ["BGG search cover images and classification import", "Google fallback for empty BGG searches", "Wishlist shopping links"], improvements: ["Accept full decimal precision; show weight with two decimal places and BGG rating with one"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.52",
         date: "2026-10-29T13:00:00.000-05:00",
         title: "Full-screen Vibe Check",
         summary: "Filter games by minimum weight, set a host PIN on a number pad, and reveal three large, colorful table columns.",

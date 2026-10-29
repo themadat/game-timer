@@ -107,7 +107,7 @@
         maxPlayers: maxPlayers,
         minMinutes: minMinutes,
         maxMinutes: maxMinutes,
-        complexityWeight: Number.isFinite(weight) && weight >= 1 && weight <= 5 ? Math.round(weight * 100) / 100 : null,
+        complexityWeight: Number.isFinite(weight) && weight >= 1 && weight <= 5 ? weight : null,
         recommendedPlayers: normalizePlayerCountText(source.recommendedPlayers, "--"),
         bestPlayers: normalizePlayerCountText(source.bestPlayers, "--"),
         avoidPlayers: normalizePlayerCountText(source.avoidPlayers, "--"),
@@ -123,7 +123,7 @@
     if (name) catalog.name = name;
     [["minPlayers", 1, 20], ["maxPlayers", 1, 20], ["minMinutes", 1, 1440], ["maxMinutes", 1, 1440], ["complexityWeight", 1, 5]].forEach(function ([key, min, max]) {
       const value = Number(source[key]);
-      if (Number.isFinite(value) && value >= min && value <= max) catalog[key] = key === "complexityWeight" ? Math.round(value * 100) / 100 : Math.round(value);
+      if (Number.isFinite(value) && value >= min && value <= max) catalog[key] = key === "complexityWeight" ? value : Math.round(value);
     });
     [["minPlayers", "maxPlayers"], ["minMinutes", "maxMinutes"]].forEach(function ([min, max]) {
       if (catalog[min] !== undefined && catalog[max] !== undefined) catalog[max] = Math.max(catalog[min], catalog[max]);
@@ -180,7 +180,7 @@
         note: u.cleanText(entry.note, 1000).trim(),
         metadata: {
           year: /^-?\d{1,4}$/.test(String(entry.metadata?.year ?? "")) ? Number(entry.metadata.year) : null,
-          bggRating: Number(entry.metadata?.bggRating) >= 1 && Number(entry.metadata?.bggRating) <= 10 ? Math.round(Number(entry.metadata.bggRating) * 100) / 100 : null,
+          bggRating: Number(entry.metadata?.bggRating) >= 1 && Number(entry.metadata?.bggRating) <= 10 ? Number(entry.metadata.bggRating) : null,
           category: u.cleanLine(entry.metadata?.category, 1000),
           bggId: /^\d{1,12}$/.test(String(entry.metadata?.bggId || "")) && Number(entry.metadata.bggId) > 0 ? String(entry.metadata.bggId) : ""
         }
