@@ -1631,8 +1631,9 @@
     const count = setupPlayerCount();
     const fit = playerCountFit(game, count);
     const plays = App.library?.playCount?.(game.id) || 0;
+    const libraryGame = appState().workspace.library.games[game.id];
     return `
-      <div class="game-option-card"><button class="game-option ${isHidden ? "is-hidden" : ""}" type="button" data-action="preset" data-game-id="${esc(game.id)}" data-search-text="${esc(gameSearchText(game))}" aria-pressed="${game.id === selectedGameId}">
+      <div class="game-option-card"><button class="game-option ${isHidden ? "is-hidden" : ""} ${libraryGame?.wishlist && !libraryGame.owned ? "is-wishlist-only" : ""}" type="button" data-action="preset" data-game-id="${esc(game.id)}" data-search-text="${esc(gameSearchText(game))}" aria-pressed="${game.id === selectedGameId}">
         <span class="game-option-main">
           <strong class="game-option-title">${gameTitleMarkup(game.name)}</strong>
           ${App.library.pickerSummaryMarkup(game)}
@@ -1714,11 +1715,13 @@
     root.innerHTML = `
       <div class="play-setup ${isGameListCollapsed ? "is-list-collapsed" : "is-list-open"}">
         <header class="play-bar">
-          <button class="game-picker-toggle" type="button" data-action="toggle-game-list" data-shortcut="J" aria-expanded="${!isGameListCollapsed}" aria-controls="setupGameList">
-            <span class="eyebrow">${prefs().demoMode ? "Demo Mode · " : ""}Game</span>
+          <button class="game-picker-toggle" type="button" data-action="toggle-game-list" data-shortcut="J" aria-label="Choose game: ${esc(preset.name)}" aria-expanded="${!isGameListCollapsed}" aria-controls="setupGameList">
+            <span class="picker-line">
+            ${prefs().demoMode ? '<span class="picker-mode">Demo Mode</span>' : ""}
             ${gameTitleMarkup(preset.name, "picker-title")}
             ${App.library.pickerSummaryMarkup(preset)}
             <span class="picker-meta">${ownershipMarkup(preset)}${fit.key !== "none" ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}</span>
+            </span>
             <span class="picker-chevron" aria-hidden="true">${icons.markup("chevronDown")}</span>
           </button>
           <div class="play-bar-actions">

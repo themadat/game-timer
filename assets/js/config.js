@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.54";
+  const VERSION = "2.1.0.55";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T16:00:00.000-05:00",
+        title: "Compact game selection",
+        summary: "Keep the selected Play game on one line and make wishlist-only Library games easier to distinguish.",
+        features: [], improvements: ["Move Library Reset next to search", "Shade wishlist-only game rows", "Match the Play selector height to its action buttons"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.54",
         date: "2026-10-29T15:00:00.000-05:00",
         title: "Quicker Vibe Check setup",
         summary: "Start with the usual group, select large highlighted people chips, and set Heavy minimum or Light maximum weights without scrolling setup.",

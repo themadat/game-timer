@@ -785,7 +785,8 @@
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="${id}" tabindex="0" aria-label="Notes for ${esc(game.name)}; double-click or press Enter to edit"` : ''} title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
-    return `<tr${parent ? ` class="sheet-expansion-row" data-expansion-parent="${esc(parent.id)}"` : game.id === "custom" ? ' class="is-pinned-game"' : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
+    const rowClasses = [parent ? "sheet-expansion-row" : game.id === "custom" ? "is-pinned-game" : "", entry.wishlist && !entry.owned ? "is-wishlist-only" : ""].filter(Boolean).join(" ");
+    return `<tr${rowClasses ? ` class="${rowClasses}"` : ""}${parent ? ` data-expansion-parent="${esc(parent.id)}"` : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
   }
 
   function sheetYearMarkup(game, parentId, expansionName) {
@@ -1224,14 +1225,15 @@
       ${ui.tab === "games" ? `
         <div class="filter-row" role="group" aria-label="Library search and filters">
         <details class="library-table-options"><summary>${symbol("people")}<span>Table${count ? ` · ${count}` : ''}</span></summary>${presentPickerMarkup()}</details>
-          <label class="search-field grow-control library-search-field"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"><span class="library-game-count" role="status">${filteredGames().length} out of ${allGames().length} games</span><kbd aria-hidden="true">.</kbd></label>
+          <div class="library-search-tools"><label class="search-field grow-control library-search-field"><span class="visually-hidden">Search library</span><input type="search" aria-keyshortcuts="." data-library-search value="${esc(ui.search)}" placeholder="Search library…" autocomplete="off"><span class="library-game-count" role="status">${filteredGames().length} out of ${allGames().length} games</span><kbd aria-hidden="true">.</kbd></label>
+          <button class="button small" type="button" data-library-reset>Reset</button>
+          </div>
           <label class="select-field"><span class="visually-hidden">Show</span><select data-library-ownership>${Object.keys(OWNERSHIP_LABELS).map(key => `<option value="${key}" ${ui.ownership === key ? "selected" : ""}>${OWNERSHIP_LABELS[key]}</option>`).join("")}</select></label>
           <label class="select-field"><span class="visually-hidden">Sort</span><select data-library-sort>${Object.keys(SORT_LABELS).map(key => `<option value="${key}" ${ui.sortBy === key ? "selected" : ""}>${SORT_LABELS[key]}${key === "fit" && count ? ` for ${count}` : ""}</option>`).join("")}</select></label>
           <button class="icon-button" type="button" data-library-direction aria-label="${ui.sortDirection === "desc" ? "Reverse order on" : "Reverse order off"}" aria-pressed="${ui.sortDirection === "desc"}" title="Reverse order">${icons.markup("sort")}</button>
           <label class="select-field"><span class="visually-hidden">Main Type / Additional Types</span><select data-library-main-type><option value="all">All types</option>${MAIN_GAME_TYPES.map(type => `<option value="${type}" ${ui.mainType === type ? 'selected' : ''}>${type}</option>`).join("")}<optgroup label="Additional Types">${ADDITIONAL_GAME_TYPES.map(type => `<option value="additional:${esc(type)}" ${ui.mainType === 'additional:' + type ? 'selected' : ''}>${esc(type)}</option>`).join("")}</optgroup></select></label>
           ${[["mechanism", "Mechanism", "Mechanism"]].map(([key, label, group]) => `<label class="select-field"><span class="visually-hidden">${label}</span><select data-library-${key}><option value="all">${label}</option>${[...new Set(allGames().flatMap(game => gameTagGroups(game)[group]))].sort().map(value => `<option value="${esc(value)}" ${ui[key] === value ? 'selected' : ''}>${esc(value)}</option>`).join("")}</select></label>`).join("")}
           <label class="select-field"><span class="visually-hidden">Colors</span><select data-library-verified>${[["all", "Any verification"], ["yes", "Verified"], ["no", "Unchecked"]].map(([value, label]) => `<option value="${value}" ${ui.verified === value ? 'selected' : ''}>${label}</option>`).join("")}</select></label>
-          <button class="button small" type="button" data-library-reset>Reset</button>
         </div>
 
 
