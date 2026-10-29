@@ -102,20 +102,20 @@ test('dynamic matching agrees with exhaustive search on mixed ballots and limits
 });
 
 // Exercise the registered DOM handlers without exporting ballots or auth internals.
-function flow() {
+function flow({ confirm = true } = {}) {
   const listeners = {}, visibility = {}, status = { textContent: '' };
   let markup = '', clock = 1000;
-  const node = { focus() {} };
+  const node = { focus() {}, textContent: "" };
   const body = {
     get innerHTML() { return markup; }, set innerHTML(value) { markup = value; },
     querySelector(selector) { return selector === '[data-vibe-error]' ? status : node; },
     addEventListener(name, handler) { listeners[name] = handler; }
   };
-  const dialog = { addEventListener(name, handler) { visibility[name] = handler; } };
+  const dialog = { dataset: {}, addEventListener(name, handler) { visibility[name] = handler; } };
   const button = { addEventListener(name, handler) { listeners.open = handler; } };
-  const state = { workspace: { people: ['A', 'B', 'C'].map(name => ({ name })) } };
+  const state = { workspace: { people: ['A', 'B', 'C'].map((name, i) => ({ name, color: ['#ff0000', '#00ff00', '#0000ff'][i] })) } };
   const App = {
-    utils: { escapeHtml: value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;') },
+    utils: { normalizeColor: (value, fallback) => /^#[0-9a-f]{6}$/.test(value || '') ? value : fallback, escapeHtml: value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;') },
     icons: { markup: () => '' }, config: { controls: { maxPeople: 200 } },
     storage: { getState: () => state, mutate() { throw Error('Vibe Check must not persist private data'); } },
     components: { openDialog() {} },
@@ -126,47 +126,50 @@ function flow() {
     querySelector: selector => ({ '#vibeCheckDialog': dialog, '#vibeCheckBody': body, '#vibeCheckButton': button })[selector],
     addEventListener(name, handler) { visibility[name] = handler; }
   };
-  const sandbox = vm.createContext({ window: { LocalApp: App }, document, Math, Date: { now: () => clock } });
+  const sandbox = vm.createContext({ window: { LocalApp: App, addEventListener() {} }, document, Math, Date: { now: () => clock } });
   vm.runInContext(source, sandbox);
   App.vibeCheck.init();
   listeners.open({ currentTarget: button });
   const form = {
     id: 'vibeSetup',
     querySelectorAll: () => [0, 1, 2].map(value => ({ value: String(value) })),
-    elements: { passcode: { value: '2468' }, confirmation: { value: '2468' }, fixed: { checked: true }, heavyGame: { value: '' }, lightGame: { value: '' } }
+    elements: { fixed: { checked: true }, heavyGame: { value: '' }, lightGame: { value: '' } }
   };
   const submit = target => listeners.submit({ preventDefault() {}, target });
   submit(form);
-  const click = (action, answer) => listeners.click({
+  const click = (action, answer, digit) => listeners.click({
     detail: 1,
-    target: { closest: selector => selector === '[data-vibe-answer]' ? (answer === undefined ? null : { dataset: { vibeAnswer: String(answer) } }) : { dataset: { vibe: action } } }
+    target: { closest: selector => {
+      if (selector === '[data-vibe-digit]') return digit === undefined ? null : { dataset: { vibeDigit: digit } };
+      if (selector === '[data-vibe-answer]') return answer === undefined ? null : { dataset: { vibeAnswer: String(answer) } };
+      return { dataset: { vibe: action } };
+    } }
   });
+  const pin = code => { for (const digit of code) click(null, undefined, digit); };
+  if (confirm) { pin('2468'); pin('2468'); }
   const vote = answers => { click('ready'); answers.forEach(answer => click(null, answer)); click('submit'); };
-  const unlock = code => {
-    const unlockForm = { id: 'vibeUnlock', elements: { code: { value: code } }, reset() { this.elements.code.value = ''; } };
-    submit(unlockForm);
-    assert.equal(unlockForm.elements.code.value, '');
-  };
-  return { vote, click, unlock, html: () => markup, status, close: () => visibility.close(), hide: () => { document.hidden = true; visibility.visibilitychange(); document.hidden = false; }, advance: ms => { clock += ms; } };
+  const key = key => listeners.keydown({ key, preventDefault() {}, stopPropagation() {} });
+  return { vote, click, pin, key, unlock: pin, html: () => markup, status, close: () => visibility.close(), hide: () => { document.hidden = true; visibility.visibilitychange(); document.hidden = false; }, advance: ms => { clock += ms; } };
+
 }
 
 test('host code gates every result and re-locks when hidden; ending clears the DOM', () => {
   const f = flow();
   for (let i = 0; i < 3; i++) f.vote([true, false, false]);
-  assert.match(f.html(), /id="vibeUnlock"/);
+  assert.match(f.html(), /data-vibe-pin/);
   assert.doesNotMatch(f.html(), /Tonight’s tables|vibe-results|No valid arrangement/);
   f.unlock('0000');
-  assert.match(f.status.textContent, /Incorrect passcode/);
+  assert.match(f.html(), /Incorrect PIN/);
   assert.doesNotMatch(f.html(), /vibe-results/);
   f.unlock('2468');
   assert.match(f.html(), /Tonight’s tables/);
-  assert.match(f.html(), /<li>A<\/li>/);
+  assert.match(f.html(), />A<\/span>/);
   f.click('lock');
   assert.doesNotMatch(f.html(), /<li>/);
   f.unlock('2468');
   assert.match(f.html(), /Tonight’s tables/);
   f.hide();
-  assert.match(f.html(), /id="vibeUnlock"/);
+  assert.match(f.html(), /data-vibe-pin/);
   assert.doesNotMatch(f.html(), /<li>/);
   f.close();
   assert.equal(f.html(), '');
@@ -176,12 +179,12 @@ test('five wrong codes throttle reveal, including a correct code until cooldown 
   const f = flow();
   for (let i = 0; i < 3; i++) f.vote([false, false, true]);
   for (let i = 0; i < 5; i++) f.unlock('9999');
-  assert.match(f.status.textContent, /Wait 15 seconds/);
+  assert.match(f.html(), /Wait 15 seconds/);
   f.unlock('2468');
   assert.doesNotMatch(f.html(), /Tonight’s tables/);
   f.advance(15000);
   f.unlock('2468');
-  assert.match(f.html(), /Sitting out · 3/);
+  assert.match(f.html(), /Out <span>3<\/span>/);
 });
 
 test('an impossible split is hidden until the host unlocks', () => {
@@ -207,5 +210,80 @@ test('empty ballots retry the same voter and backgrounding discards only the cur
   f.vote([true, false, false]);
   f.vote([true, false, false]);
   f.unlock('2468');
-  assert.match(f.html(), /Heavy · 3/);
+  assert.match(f.html(), /Heavy <span>3<\/span>/);
+});
+
+test('weight thresholds include the boundary and heavier games, exclude unknowns while filtering', () => {
+  const games = [
+    { id: 'light', complexityWeight: 1.5 }, { id: 'boundary', complexityWeight: 2.5 },
+    { id: 'heavy', complexityWeight: 4.2 }, { id: 'unknown', complexityWeight: null },
+    { id: 'missing' }, { id: 'custom', complexityWeight: 5 }
+  ];
+  const filter = minimum => Array.from(context.window.LocalApp.vibeCheck.filterGames(games, minimum), game => game.id);
+  assert.deepEqual(filter('2.5'), ['boundary', 'heavy']);
+  assert.deepEqual(filter(''), ['light', 'boundary', 'heavy', 'unknown', 'missing']);
+  assert.deepEqual(filter('5'), []);
+  assert.equal(games.length, 6);
+});
+
+test('freeform targets stay within bounds and never overlap on supported canvas sizes', () => {
+  let seed = 888;
+  const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  const distinct = new Set();
+  for (const [width, height, bw, bh] of [[299, 200, 120, 64], [700, 350, 200, 90], [1200, 500, 240, 96]]) {
+    for (let i = 0; i < 100; i++) {
+      const points = context.window.LocalApp.vibeCheck.answerPositions(width, height, bw, bh, random);
+      for (const point of points) {
+        assert.ok(point.x >= 0 && point.x + bw <= width);
+        assert.ok(point.y >= 0 && point.y + bh <= height);
+        distinct.add(point.x.toFixed(2) + ',' + point.y.toFixed(2));
+      }
+      assert.ok(Math.abs(points[0].x - points[1].x) >= bw + 16 || Math.abs(points[0].y - points[1].y) >= bh + 16);
+    }
+  }
+  assert.ok(distinct.size > 100);
+});
+
+test('PIN setup requires confirmation and contains no autofill or credential inputs', () => {
+  const f = flow({ confirm: false });
+  assert.match(f.html(), /Choose host PIN/);
+  assert.doesNotMatch(f.html(), /<input|<textarea|contenteditable/);
+  f.pin('2468');
+  assert.match(f.html(), /Confirm host PIN/);
+  f.pin('1111');
+  assert.match(f.html(), /PINs do not match/);
+  assert.doesNotMatch(f.html(), /Pass to A|2468/);
+  f.pin('2468');
+  assert.match(f.html(), /Pass to A/);
+});
+
+test('keyboard PIN supports correction; names and colors appear during voting and all three result columns exist', () => {
+  const f = flow({ confirm: false });
+  f.key('2'); f.key('9'); f.key('Backspace');
+  f.key('4'); f.key('6'); f.key('8');
+  for (const digit of '2468') f.key(digit);
+  f.click('ready');
+  assert.match(f.html(), />A<\/span>/);
+  assert.match(f.html(), /--person-color:#ff0000/);
+  f.click(null, true); f.click(null, false); f.click(null, false); f.click('submit');
+  f.vote([true, false, false]); f.vote([true, false, false]); f.unlock('2468');
+  for (const kind of ['heavy', 'light', 'out']) assert.match(f.html(), new RegExp('vibe-result-' + kind));
+  assert.match(f.html(), /--person-color:#00ff00/);
+  assert.match(f.html(), /--person-color:#0000ff/);
+  assert.match(f.html(), /Nobody here/);
+});
+
+test('hiding during PIN confirmation discards partial PINs and requires a fresh confirmed code', () => {
+  const f = flow({ confirm: false });
+  f.pin('2468'); f.pin('24'); f.hide();
+  assert.match(f.html(), /Choose host PIN/);
+  f.pin('9753');
+  assert.match(f.html(), /Confirm host PIN/);
+  f.pin('9753');
+  assert.match(f.html(), /Pass to A/);
+  for (let i = 0; i < 3; i++) f.vote([true, false, false]);
+  f.unlock('2468');
+  assert.doesNotMatch(f.html(), /Tonight’s tables/);
+  f.unlock('9753');
+  assert.match(f.html(), /Tonight’s tables/);
 });

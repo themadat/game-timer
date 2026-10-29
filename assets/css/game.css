@@ -970,33 +970,69 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 @media (min-width: 481px) and (max-width: 700px) { .game-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .game-option-info > span { display: inline-flex; min-width: 0; }
 
-/* Vibe Check: private handoffs, generous stationary answer targets. */
-.vibe-dialog { width: min(700px, calc(100vw - 1rem)); }
-.vibe-form { display: grid; gap: 1rem; }
+/* Vibe Check occupies the viewport in every stage, without native credential fields. */
+dialog.vibe-dialog { position: fixed; inset: 0; width: 100%; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+.vibe-dialog > .dialog-shell { height: 100%; max-height: 100%; }
+.vibe-dialog > .dialog-shell > .dialog-header { padding-inline: max(1rem, var(--safe-left)) max(1rem, var(--safe-right)); padding-top: max(.8rem, var(--safe-top)); }
+.vibe-dialog .dialog-body { padding: 1rem max(1rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(1rem, var(--safe-left)); }
+.vibe-form { display: grid; gap: 1rem; max-width: 1100px; margin-inline: auto; }
 .vibe-form > p, .vibe-private > p { margin-block: 0 .6rem; }
-.vibe-form fieldset { min-width: 0; margin: 0; padding: .8rem; border: 1px solid var(--line); border-radius: 12px; }
+.vibe-form fieldset { min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--line); border-radius: 12px; }
 .vibe-form legend { padding-inline: .3rem; font-weight: 700; }
-.vibe-form legend .sf-symbol, .vibe-private h3 .sf-symbol, .vibe-results h4 .sf-symbol, .vibe-table-summary .sf-symbol { display: inline-block; width: 24px; height: 24px; vertical-align: middle; }
+.vibe-form legend .sf-symbol, .vibe-private h3 .sf-symbol, .vibe-results h4 .sf-symbol, .vibe-table-summary .sf-symbol { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: middle; }
 .vibe-form label { display: grid; gap: .35rem; min-width: 0; }
 .vibe-form input:not([type="checkbox"]), .vibe-form select { width: 100%; min-height: 44px; padding: .5rem; }
-.vibe-people { display: flex; flex-wrap: wrap; gap: .5rem; max-height: 220px; overflow-y: auto; }
-.vibe-people label, .vibe-form .vibe-check { display: flex; align-items: center; gap: .5rem; min-height: 44px; padding: .3rem .55rem; border-radius: 8px; background: var(--surface-2); cursor: pointer; }
+.vibe-people { display: flex; flex-wrap: wrap; gap: .5rem; max-height: 240px; overflow-y: auto; }
+.vibe-people label, .vibe-form .vibe-check { display: flex; align-items: center; gap: .5rem; min-height: 44px; padding: .5rem .7rem; border-radius: 8px; background: var(--surface-2); cursor: pointer; }
 .vibe-people input, .vibe-check input { width: 20px; height: 20px; flex: 0 0 auto; }
-.vibe-tables { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
-.vibe-table-summary { display: grid; gap: .5rem; margin-block: 1rem; }
+.vibe-person-dot { width: 1.1rem; height: 1.1rem; border-radius: 50%; background: var(--person-color); border: 1px solid var(--line); flex: 0 0 auto; }
+.vibe-tables { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.vibe-table-summary { display: grid; gap: .5rem; margin-block: 1rem; font-size: 1.1rem; }
 .vibe-private { text-align: center; }
-.vibe-private h3 { margin-block: .5rem 1rem; font-size: 1.3rem; }
-.vibe-private > .button { margin: .4rem; min-height: 48px; }
-.vibe-targets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, 86px); gap: .8rem; margin-block: 1.5rem; }
-.vibe-targets .button { min-width: 0; padding: .6rem; font-size: 1.05rem; touch-action: manipulation; }
-.vibe-targets.vibe-fixed { grid-template-rows: 86px; }
-.vibe-error { color: var(--danger); margin: 0; }
+.vibe-private h3 { margin-block: .5rem; font-size: clamp(1.3rem, 2.5vw, 2.2rem); }
+.vibe-handoff { min-height: 100%; max-width: 950px; margin-inline: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; }
+.vibe-handoff > .button { min-height: 54px; font-size: 1.2rem; }
+.vibe-name { display: inline-block; max-width: 100%; overflow-wrap: anywhere; padding: .4em .65em; border-radius: 12px; background: var(--person-color); color: var(--person-ink); font-weight: 800; line-height: 1.15; }
+.vibe-current-person { margin-bottom: .5rem; font-size: clamp(1.5rem, 3.5vw, 3rem); }
+.vibe-question { display: flex; flex-direction: column; height: 100%; min-height: 480px; }
+.vibe-question .vibe-current-person { flex: 0 0 auto; }
+.vibe-targets { position: relative; flex: 1 0 200px; min-height: 200px; margin-block: .5rem; }
+.vibe-targets .button { position: absolute; width: clamp(120px, 26vw, 240px); height: clamp(64px, 10dvh, 96px); padding: .5rem; font-size: clamp(1rem, 2vw, 1.5rem); font-weight: 800; touch-action: manipulation; border: 2px solid transparent; }
+.vibe-targets .vibe-answer-yes { background: #176738; color: #fff; }
+.vibe-targets .vibe-answer-no { background: #ab2533; color: #fff; }
+.vibe-targets .vibe-answer-yes:hover { background: #11522c; }
+.vibe-targets .vibe-answer-no:hover { background: #8c1c28; }
+.vibe-targets.vibe-fixed { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 1rem; }
+.vibe-targets.vibe-fixed .button { position: static; }
+.vibe-error { color: var(--danger); margin: 0; min-height: 1.4em; }
 .vibe-error:empty { display: none; }
 .vibe-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.vibe-results { display: grid; gap: .75rem; }
-.vibe-results section { padding: .8rem; border: 1px solid var(--line); border-radius: 12px; }
-.vibe-results h4, .vibe-results p { margin: 0 0 .5rem; }
-.vibe-results ul { margin: 0; padding-left: 1.4rem; }
+.vibe-actions .button { min-height: 44px; }
+.vibe-pin-page { width: min(100%, 420px); min-height: 100%; margin-inline: auto; display: flex; flex-direction: column; justify-content: center; gap: .7rem; text-align: center; }
+.vibe-pin-page:focus { outline: none; }
+.vibe-pin-page h3 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.5rem); }
+.vibe-pin-page p { margin: 0; }
+.vibe-pin-dots { font-size: 2.5rem; letter-spacing: .15em; line-height: 1.2; }
+.vibe-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+.vibe-keypad .button { min-height: 62px; font-size: 1.7rem; touch-action: manipulation; }
+.vibe-keypad [data-vibe="pin-clear"] { font-size: 1rem; }
+.vibe-pin-page .vibe-actions { justify-content: center; }
+.vibe-result-page { min-height: 100%; display: flex; flex-direction: column; gap: 1rem; }
+.vibe-result-page > h3 { margin: 0; font-size: clamp(1.6rem, 3vw, 3rem); }
+.vibe-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(.4rem, 1.5vw, 1.5rem); flex: 1; }
+.vibe-results section { min-width: 0; padding: clamp(.45rem, 1.4vw, 1.5rem); border: 1px solid var(--line); border-top: 7px solid var(--table-color); border-radius: 12px; background: var(--surface-2); }
+.vibe-result-heavy { --table-color: #8e6cc1; }
+.vibe-result-light { --table-color: #2b9a7a; }
+.vibe-result-out { --table-color: #8e98a5; }
+.vibe-results h4 { margin: 0 0 .5rem; font-size: clamp(1rem, 2.5vw, 2.6rem); overflow-wrap: anywhere; }
+.vibe-results h4 span { font-variant-numeric: tabular-nums; }
+.vibe-results p { margin: 0 0 1rem; overflow-wrap: anywhere; font-size: clamp(.85rem, 1.4vw, 1.4rem); }
+.vibe-results ul { display: grid; gap: .8rem; list-style: none; margin: 0; padding: 0; }
+.vibe-results .vibe-name { display: block; font-size: clamp(1rem, 2.4vw, 2.8rem); }
+.vibe-empty { color: var(--muted); }
 @media (max-width: 480px) {
   .vibe-tables { grid-template-columns: minmax(0, 1fr); }
+  .vibe-dialog .dialog-body { padding-inline: max(.65rem, var(--safe-left)) max(.65rem, var(--safe-right)); }
+  .vibe-pin-page { gap: .6rem; }
+  .vibe-results .vibe-name { border-radius: 7px; padding: .4em .3em; }
 }

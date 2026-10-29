@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.51";
+  const VERSION = "2.1.0.52";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T13:00:00.000-05:00",
+        title: "Full-screen Vibe Check",
+        summary: "Filter games by minimum weight, set a host PIN on a number pad, and reveal three large, colorful table columns.",
+        features: ["Per-table minimum weight filters", "Four-digit host PIN with keypad confirmation", "Full-screen voting with freeform green/red answers and player colors", "Heavy, Light and Out result columns"], improvements: [], fixes: ["Remove credential inputs from Vibe Check to avoid password autofill"], knownIssues: []
+      },
+      {
+        version: "2.1.0.51",
         date: "2026-10-29T12:00:00.000-05:00",
         title: "Simple BGG connection",
         summary: "Save a BGG API key in Settings → Data Sync and import game info directly from BoardGameGeek.",
