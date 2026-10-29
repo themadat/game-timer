@@ -201,6 +201,13 @@
               <div class="button-row compact-sync-actions"><button id="forgetSyncButton" class="button danger-text" type="button"><span class="setting-button-icon" aria-hidden="true" data-symbol="forgetConnection"></span><span>Forget</span></button><button id="testSyncButton" class="button" type="button"><span class="setting-button-icon" aria-hidden="true" data-symbol="testConnection"></span><span>Test</span></button><button id="saveSyncButton" class="button primary" type="button"><span class="setting-button-icon" aria-hidden="true" data-symbol="saveConnection"></span><span>Save</span></button></div>
               </div>
             </div>
+            <div id="bggSettings" class="settings-section">
+              <div class="section-heading"><h3>BoardGameGeek</h3><span id="bggKeyState" class="status-pill">Key required</span></div>
+              <label class="field sync-token-field"><span>BGG API key</span><input id="bggToken" type="password" maxlength="500" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="Enter your BGG API key" aria-describedby="bggKeyHelp bggKeyStatus"></label>
+              <p id="bggKeyHelp" class="setting-note">Saved only in this browser on this device, outside backups and sync. Used to fetch game info directly from BoardGameGeek.</p>
+              <div class="button-row compact-sync-actions"><button id="forgetBggButton" class="button danger-text" type="button">Forget key</button><button id="saveBggButton" class="button primary" type="button">Save key</button></div>
+              <p id="bggKeyStatus" class="setting-note" role="status" aria-live="polite"></p>
+            </div>
             <details id="syncPayloadDetails" class="sync-payload">
               <summary><span class="sync-payload-heading"><span aria-hidden="true" data-symbol="json"></span><span>Sync payload (JSON)</span></span></summary>
               <p class="setting-note">Current local content used for GitHub Sync. The cloud copy may differ until you sync. Device settings and credentials are excluded.</p>
@@ -320,7 +327,7 @@
         <p id="gamePasteBggHint" class="setting-note">Fetch by BGG ID or page link, or search for a title below. Review the fields before applying them.</p>
         <div class="bgg-lookup-row"><button id="gameBggFetch" type="button" class="button primary">Fetch BGG info</button><label class="field grow-control"><span>Search BoardGameGeek</span><input id="gameBggQuery" type="search" maxlength="100" placeholder="Game title" autocomplete="off"></label><button id="gameBggSearch" type="button" class="button">Search BGG</button><button id="gameBggCancel" type="button" class="button" hidden>Cancel request</button></div>
         <div id="gameBggResults" class="bgg-search-results" aria-label="BoardGameGeek search results"></div>
-        <details id="gameBggConnection"><summary>BGG connection</summary><label class="field"><span>BGG service URL</span><input id="gameBggEndpoint" type="url" maxlength="500" placeholder="https://your-bgg-service.workers.dev" autocomplete="off"></label><button id="gameBggConnect" type="button" class="button small">Save connection</button><p class="setting-note">Saved on this device. The service keeps the BGG token private. <a href="docs/BGG.md" target="_blank" rel="noopener noreferrer">Setup instructions</a></p><p id="gameBggConnectionStatus" class="setting-note" role="status"></p></details>
+        <div class="bgg-lookup-row"><p id="gameBggKeyHint" class="setting-note"></p><button id="gameBggSettings" type="button" class="button small">BGG key settings</button></div>
         <details><summary>Paste manually instead</summary>
         <div class="game-paste-inputs"><label class="field"><span>1. Game overview</span><textarea id="gamePasteOverview" data-game-paste-input rows="5" maxlength="50000" placeholder="BGG link, rating, players, play time, weight…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label><label class="field"><span>2. Player recommendations</span><textarea id="gamePastePoll" data-game-paste-input rows="5" maxlength="50000" placeholder="Best / Recommended / Not Recommended table…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label><label class="field"><span>3. Correction form</span><textarea id="gamePasteText" data-game-paste-input rows="5" maxlength="50000" placeholder="Names, year, categories, mechanisms, expansions…" spellcheck="false" aria-describedby="gamePasteStatus"></textarea></label></div>
         </details>

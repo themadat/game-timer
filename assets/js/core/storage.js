@@ -163,6 +163,7 @@
 
   function clearAll() {
     scheduleSave.cancel();
+    App.bgg?.clearToken();
     [config.storage.stateKey, config.storage.recoveryKey, config.storage.secretKey, config.storage.sessionSecretKey].concat(config.storage.legacyKeys).forEach(removeLocal);
     try { sessionStorage.removeItem(config.storage.sessionSecretKey); } catch (error) { /* unavailable */ }
     lastSavedJson = "";

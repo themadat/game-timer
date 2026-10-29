@@ -63,8 +63,6 @@ self.addEventListener("fetch", function (event) {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  // BGG results have their own server cache; never replay stale API errors offline.
-  if (url.pathname.startsWith("/api/bgg/")) return;
   // Keep one config cache entry despite boot's freshness nonce.
   const cacheUrl = new URL(request.url);
   cacheUrl.searchParams.delete("boot");

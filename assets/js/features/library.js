@@ -221,7 +221,6 @@
     } catch (error) {
       if (bggRequest !== controller || controller.signal.aborted) return;
       bggMessage = error.message;
-      if (!App.bgg.endpoint()) document.querySelector("#gameBggConnection").open = true;
     } finally {
       if (bggRequest === controller) { bggRequest = null; renderPastePreview(); }
     }
@@ -268,9 +267,6 @@
     pasteParsed = { fields: {}, warnings: [] };
     document.querySelector("#gameBggQuery").value = customForm ? target.value : game ? sheetValue(game, "name") : "";
     document.querySelector("#gameBggResults").innerHTML = "";
-    document.querySelector("#gameBggEndpoint").value = App.bgg.endpoint();
-    document.querySelector("#gameBggConnection").open = !App.bgg.endpoint();
-    document.querySelector("#gameBggConnectionStatus").textContent = "";
     renderPastePreview();
     components.openDialog("#gamePasteDialog", { trigger, focus: idInput.value ? "#gameBggFetch" : "#gameBggQuery" });
   }
@@ -299,6 +295,7 @@
     document.querySelector("#gameBggFetch").disabled = Boolean(bggRequest);
     document.querySelector("#gameBggSearch").disabled = Boolean(bggRequest);
     document.querySelector("#gameBggCancel").hidden = !bggRequest;
+    document.querySelector("#gameBggKeyHint").textContent = App.bgg.hasToken() ? "BGG key saved on this device." : "Add your BGG API key in Settings → Data Sync to get started.";
     document.querySelector("#gamePastePreview").setAttribute("aria-busy", String(Boolean(bggRequest)));
     apply.textContent = pasteContext === "custom" ? editingCustomGameId || editingExpansionDraft ? "Apply to game" : "Fill form" : game ? "Apply to game" : "Fill new game";
   }
@@ -2172,17 +2169,10 @@
     document.querySelector("#gameBggCancel").addEventListener("click", () => { cancelBggRequest(); bggMessage = "Request canceled."; renderPastePreview(); });
     document.querySelector("#gamePasteDialog").addEventListener("close", cancelBggRequest);
     document.querySelector("#gamePasteDialog").addEventListener("cancel", cancelBggRequest);
-    document.querySelector("#gameBggConnect").addEventListener("click", () => {
-      const input = document.querySelector("#gameBggEndpoint");
-      try {
-        App.bgg.setEndpoint(input.value);
-        cancelBggRequest();
-        pasteParsed = { fields: {}, warnings: [] };
-        document.querySelector("#gameBggResults").innerHTML = "";
-        input.value = App.bgg.endpoint();
-        document.querySelector("#gameBggConnectionStatus").textContent = input.value ? "Connection saved. Search or fetch a game to check it." : "Using the app’s default connection, if configured.";
-        renderPastePreview();
-      } catch (error) { document.querySelector("#gameBggConnectionStatus").textContent = error.message; }
+    document.querySelector("#gameBggSettings").addEventListener("click", event => {
+      components.closeDialog("#gamePasteDialog");
+      App.application.openSupport("dataSync", event.currentTarget);
+      requestAnimationFrame(() => { document.querySelector("#bggSettings").scrollIntoView({ block: "start" }); document.querySelector("#bggToken").focus(); });
     });
     document.querySelector("#gameBggQuery").addEventListener("input", () => {
       if (!bggRequest) return;
@@ -2191,10 +2181,9 @@
     });
     document.querySelector("#gamePasteForm").addEventListener("keydown", event => {
       if (event.key !== "Enter" || event.isComposing) return;
-      if (event.target.matches("#gameBggQuery, #gamePasteBggId, #gameBggEndpoint, #gamePasteTarget")) {
+      if (event.target.matches("#gameBggQuery, #gamePasteBggId, #gamePasteTarget")) {
         event.preventDefault();
-        if (event.target.id === "gameBggEndpoint") document.querySelector("#gameBggConnect").click();
-        else if (event.target.id === "gamePasteBggId") fetchBggInfo("thing");
+        if (event.target.id === "gamePasteBggId") fetchBggInfo("thing");
         else if (event.target.id === "gamePasteTarget") document.querySelector("#gameBggQuery").focus();
         else fetchBggInfo("search");
       }

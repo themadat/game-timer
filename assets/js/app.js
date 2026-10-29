@@ -83,7 +83,7 @@
     $("#versionButton").setAttribute("aria-label", "Open release notes for version " + config.identity.version);
     $("#appIcon").src = versionedAsset(config.identity.assets.appIconLight);
     $("#releaseCurrentVersion").textContent = "v" + config.identity.version;
-    $("#dataSyncTab").hidden = !config.features.cloudSync;
+    $("#dataSyncTab").hidden = false;
     if (!config.features.roadmap) {
       $("[data-module='roadmap']")?.setAttribute("hidden", "");
       $("#roadmapModule")?.setAttribute("hidden", "");
@@ -510,7 +510,16 @@
     if (output.textContent !== json) output.textContent = json;
   }
 
+  function renderBggSettings() {
+    const connected = App.bgg.hasToken();
+    $("#bggKeyState").textContent = connected ? "Key saved" : "Key required";
+    $("#bggKeyState").dataset.kind = connected ? "success" : "neutral";
+    $("#bggToken").placeholder = connected ? "Enter a replacement key" : "Enter your BGG API key";
+    $("#forgetBggButton").disabled = !connected;
+  }
+
   function renderSyncSettings() {
+    renderBggSettings();
     renderSyncPayload();
     const localAvailable = storage.isPersistent();
     $("#localStorageSettingsState").textContent = localAvailable ? "Saved locally" : "Unavailable";
@@ -884,6 +893,25 @@
     });
     $("#restoreHintsButton").addEventListener("click", function () { storage.mutate(function (next) { next.preferences.hints.dismissed = []; next.ui.dismissedHints = []; }, { reason: "hints" }); renderHeader(); renderSettings(); components.toast("All contextual hints are available again.", { title: "Hints restored", kind: "success" }); });
     $("#saveSyncButton").addEventListener("click", saveSyncSettings);
+    $("#saveBggButton").addEventListener("click", function () {
+      try {
+        App.bgg.setToken($("#bggToken").value);
+        $("#bggToken").value = "";
+        $("#bggKeyStatus").textContent = "BGG key saved. You can now search and fetch game info.";
+        renderBggSettings();
+      } catch (error) { $("#bggKeyStatus").textContent = error.message; }
+    });
+    $("#forgetBggButton").addEventListener("click", function () {
+      try {
+        App.bgg.clearToken();
+        $("#bggToken").value = "";
+        $("#bggKeyStatus").textContent = "BGG key removed from this device.";
+        renderBggSettings();
+      } catch (error) { $("#bggKeyStatus").textContent = error.message; }
+    });
+    $("#bggToken").addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && !event.isComposing) { event.preventDefault(); $("#saveBggButton").click(); }
+    });
     $("#testSyncButton").addEventListener("click", testSyncSettings);
     $("#forgetSyncButton").addEventListener("click", forgetSync);
     $("#syncNowButton").addEventListener("click", function (event) { sync.syncNow(event.currentTarget); });

@@ -1,8 +1,11 @@
-/* BGG XML API2 import. Credentials stay on the proxy, outside app data. */
+/* Direct BGG XML API2 import. The key stays on this device, outside app data. */
 (function () {
   "use strict";
   const App = window.LocalApp;
-  const endpointKey = "gameTimer.bggEndpoint.v1";
+  const tokenKey = App.config.storage?.bggSecretKey || "gameTimer.bggToken.v1";
+  const cache = new Map();
+  const active = new Set();
+  let nextRequestAt = 0;
   const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   const children = (node, tag) => Array.from(node.children).filter(child => child.tagName === tag);
   function xmlDocument(text) {
@@ -69,46 +72,81 @@
     else warnings.push("No usable player-count votes were returned; existing recommendations will be kept.");
     return { fields, warnings: [...new Set(warnings)] };
   }
-  function validateEndpoint(value) {
-    if (!String(value || "").trim()) return "";
-    const url = new URL(String(value).trim());
-    if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) throw new Error("Use an HTTPS BGG service URL (HTTP is allowed on localhost).");
-    return url.href.replace(/\/$/, "");
+  function getToken() {
+    try { return localStorage.getItem(tokenKey) || ""; } catch (_) { return ""; }
   }
-  function endpoint() {
-    try { return validateEndpoint(localStorage.getItem(endpointKey) || App.config.bgg?.apiUrl || ""); } catch (_) { return ""; }
+  function resetRequests() {
+    for (const controller of active) controller.abort(new Error("The BGG key changed. Try the request again."));
+    cache.clear();
+    nextRequestAt = 0;
   }
-  function setEndpoint(value) {
-    const next = validateEndpoint(value);
-    if (next) localStorage.setItem(endpointKey, next); else localStorage.removeItem(endpointKey);
+  function setToken(value) {
+    const token = String(value || "").trim();
+    if (!token || token.length > 500 || /\s/.test(token)) throw new Error("Enter a valid BGG API key.");
+    try { localStorage.setItem(tokenKey, token); }
+    catch (_) { throw new Error("This browser could not save the BGG key. Allow device storage and try again."); }
+    resetRequests();
+  }
+  function clearToken() {
+    try { localStorage.removeItem(tokenKey); }
+    catch (_) { throw new Error("This browser could not remove the BGG key. Try again."); }
+    resetRequests();
+  }
+  function wait(milliseconds, signal) {
+    return new Promise((resolve, reject) => {
+      const abort = () => { clearTimeout(timer); signal.removeEventListener("abort", abort); reject(signal.reason); };
+      const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, milliseconds);
+      signal.addEventListener("abort", abort, { once: true });
+      if (signal.aborted) abort();
+    });
   }
   async function request(command, params, signal) {
-    const base = endpoint();
-    if (!base) throw new Error("Connect the BGG service below before searching or fetching. The token belongs on that service.");
+    const token = getToken();
+    if (!token) throw new Error("Add your BGG API key in Settings → Data Sync before searching or fetching.");
     if (navigator.onLine === false) throw new Error("Reconnect to fetch BGG info. Your saved games are available offline.");
-    const url = new URL(base + "/" + command);
+    if (signal?.aborted) throw signal.reason;
+    const url = new URL("https://boardgamegeek.com/xmlapi2/" + command);
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    if (command === "thing") url.searchParams.set("stats", "1");
+    else url.searchParams.set("type", "boardgame,boardgameexpansion");
+    const parse = text => command === "search" ? parseSearch(text) : parseThing(text, params.id);
+    const cached = cache.get(url.href);
+    if (cached && cached.expires > Date.now()) return parse(cached.text);
     const controller = new AbortController();
+    active.add(controller);
     const abort = () => controller.abort();
     signal?.addEventListener("abort", abort, { once: true });
     if (signal?.aborted) controller.abort();
-    const timeout = setTimeout(abort, 25000);
+    const timeout = setTimeout(() => controller.abort(new Error("BGG took too long to respond. Try again.")), 30000);
+    let reservedAt = null, started = false;
     try {
-      const response = await fetch(url.href, { signal: controller.signal, credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" });
+      const startAt = Math.max(Date.now(), nextRequestAt);
+      reservedAt = startAt;
+      nextRequestAt = startAt + 5000;
+      if (startAt > Date.now()) await wait(startAt - Date.now(), controller.signal);
+      started = true;
+      const response = await fetch(url.href, { headers: { Authorization: "Bearer " + token }, signal: controller.signal, credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store", redirect: "error" });
       if (response.status === 202) throw new Error("BGG is preparing this data. Wait a few seconds, then try again.");
-      if (response.status === 401 || response.status === 403) throw new Error("BGG access was refused. Check the service token and allowed app origin.");
+      if (response.status === 401 || response.status === 403) throw new Error("BGG access was refused. Check your API key in Settings → Data Sync.");
       if (response.status === 429 || response.status === 503) throw new Error("BGG is busy or requests are too frequent. Wait a few seconds, then try again.");
-      if (!response.ok) throw new Error("The BGG service could not fetch data (" + response.status + "). Try again later.");
+      if (!response.ok) throw new Error("BGG could not fetch data (" + response.status + "). Try again later.");
       const text = await response.text();
-      return command === "search" ? parseSearch(text) : parseThing(text, params.id);
+      const result = parse(text);
+      if (controller.signal.aborted) throw controller.signal.reason;
+      if (cache.size >= 100) cache.delete(cache.keys().next().value);
+      cache.set(url.href, { text, expires: Date.now() + (command === "thing" ? 86400000 : 3600000) });
+      return result;
     } catch (error) {
       if (signal?.aborted) throw error;
-      if (controller.signal.aborted) throw new Error("BGG took too long to respond. Try again.");
-      if (error instanceof TypeError) throw new Error("Could not reach the BGG service. Check its URL and allowed app origin, then try again.");
+      if (controller.signal.aborted) throw controller.signal.reason;
+      if (error instanceof TypeError) throw new Error("Could not reach BGG. Check your connection and try again.");
       throw error;
-    } finally { clearTimeout(timeout); signal?.removeEventListener("abort", abort); }
+    } finally {
+      if (!started && reservedAt !== null && nextRequestAt === reservedAt + 5000) nextRequestAt = reservedAt;
+      active.delete(controller); clearTimeout(timeout); signal?.removeEventListener("abort", abort);
+    }
   }
-  App.bgg = { endpoint, setEndpoint, parseSearch, parseThing,
+  App.bgg = { hasToken: () => Boolean(getToken()), setToken, clearToken, parseSearch, parseThing,
     search: (query, signal) => request("search", { query: clean(query).slice(0, 100) }, signal),
     thing: (id, signal) => request("thing", { id }, signal)
   };

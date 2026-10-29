@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.50";
+  const VERSION = "2.1.0.51";
 
   const CONFIG = {
     identity: {
@@ -29,14 +29,13 @@
       }
     },
 
-    // Public proxy URL only. The BGG token belongs in the service's secret store.
-    bgg: { apiUrl: "" },
     schemaVersion: 4,
     storage: {
       stateKey: "gameTimer.state.v2",
       legacyKeys: [],
       recoveryKey: "gameTimer.recovery.v1",
       secretKey: "gameTimer.githubToken.v1",
+      bggSecretKey: "gameTimer.bggToken.v1",
       sessionSecretKey: "gameTimer.githubToken.session.v1",
       sessionKey: "gameTimer.session.v1",
       legacyLastResultKey: "gameTimer.lastResult.v1"
@@ -88,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T12:00:00.000-05:00",
+        title: "Simple BGG connection",
+        summary: "Save a BGG API key in Settings → Data Sync and import game info directly from BoardGameGeek.",
+        features: [], improvements: ["One device-local BGG key", "Direct API calls with cached results and request spacing", "Remove proxy setup"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.50",
         date: "2026-10-29T12:00:00.000-05:00",
         title: "Fetch game info from BGG",
         summary: "Search BoardGameGeek or fetch by ID, then review metadata and player recommendations before applying selected fields.",

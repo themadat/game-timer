@@ -1,8 +1,0 @@
-name = "game-timer-bgg"
-main = "worker.mjs"
-compatibility_date = "2026-10-29"
-
-[vars]
-ALLOWED_ORIGIN = "https://themadat.github.io"
-
-# Set BGG_TOKEN using the provider's secret store, never as a variable here.

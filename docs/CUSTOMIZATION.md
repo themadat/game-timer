@@ -19,7 +19,7 @@ Never rename an existing `id`. Users can also add their own games from the Libra
 
 Edit `assets/js/config.js`: identity, repository/support URLs, flags, Help topics, Roadmap, and releases. Theme defaults (`themeDefaults`) set the accent colors. Keep system appearance and OS reduced motion.
 
-`bgg.apiUrl` can supply the public BGG proxy URL. Store the BGG token only as a service secret; see [BGG setup](BGG.md). No server or runtime dependency is needed for the static app itself.
+BGG keys are entered in Settings → Data Sync, outside source/configuration, backups, and sync; see [BGG setup](BGG.md). Requests go directly to BGG without a server.
 
 ## Release
 
