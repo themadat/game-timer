@@ -493,7 +493,7 @@
 .sheet-missing { color: var(--muted); }
 .sheet-actions, .sheet-colors { display: flex; gap: .35rem; align-items: center; }
 .sheet-colors { flex-wrap: wrap; min-width: 140px; max-width: 220px; }
-.sheet-color { width: 17px; height: 17px; flex: 0 0 17px; border-radius: 50%; background: var(--bubble); border: 1px solid var(--muted); box-shadow: inset 0 0 0 1px #ffffff55; }
+.sheet-color { width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%; background: var(--bubble); border: 1px solid var(--muted); box-shadow: inset 0 0 0 1px #ffffff55; }
 @media (max-width: 600px) { .library-sheet .sheet-name-cell { min-width: 145px; max-width: 155px; } .library-sheet th, .library-sheet td { padding: .5rem; } }
 
 .sheet-cell-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -650,7 +650,7 @@
 .sheet-play-button:hover { background: var(--accent-soft); }
 .library-sheet .sheet-minPlayers { width: 175px; min-width: 175px; max-width: 175px; }
 .library-sheet .player-count-badges { display: grid; grid-template-columns: repeat(8, 17px); gap: 3px; width: 157px; min-width: 157px; max-width: 157px; }
-.faction-color-button { min-width: 17px; min-height: 17px; padding: 0; cursor: pointer; }
+.faction-color-button { min-width: 12px; min-height: 12px; padding: 0; cursor: pointer; }
 .faction-color-list { display: grid; gap: .45rem; padding: 0; margin: .6rem 0 0; list-style: none; }
 .faction-color-list li { display: flex; align-items: center; gap: .5rem; overflow-wrap: anywhere; }
 .owner-pills, .game-tags { display: flex; flex-wrap: wrap; gap: .25rem; }
@@ -866,7 +866,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 #customGameDialog .field :is(input, select) { width: 100%; }
 #customGameDialog input.paste-missing-field { background: #fff1a6; color: #302400; border-color: #ba8800; box-shadow: inset 0 0 0 1px #ba8800; }
 #customGameDialog input.paste-missing-field::placeholder { color: #756100; }
-.library-sheet tbody > tr:not(.is-pinned-game) > :is(th,td) { white-space: nowrap; padding-block: .25rem; }
+.library-sheet tbody > tr:not(.is-pinned-game) > :is(th,td) { white-space: nowrap; padding-block: .15rem; }
 .library-sheet tr:not(.is-pinned-game) .owner-pills { flex-wrap: nowrap; max-width: 220px; overflow-x: auto; scrollbar-width: none; }
 .library-sheet tr:not(.is-pinned-game) .owner-pill { flex-shrink: 0; }
 .library-sheet tr:not(.is-pinned-game) .player-count-badges { display: flex; flex-wrap: nowrap; width: max-content; max-width: 150px; overflow-x: auto; scrollbar-width: none; }
@@ -884,6 +884,12 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .sheet-name-line { gap: 2px; }
 .library-sheet .sheet-name-line .sheet-name-details { gap: 2px; }
 .library-sheet .sheet-name-details .sheet-colors { gap: 2px; }
+.library-sheet tbody > tr > :is(th, td) { padding-block: .15rem; }
+.library-sheet .sheet-name-line > .sheet-name { font-size: .95rem; line-height: 1.25; }
+.library-sheet .sheet-alternative-names { font-size: .75rem; }
+.library-sheet :is(.sheet-web, .sheet-info-button, .sheet-verification-mark) { width: 26px; height: 26px; padding: 3px; }
+.library-sheet .sheet-name-details .sheet-verification-mark { flex-basis: 26px; }
+.library-sheet :is(.sheet-web, .sheet-info-button, .sheet-verification-mark) .glyph { width: 20px; height: 20px; }
 .library-sheet .sheet-name-line .sheet-year { flex-basis: 40px; min-width: 40px; }
 .sheet-expansion-slot { flex-basis: 32px; }
 .sheet-expansion-slot .expansion-count { gap: 1px; }

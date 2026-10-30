@@ -130,7 +130,6 @@
       body.querySelector(`[data-vibe-setup="${kind}"]`).setAttribute("aria-pressed", String(kind === step));
     }
     const next = body.querySelector("[data-vibe-continue]");
-    next.type = step === "people" ? "button" : "submit";
     next.textContent = step === "people" ? "Next: tables" : "Next: set host PIN";
     next.dataset.vibe = step === "people" ? "setup-tables" : "setup-start";
     error("");
@@ -187,6 +186,7 @@
   }
 
   function begin(form) {
+    if (!form.reportValidity()) return;
     const people = App.storage.getState().workspace.people;
     const attendees = draft.attendees;
     if (attendees.length < 3) { error("Select at least three people."); return; }
@@ -358,6 +358,7 @@
         }
         if (setupAction === "fixed") { draft.fixed = !draft.fixed; event.target.closest("[data-vibe]").setAttribute("aria-pressed", String(draft.fixed)); return; }
         if (setupAction === "setup-tables") { setSetupStep("tables"); return; }
+        if (setupAction === "setup-start") { begin(event.target.closest("form")); return; }
         if (setupAction === "people-prev" || setupAction === "people-next") { peoplePage += setupAction === "people-next" ? 1 : -1; renderPeople(); return; }
       }
       const digit = event.target.closest("[data-vibe-digit]")?.dataset.vibeDigit;

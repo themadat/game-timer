@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.57";
+  const VERSION = "2.1.0.58";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-29T19:00:00.000-05:00",
+        title: "Tighter Library and reliable table setup",
+        summary: "Compact Library rows and simplify game selection while keeping Vibe Check table setup visible.",
+        features: [], improvements: ["Smaller Library color circles and larger game names", "Show Type as plain text", "Remove owner and Added badges from the Play game selector"], fixes: ["Keep Next: tables from also submitting Vibe Check setup"], knownIssues: []
+      },
+      {
+        version: "2.1.0.57",
         date: "2026-10-29T18:00:00.000-05:00",
         title: "Rose wishlist accents",
         summary: "Distinguish wishlist-only games with a subtle rose tint and matching, smaller heart symbols.",

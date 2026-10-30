@@ -1597,14 +1597,6 @@
     return `<span class="swatches" aria-hidden="true">${preview.map(color => `<span class="swatch" style="--swatch:${esc(color.value)}"></span>`).join("")}${colors.length > preview.length ? `<span class="swatch-count">+${colors.length - preview.length}</span>` : ""}</span>`;
   }
 
-  function ownershipMarkup(game) {
-    const entry = libraryEntry(game.id);
-    if (!entry || (!entry.owned && !entry.wishlist)) return "";
-    if (entry.wishlist && !entry.owned) return `<span class="own-pill is-wishlist">${symbol("heart")}Wishlist</span>`;
-    const owners = entry.owners || [];
-    return `<span class="own-pill" title="${esc(owners.length ? "Owned by " + owners.join(", ") : "Owned")}">${symbol("checkmark")}${esc(owners.length ? owners.join(", ") : "Owned")}</span>`;
-  }
-
   function setupPlayerCount() {
     return realSetupPlayerCount();
   }
@@ -1637,7 +1629,7 @@
         <span class="game-option-main">
           <strong class="game-option-title">${gameTitleMarkup(game.name)}</strong>
           ${App.library.pickerSummaryMarkup(game)}
-          <span class="game-option-meta">${ownershipMarkup(game)}${fit.key !== "none" && count ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}${plays ? `<span class="plays-pill">${plays} ${plays === 1 ? "play" : "plays"}</span>` : ""}${game.custom ? `<span class="plays-pill">Added</span>` : ""}</span>
+          <span class="game-option-meta">${fit.key !== "none" && count ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}${plays ? `<span class="plays-pill">${plays} ${plays === 1 ? "play" : "plays"}</span>` : ""}</span>
         </span>
       </button><span class="game-option-info">${App.library.pickerInfoMarkup(game)}</span></div>`;
   }
@@ -1720,7 +1712,7 @@
             ${prefs().demoMode ? '<span class="picker-mode">Demo Mode</span>' : ""}
             ${gameTitleMarkup(preset.name, "picker-title")}
             ${App.library.pickerSummaryMarkup(preset)}
-            <span class="picker-meta">${ownershipMarkup(preset)}${fit.key !== "none" ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}</span>
+            <span class="picker-meta">${fit.key !== "none" ? `<span class="fit-pill is-${esc(fit.key)}">${esc(fit.label)}</span>` : ""}</span>
             </span>
             <span class="picker-chevron" aria-hidden="true">${icons.markup("chevronDown")}</span>
           </button>

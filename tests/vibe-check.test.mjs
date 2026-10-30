@@ -102,13 +102,14 @@ test('dynamic matching agrees with exhaustive search on mixed ballots and limits
 });
 
 // Exercise the registered DOM handlers without exporting ballots or auth internals.
-function flow({ confirm = true } = {}) {
+function flow({ confirm = true, start = true } = {}) {
   const listeners = {}, visibility = {}, status = { textContent: '' };
   let markup = '', clock = 1000;
   const node = { focus() {}, setAttribute() {}, textContent: "", dataset: {}, style: {}, clientWidth: 600, clientHeight: 304 };
+  const continueButton = { type: 'button', dataset: {}, textContent: '' };
   const body = {
     get innerHTML() { return markup; }, set innerHTML(value) { markup = value; },
-    querySelector(selector) { return selector === '[data-vibe-error]' ? status : node; },
+    querySelector(selector) { return selector === '[data-vibe-error]' ? status : selector === '[data-vibe-continue]' ? continueButton : node; },
     querySelectorAll() { return []; },
     addEventListener(name, handler) { listeners[name] = handler; }
   };
@@ -133,28 +134,54 @@ function flow({ confirm = true } = {}) {
   listeners.open({ currentTarget: button });
   const form = {
     id: 'vibeSetup',
+    reportValidity: () => true,
     querySelectorAll: () => [0, 1, 2].map(value => ({ value: String(value) })),
     elements: { fixed: { checked: true }, heavyGame: { value: '' }, lightGame: { value: '' } }
   };
   const submit = target => listeners.submit({ preventDefault() {}, target });
-  const click = (action, answer, digit) => listeners.click({
-    detail: 1,
-    target: { closest: selector => {
-      if (selector === '[data-vibe-digit]') return digit === undefined ? null : { dataset: { vibeDigit: digit } };
-      if (selector === '[data-vibe-answer]') return answer === undefined ? null : { dataset: { vibeAnswer: String(answer) } };
-      if (selector === '[data-vibe]') return { dataset: { vibe: action }, setAttribute() {} };
-      return null;
-    } }
-  });
+  const click = (action, answer, digit) => {
+    listeners.click({
+      detail: 1,
+      target: { closest: selector => {
+        if (selector === '[data-vibe-digit]') return digit === undefined ? null : { dataset: { vibeDigit: digit } };
+        if (selector === '[data-vibe-answer]') return answer === undefined ? null : { dataset: { vibeAnswer: String(answer) } };
+        if (selector === '[data-vibe]') return { dataset: { vibe: action }, setAttribute() {} };
+        if (selector === 'form') return form;
+        return null;
+      } }
+    });
+    // Browsers run the default submit action after click handlers, using the new type.
+    if (['setup-tables', 'setup-start'].includes(action) && continueButton.type === 'submit') submit(form);
+  };
   for (let i = 0; i < 3; i++) listeners.click({ target: { closest: selector => selector === '[data-vibe-person]' ? { dataset: { vibePerson: String(i) }, setAttribute() {} } : null } });
-  click('fixed'); click('setup-tables'); submit(form);
+  click('fixed');
+  if (start) { click('setup-tables'); click('setup-start'); }
   const pin = code => { for (const digit of code) click(null, undefined, digit); };
-  if (confirm) { pin('2468'); pin('2468'); }
+  if (start && confirm) { pin('2468'); pin('2468'); }
   const vote = answers => { click('ready'); answers.forEach(answer => click(null, answer)); click('submit'); };
   const key = key => listeners.keydown({ key, preventDefault() {}, stopPropagation() {} });
-  return { vote, click, pin, key, unlock: pin, html: () => markup, status, close: () => visibility.close(), hide: () => { document.hidden = true; visibility.visibilitychange(); document.hidden = false; }, advance: ms => { clock += ms; } };
+  return { vote, click, pin, key, submit: () => submit(form), continueButton, unlock: pin, html: () => markup, status, close: () => visibility.close(), hide: () => { document.hidden = true; visibility.visibilitychange(); document.hidden = false; }, advance: ms => { clock += ms; } };
 
 }
+
+test('Next opens Tables without also submitting setup; the next click opens PIN setup', () => {
+  const f = flow({ start: false });
+  f.click('setup-tables');
+  assert.equal(f.continueButton.textContent, 'Next: set host PIN');
+  assert.equal(f.continueButton.type, 'button');
+  assert.match(f.html(), /id="vibeSetup"/);
+  f.click('setup-start');
+  assert.match(f.html(), /Choose host PIN/);
+});
+
+test('submitting from People opens Tables before a second submit opens PIN setup', () => {
+  const f = flow({ start: false });
+  f.submit();
+  assert.match(f.html(), /id="vibeSetup"/);
+  assert.equal(f.continueButton.textContent, 'Next: set host PIN');
+  f.submit();
+  assert.match(f.html(), /Choose host PIN/);
+});
 
 test('host code gates every result and re-locks when hidden; ending clears the DOM', () => {
   const f = flow();

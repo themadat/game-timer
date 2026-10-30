@@ -774,7 +774,7 @@
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "owners") content = ownerPillsMarkup(game);
-      if (key === "mainType") content = `<button class="game-tag main-game-tag" type="button" data-sheet-info="Main Type and Additional Types" data-info-game="${id}" data-info-kind="tags" data-info-label="Main Type and Additional Types" aria-expanded="false">${esc(combinedGameType(game))}${symbol("chevronDown")}</button>`;
+      if (key === "mainType") content = esc(combinedGameType(game));
       if (key === "mechanisms") content = gameListButton(game, key, "Mechanism", gameTagGroups(game).Mechanism);
       if (key === "turnStart") content = sheetInfoButton(game, key, "libraryTurnStart", "Turn start");
       if (key === "factions") content = sheetInfoButton(game, key, "libraryFactions", "Factions");
