@@ -785,7 +785,7 @@
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="${id}" tabindex="0" aria-label="Notes for ${esc(game.name)}; double-click or press Enter to edit"` : ''} title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
-    const rowClasses = [parent ? "sheet-expansion-row" : game.id === "custom" ? "is-pinned-game" : "", entry.wishlist ? "is-wishlist" : "", entry.wishlist && !entry.owned ? "is-wishlist-only" : ""].filter(Boolean).join(" ");
+    const rowClasses = [parent ? "sheet-expansion-row" : game.id === "custom" ? "is-pinned-game" : "", entry.wishlist && !entry.owned ? "is-wishlist-only" : ""].filter(Boolean).join(" ");
     return `<tr${rowClasses ? ` class="${rowClasses}"` : ""}${parent ? ` data-expansion-parent="${esc(parent.id)}"` : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
   }
 

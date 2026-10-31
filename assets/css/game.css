@@ -73,7 +73,7 @@
 .own-pill, .fit-pill, .plays-pill, .placement-chip, .selection-pill, .starter-pill, .session-chip { display: inline-flex; align-items: center; gap: .28rem; min-height: 22px; padding: .1rem .45rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: .68rem; font-weight: 800; line-height: 1.2; white-space: nowrap; }
 .own-pill { border-color: color-mix(in srgb, var(--success) 45%, var(--line)); background: color-mix(in srgb, var(--success) 12%, var(--surface)); color: var(--success); }
 .own-pill.is-wishlist { border-color: color-mix(in srgb, var(--wishlist-rose) 45%, var(--line)); background: color-mix(in srgb, var(--wishlist-rose) 10%, var(--surface)); color: var(--wishlist-rose); }
-.is-wishlist .glyph, .wishlist-choice .glyph { color: var(--wishlist-rose); transform: scale(.7); }
+.own-pill.is-wishlist .glyph, .owner-pill.is-wishlist .glyph, .wishlist-choice .glyph { color: var(--wishlist-rose); transform: scale(.7); }
 .own-pill.is-unowned { border-color: var(--line); background: transparent; color: var(--faint); }
 .own-pill .glyph, .session-chip .glyph { width: .8rem; height: .8rem; }
 .fit-pill.is-best { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); background: var(--accent-soft); color: var(--accent-strong); }
@@ -887,7 +887,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet tbody > tr > :is(th, td) { padding-block: .15rem; }
 .library-sheet .sheet-name-line > .sheet-name, .library-sheet .expansion-row-name > .text-link { font-size: 1.5rem; line-height: 1.05; color: var(--library-name-color, #1759a8); }
 :root[data-theme="dark"] .library-sheet { --library-name-color: #8dc7ff; }
-.library-sheet .is-wishlist .sheet-name-line > .sheet-name { color: var(--muted); }
+.library-sheet .is-wishlist-only .sheet-name-line > .sheet-name { color: var(--muted); }
+.library-sheet .sheet-name .name-text > .sheet-primary-name { font: inherit; color: inherit; }
 .library-sheet .sheet-alternative-names { font-size: .75rem; }
 .library-sheet :is(.sheet-web, .sheet-info-button, .sheet-verification-mark) { width: 26px; height: 26px; padding: 3px; }
 .library-sheet .sheet-name-details .sheet-verification-mark { flex-basis: 26px; }

@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.59";
+  const VERSION = "2.1.0.60";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-30",
+        title: "Correct Library name and wishlist styles",
+        summary: "Apply the larger font to the visible game title and keep wishlist styling confined to names and badges.",
+        features: [], improvements: [], fixes: ["Override the small secondary-text style on game titles", "Keep owned-and-wishlisted names blue", "Preserve Play, verification, and mechanism icon colors"], knownIssues: []
+      },
+      {
+        version: "2.1.0.59",
         date: "2026-10-30",
         title: "Bolder Library names and compact Play counts",
         summary: "Fill compact Library rows with larger game names and keep Type and Play columns sized to their contents.",
