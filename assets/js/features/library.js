@@ -455,10 +455,17 @@
     return `<span class="player-count-badges${game.maxPlayers > 8 ? ' has-two-rows' : ''}"${game.maxPlayers > 8 ? ` style="--player-count-columns:${Math.ceil(game.maxPlayers / 2)}"` : ''}>${badges.join("")}</span>`;
   }
 
+  function gameTimeLabel(game) {
+    const { minMinutes, maxMinutes } = game;
+    if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes)) return "Time unknown";
+    const hours = minMinutes > 60 && maxMinutes > 60;
+    const format = minutes => hours ? Number((minutes / 60).toFixed(2)) : minutes;
+    return `${format(minMinutes)}${minMinutes === maxMinutes ? "" : "–" + format(maxMinutes)} ${hours ? "hr" : "min"}`;
+  }
+
   function pickerSummaryMarkup(game) {
     if (game.id === "custom") return '<span class="game-summary">Any game · any player count</span>';
-    const time = Number.isFinite(game.minMinutes) && Number.isFinite(game.maxMinutes)
-      ? `${game.minMinutes}${game.minMinutes === game.maxMinutes ? "" : "–" + game.maxMinutes} min` : "Time unknown";
+    const time = gameTimeLabel(game);
     const weight = Number.isFinite(game.complexityWeight) ? game.complexityWeight.toFixed(2) : "?";
     return `<span class="game-summary">${playerCountBadges(game)} <span aria-hidden="true">·</span> <span class="summary-time time-band-${Math.min(6, Math.max(1, Math.ceil((game.maxMinutes || 0) / 30)))}">${esc(time)}</span> <span aria-hidden="true">·</span> <span class="summary-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(game.complexityWeight || 1)))}" title="Complexity out of 5">Weight ${esc(weight)}</span> <span aria-hidden="true">·</span> <span class="summary-type">${esc(combinedGameType(game))}</span></span>`;
   }
@@ -770,7 +777,7 @@
       if (key === "weight" && Number.isFinite(value)) content = `<span class="sheet-weight weight-band-${Math.min(5, Math.max(1, Math.ceil(value)))}" title="Complexity ${Number(value).toFixed(2)} / 5">${Number(value).toFixed(2)}</span>`;
       if (key === "length" && Number.isFinite(game.minMinutes) && Number.isFinite(game.maxMinutes)) {
         const band = Math.min(6, Math.max(1, Math.ceil(game.maxMinutes / 30)));
-        content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average"><span>${esc(game.minMinutes)}${game.minMinutes === game.maxMinutes ? "" : "–" + esc(game.maxMinutes)} min</span></span>`;
+        content = `<span class="sheet-time time-band-${band}" title="${esc(game.maxMinutes)} min longest · ${Math.round(value || 0)} min average"><span>${esc(gameTimeLabel(game))}</span></span>`;
       }
       if (key === "minPlayers") content = playerCountBadges(game);
       if (key === "owners") content = ownerPillsMarkup(game);

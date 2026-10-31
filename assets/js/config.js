@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.61";
+  const VERSION = "2.1.0.62";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-30",
+        title: "Smaller Library names and hour ranges",
+        summary: "Use 18px game names and show longer game durations in hours.",
+        features: [], improvements: ["Reduce Library game names to 18px", "Show durations such as 90–120 minutes as 1.5–2 hr when both limits exceed an hour"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.61",
         date: "2026-10-30",
         title: "Refined Library sizing and alignment",
         summary: "Balance game-name size, align Play disclosure arrows, and tighten the year spacing.",
