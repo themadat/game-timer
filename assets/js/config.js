@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.58";
+  const VERSION = "2.1.0.59";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-30",
+        title: "Bolder Library names and compact Play counts",
+        summary: "Fill compact Library rows with larger game names and keep Type and Play columns sized to their contents.",
+        features: [], improvements: ["Larger blue game names; wishlist names stay gray", "Content-sized Type column", "Replace Mechanism labels with a Play count and disclosure arrow"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.58",
         date: "2026-10-29T19:00:00.000-05:00",
         title: "Tighter Library and reliable table setup",
         summary: "Compact Library rows and simplify game selection while keeping Vibe Check table setup visible.",

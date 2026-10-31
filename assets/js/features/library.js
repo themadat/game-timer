@@ -438,7 +438,7 @@
   const SHEET_COLUMNS = [
     ["name", "Name"], ["bggId", "BGG"], ["turnStart", "Turn start"], ["factions", "Factions"],
     ["rating", "Rate"], ["bggRating", "BGG rating"], ["weight", "Weight"], ["minPlayers", "Players"],
-    ["length", "Time"], ["mainType", "Type"], ["mechanisms", "Mechanism"], ["note", "Notes"], ["owners", "Owner"]
+    ["length", "Time"], ["mainType", "Type"], ["mechanisms", "Play"], ["note", "Notes"], ["owners", "Owner"]
   ];
   SHEET_COLUMNS.forEach(([key, label]) => { SORT_LABELS[key] = label; });
   Object.assign(SORT_LABELS, { year: "Published year", bestPlayers: "Best player count", recommendedPlayers: "Good player counts", avoidPlayers: "Bad player counts", maxPlayers: "Maximum players", minMinutes: "Shortest time", maxMinutes: "Longest time", verified: "Verified colors", colors: "Colors" });
@@ -668,7 +668,7 @@
     return true;
   }
   function gameListButton(game, kind, label, values) {
-    return `<button class="game-tag" type="button" data-info-game="${esc(game.id)}" data-info-kind="${kind}" data-info-label="${label}" data-sheet-info="${esc(values.join('\n') || 'None added')}" aria-expanded="false"><span class="game-tag-label">${esc(values[0] || '—')}${values.length > 1 ? ` +${values.length - 1}` : ''}</span>${symbol("chevronDown")}</button>`;
+    return `<button class="game-tag" type="button" data-info-game="${esc(game.id)}" data-info-kind="${kind}" data-info-label="${label}" data-sheet-info="${esc(values.join('\n') || 'None added')}" aria-label="${values.length} mechanisms for ${esc(game.name)}; show list" aria-expanded="false"><span class="game-tag-label">${values.length}</span>${symbol("chevronDown")}</button>`;
   }
 
   function refreshSheetPosition(focusSelector) {
@@ -785,7 +785,7 @@
       if (["note"].includes(key)) content = `<span class="sheet-cell-text">${content}</span>`;
       return `<td class="sheet-${key}" ${key === "note" ? `data-edit-note="${id}" tabindex="0" aria-label="Notes for ${esc(game.name)}; double-click or press Enter to edit"` : ''} title="${esc(value ?? '')}">${content}</td>`;
     }).join("");
-    const rowClasses = [parent ? "sheet-expansion-row" : game.id === "custom" ? "is-pinned-game" : "", entry.wishlist && !entry.owned ? "is-wishlist-only" : ""].filter(Boolean).join(" ");
+    const rowClasses = [parent ? "sheet-expansion-row" : game.id === "custom" ? "is-pinned-game" : "", entry.wishlist ? "is-wishlist" : "", entry.wishlist && !entry.owned ? "is-wishlist-only" : ""].filter(Boolean).join(" ");
     return `<tr${rowClasses ? ` class="${rowClasses}"` : ""}${parent ? ` data-expansion-parent="${esc(parent.id)}"` : ""}><td class="sheet-play-cell">${parent ? '' : `<button class="sheet-play-button" type="button" data-play-game="${id}" aria-label="Play ${esc(game.name)}" title="Play ${esc(game.name)}">${symbol("play")}</button>`}</td>${cells}</tr>`;
   }
 
