@@ -885,7 +885,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .sheet-name-line .sheet-name-details { gap: 2px; }
 .library-sheet .sheet-name-details .sheet-colors { gap: 2px; }
 .library-sheet tbody > tr > :is(th, td) { padding-block: .15rem; }
-.library-sheet .sheet-name-line > .sheet-name, .library-sheet .expansion-row-name > .text-link { font-size: 1.5rem; line-height: 1.05; color: var(--library-name-color, #1759a8); }
+.library-sheet .sheet-name-line > .sheet-name, .library-sheet .expansion-row-name > .text-link { font-size: 1.25rem; line-height: 1.15; color: var(--library-name-color, #1759a8); }
 :root[data-theme="dark"] .library-sheet { --library-name-color: #8dc7ff; }
 .library-sheet .is-wishlist-only .sheet-name-line > .sheet-name { color: var(--muted); }
 .library-sheet .sheet-name .name-text > .sheet-primary-name { font: inherit; color: inherit; }
@@ -909,7 +909,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 /* Detailed expansion rows reuse the normal cells and keep their disclosure separate. */
 .expansion-indent { flex: 0 0 auto; font-weight: 500; }
 .expansion-row-owners { display: inline-flex; align-items: center; gap: .4rem; }
-.library-sheet .sheet-mechanisms .game-tag { display: inline-flex; align-items: center; vertical-align: middle; gap: .3rem; line-height: 1.25; }
+.library-sheet .sheet-mechanisms .game-tag { display: inline-flex; align-items: center; justify-content: space-between; width: 100%; vertical-align: middle; gap: .3rem; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.library-sheet .sheet-mechanisms .game-tag-label { flex: 1; min-width: 2ch; text-align: right; }
 .game-tag-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .library-sheet .sheet-mechanisms .game-tag .glyph { display: inline-flex; align-self: center; flex-shrink: 0; }
 .library-sheet :is(th, td):is(.sheet-mainType, .sheet-mechanisms) { width: 1%; min-width: 0; max-width: none; padding-inline: .3rem; white-space: nowrap; }
@@ -985,8 +986,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .player-count-badges.has-two-rows, .library-sheet tr:not(.is-pinned-game) .player-count-badges.has-two-rows { display: grid; grid-template-columns: repeat(var(--player-count-columns),17px); grid-template-rows: repeat(2,17px); gap: 3px; }
 
 /* Stable trailing slots keep years and expansion counts aligned between games. */
-.library-sheet .sheet-name-line .sheet-year { flex: 0 0 7ch; min-width: 7ch; text-align: right; font-variant-numeric: tabular-nums; }
-.library-sheet .sheet-name-line .sheet-expansion-slot { flex: 0 0 8ch; min-width: 8ch; justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.library-sheet .sheet-name-line .sheet-year { flex: 0 0 5ch; min-width: 5ch; margin-left: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.library-sheet .sheet-name-line .sheet-expansion-slot { flex: 0 0 7ch; min-width: 7ch; justify-content: flex-end; font-variant-numeric: tabular-nums; }
 .library-sheet .sheet-name-line .sheet-year:has(.sheet-year-editor) { flex-basis: 78px; min-width: 78px; }
 
 /* A single flowing summary shares the Library's count symbols and colors. */

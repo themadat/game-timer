@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.60";
+  const VERSION = "2.1.0.61";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-10-30",
+        title: "Refined Library sizing and alignment",
+        summary: "Balance game-name size, align Play disclosure arrows, and tighten the year spacing.",
+        features: [], improvements: ["Reduce game names to 20px", "Give Play counts matching widths and aligned arrows", "Reduce reserved space around game years"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.60",
         date: "2026-10-30",
         title: "Correct Library name and wishlist styles",
         summary: "Apply the larger font to the visible game title and keep wishlist styling confined to names and badges.",
