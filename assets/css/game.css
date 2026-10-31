@@ -885,7 +885,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .sheet-name-line .sheet-name-details { gap: 2px; }
 .library-sheet .sheet-name-details .sheet-colors { gap: 2px; }
 .library-sheet tbody > tr > :is(th, td) { padding-block: .15rem; }
-.library-sheet .sheet-name-line > .sheet-name, .library-sheet .expansion-row-name > .text-link { font-size: 1.125rem; line-height: 1.2; color: var(--library-name-color, #1759a8); }
+.library-sheet .sheet-name-line > .sheet-name, .library-sheet .expansion-row-name > .text-link { font-size: 1.0625rem; line-height: 1.2; color: var(--library-name-color, #1759a8); }
 :root[data-theme="dark"] .library-sheet { --library-name-color: #8dc7ff; }
 .library-sheet .is-wishlist-only .sheet-name-line > .sheet-name { color: var(--muted); }
 .library-sheet .sheet-name .name-text > .sheet-primary-name { font: inherit; color: inherit; }

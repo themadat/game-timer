@@ -458,7 +458,7 @@
   function gameTimeLabel(game) {
     const { minMinutes, maxMinutes } = game;
     if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes)) return "Time unknown";
-    const hours = minMinutes > 60 && maxMinutes > 60;
+    const hours = minMinutes >= 60 && maxMinutes >= 60;
     const format = minutes => hours ? Number((minutes / 60).toFixed(2)) : minutes;
     return `${format(minMinutes)}${minMinutes === maxMinutes ? "" : "–" + format(maxMinutes)} ${hours ? "hr" : "min"}`;
   }
