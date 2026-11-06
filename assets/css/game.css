@@ -393,8 +393,9 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 959px) {
-  .app-header { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "title tabs toolbar" "search search search"; }
-  .view-tabs { justify-self: center; }
+  .app-header { grid-template-columns: minmax(0, 1fr) minmax(220px, 1fr); grid-template-areas: "title toolbar" "tabs search"; }
+  .view-tabs { justify-self: stretch; }
+  .view-tabs [role="tab"] { flex: 1; min-width: 0; padding-inline: .5rem; }
   .app-header .global-search-wrap { max-width: none; }
   .setup-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "add" "order" "other"; }
   .turn-order-panel { position: static; }
@@ -403,6 +404,13 @@
   .metric-strip { grid-column: 1 / -1; grid-row: 2; }
   .metric { flex: 1; }
   .session-flags { grid-column: 1; grid-row: 3; }
+}
+
+/* Unfolded phones have room for setup and turn order together. */
+@media (min-width: 700px) and (max-width: 959px) {
+  .setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "add order" "other order"; }
+  .color-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .roster-row { grid-template-columns: 32px minmax(0, 1fr) auto 44px 44px; gap: .2rem; }
 }
 
 @media (max-width: 699px) {
@@ -989,6 +997,55 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .library-sheet .sheet-name-line .sheet-year { flex: 0 0 5ch; min-width: 5ch; margin-left: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .library-sheet .sheet-name-line .sheet-expansion-slot { flex: 0 0 7ch; min-width: 7ch; justify-content: flex-end; font-variant-numeric: tabular-nums; }
 .library-sheet .sheet-name-line .sheet-year:has(.sheet-year-editor) { flex-basis: 78px; min-width: 78px; }
+
+/* Keep complete names readable without a phone-wide metadata lane. */
+@media (max-width: 699px) {
+  .library-sheet .sheet-name-cell { width: 260px; min-width: 260px; max-width: 260px; }
+  .library-sheet .sheet-name-line { min-width: 0; flex-wrap: wrap; gap: .35rem; }
+  .library-sheet .sheet-name-line > .sheet-name,
+  .library-sheet .sheet-name-line > .expansion-row-name { flex: 1 1 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .library-sheet .sheet-name .name-text { white-space: normal; overflow-wrap: anywhere; }
+  .library-sheet .sheet-name-line .sheet-name-details { flex-wrap: wrap; margin-left: 0; }
+  .library-controls { position: static; --control-height: 44px; }
+  .library-controls .filter-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 100%; min-width: 0; overflow: visible; }
+  .library-controls .filter-row .library-search-tools { grid-column: 1 / -1; grid-row: 1; min-width: 0; }
+  .library-controls .filter-row .select-field { min-width: 0; }
+  .library-controls .library-search-tools { align-items: flex-start; }
+  .library-controls .library-search-tools .library-search-field { display: grid; gap: .2rem; }
+  .library-controls .library-search-field input { min-width: 0; width: 100%; padding-right: 2rem; }
+  .library-controls .library-game-count { position: static; transform: none; }
+  .library-controls .library-search-field > kbd { top: 22px; }
+  .library-controls input, .library-controls select { min-height: 44px; height: 44px; font-size: 16px; }
+  .library-controls .button, .library-controls .segmented button,
+  .library-controls .library-table-options > summary { min-height: 44px; height: auto; }
+  .library-controls .icon-button { width: 44px; min-width: 44px; height: 44px; }
+  .sheet-play-button, .sheet-info-button, .sheet-web { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+  .library-sheet .sheet-play-cell { width: 52px; min-width: 52px; max-width: 52px; }
+  .roster-row { grid-template-columns: 32px minmax(0, 1fr) auto 44px 44px; }
+  .roster-row .icon-button { width: 44px; min-width: 44px; height: 44px; }
+  .panel-head .button.small, .chip-grid .chip-btn { min-height: 44px; }
+}
+
+/* Touch controls also apply when a foldable opens beyond the phone breakpoint. */
+@media (pointer: coarse) {
+  :root { --control-height: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), textarea, select { font-size: max(16px, 1rem); }
+  .button.small, .segmented button, .numeric-rating-levels button, .chip-grid .chip-btn { min-height: 44px; }
+  .library-controls { --control-height: 44px; }
+  .library-controls input, .library-controls select, .library-controls .button,
+  .library-controls .segmented button, .library-controls .library-table-options > summary { min-height: 44px; height: auto; }
+  .library-controls input, .library-controls select { font-size: max(16px, 1rem); }
+  .library-controls .icon-button { width: 44px; min-width: 44px; height: 44px; }
+  .roster-row .icon-button { width: 44px; min-width: 44px; height: 44px; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .app-header { position: relative; }
+  .library-controls { position: static; }
+  .session-bar { position: static; grid-template-columns: minmax(0, 1fr) auto auto auto; }
+  .session-bar .metric-strip, .session-bar .session-flags { grid-column: auto; grid-row: auto; }
+  .session-bar .metric { min-width: 0; padding-inline: .4rem; }
+}
 
 /* A single flowing summary shares the Library's count symbols and colors. */
 .game-summary { display: block; color: var(--muted); font-size: .7rem; line-height: 1.65; font-weight: 400; white-space: normal; overflow-wrap: anywhere; }

@@ -711,6 +711,27 @@ details > summary { width: fit-content; cursor: pointer; color: var(--accent-str
   .identity-copy { max-width: 40vw; }
 }
 
+/* Keep dialogs clear of cutouts in either phone orientation. */
+@media (max-width: 699px), (max-height: 500px) and (pointer: coarse) {
+  .dialog-header, .dialog-body, .dialog-footer {
+    padding-left: max(1rem, var(--safe-left));
+    padding-right: max(1rem, var(--safe-right));
+  }
+  .dialog-header > div { min-width: 0; }
+  .dialog-header h2 { overflow-wrap: anywhere; }
+  .dialog-footer { flex-wrap: wrap; }
+  .appearance-settings .segmented button { min-height: 44px; white-space: normal; flex-wrap: wrap; }
+}
+
+@media (max-width: 399px) {
+  .title-cluster { flex-direction: column; gap: .15rem; }
+  .title-cluster .app-icon-button { width: 32px; height: 32px; }
+  .title-cluster .app-name { display: none; }
+  .title-cluster .identity-copy { max-width: none; }
+  .top-toolbar { gap: .15rem; }
+  .top-toolbar .action-button { width: 44px; min-width: 44px; }
+}
+
 .global-search-wrap { height: 52px; }
 
 .global-search-wrap input::-webkit-search-cancel-button { display: none; }

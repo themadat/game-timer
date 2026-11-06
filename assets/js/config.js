@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.63";
+  const VERSION = "2.1.0.64";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,15 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-06",
+        title: "Foldable phone layouts",
+        summary: "Adapt setup, navigation, and Library controls to narrow outer screens and wider unfolded displays.",
+        features: [],
+        improvements: ["Keep navigation clear of the title on medium screens", "Show player selection beside turn order on unfolded phone widths", "Improve narrow-screen Library names, touch targets, and dialog safe areas", "Free up vertical space in short landscape layouts"],
+        fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.63",
         date: "2026-10-30",
         title: "Smaller names and inclusive hour ranges",
         summary: "Use 17px Library game names and include 60-minute limits when displaying durations in hours.",
