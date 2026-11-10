@@ -1284,13 +1284,17 @@
   }
 
   function renderPeopleTab() {
+    const defaultColor = STANDARD_COLORS[people().length % STANDARD_COLORS.length].value;
     const ranked = people().slice().sort((a, b) => (personStats(b.name)?.wins || 0) - (personStats(a.name)?.wins || 0) || (personStats(b.name)?.games || 0) - (personStats(a.name)?.games || 0) || a.name.localeCompare(b.name));
     return `
       <section class="panel add-person">
-        <form class="custom-add" data-add-person>
+        <form class="custom-add person-add-form" data-add-person>
           <label class="grow-control"><span class="visually-hidden">New person</span><input name="name" type="text" maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words" required></label>
-          <label class="roster-color" title="Color"><span class="visually-hidden">Color</span><span class="roster-color-swatch" aria-hidden="true"></span><input name="color" type="color" value="${esc(STANDARD_COLORS[people().length % STANDARD_COLORS.length].value)}"></label>
           <button class="button primary" type="submit">${symbol("personAdd")}<span>Add person</span></button>
+          <fieldset class="person-add-colors"><legend>Person color</legend>
+            <div class="color-grid is-compact" role="group" aria-label="Default person colors">${STANDARD_COLORS.map(color => `<button type="button" class="color-btn" data-add-person-color="${esc(color.value)}" aria-pressed="${color.value === defaultColor}" style="--swatch:${esc(color.value)}"><span class="color-dot" aria-hidden="true"></span><span>${esc(color.name)}</span></button>`).join("")}</div>
+            <details><summary>More colors</summary><label>Custom color <input name="color" type="color" value="${esc(defaultColor)}" data-add-person-custom-color></label></details>
+          </fieldset>
         </form>
         <p class="setting-note">People appear as quick-add players in Setup and as owners in the Library. Records come from saved History; renaming updates history and owners too.</p>
       </section>
@@ -2083,6 +2087,13 @@
   /* ---------- Events ---------- */
 
   function handleLibraryClick(event) {
+    const personColor = event.target.closest("[data-add-person-color]");
+    if (personColor) {
+      const form = personColor.closest("form");
+      form.elements.color.value = personColor.dataset.addPersonColor;
+      form.querySelectorAll("[data-add-person-color]").forEach(button => button.setAttribute("aria-pressed", String(button === personColor)));
+      return;
+    }
     const year = event.target.closest("[data-edit-year]");
     if (year) { editSheetYear(year); return; }
     const paste = event.target.closest("[data-open-game-paste]");
@@ -2153,6 +2164,10 @@
   }
 
   function handleLibraryInput(event) {
+    if (event.target.matches("[data-add-person-custom-color]")) {
+      event.target.closest("form").querySelectorAll("[data-add-person-color]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.addPersonColor.toLowerCase() === event.target.value.toLowerCase())));
+      return;
+    }
     if (event.target.matches("[data-library-search]")) {
       const value = event.target.value.slice(0, 200);
       const start = event.target.selectionStart, end = event.target.selectionEnd;
