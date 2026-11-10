@@ -1099,7 +1099,7 @@ dialog.vibe-dialog { position: fixed; inset: 0; width: 100%; max-width: 100vw; h
 .vibe-player-limits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
 .vibe-player-limits label { font-size: .75rem; gap: .15rem; }
 .vibe-form .vibe-player-limits input { padding: .2rem .4rem; min-height: 36px; height: 36px; }
-.vibe-setup-footer { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: .5rem; }
+.vibe-setup-footer { display: flex; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: .5rem; }
 .vibe-setup-footer .button { min-height: 44px; }
 .vibe-setup .vibe-setup-error { display: block; flex: 0 0 1.4em; height: 1.4em; margin: 0; font-size: .85rem; }
 .vibe-setup-error:empty { visibility: hidden; }

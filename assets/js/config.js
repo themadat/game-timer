@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.72";
+  const VERSION = "2.1.0.73";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Right-aligned Vibe Check navigation",
+        summary: "Keep Next buttons on the right throughout People and Tables setup.",
+        features: [], improvements: ["Right-align Vibe Check setup continuation buttons"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.72",
         date: "2026-11-10",
         title: "Simpler Vibe Check setup",
         summary: "Remove the Fixed answers button from setup.",
