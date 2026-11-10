@@ -1184,3 +1184,9 @@ dialog.vibe-dialog { position: fixed; inset: 0; width: 100%; max-width: 100vw; h
   .vibe-results .vibe-name { font-size: .95rem; padding: .25em .4em; }
   .vibe-result-page > .panel-note { font-size: .7rem; margin: 0; }
 }
+
+.vibe-person-colors { flex: 0 0 auto; max-height: 40%; overflow: auto; }
+.vibe-person-colors summary { cursor: pointer; padding: .4rem; }
+.vibe-color-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .3rem; }
+.vibe-color-options .color-btn { min-width: 0; padding: .4rem; overflow-wrap: anywhere; }
+.vibe-color-options [aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }

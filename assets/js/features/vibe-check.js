@@ -131,7 +131,7 @@
     if (index < 0) {
       index = people.length;
       App.storage.mutate(next => {
-        next.workspace.people.push({ id: App.utils.uid("person"), name, color: "#94a3b8" });
+        next.workspace.people.push({ id: App.utils.uid("person"), name, color: App.utils.normalizeColor(body.querySelector("[data-vibe-new-color]").value, "#94a3b8") });
       }, { reason: "people-add" });
     }
     if (!draft.attendees.includes(index)) draft.attendees.push(index);
@@ -167,7 +167,7 @@
     draft = saved || { attendees: defaultAttendees(people), fixed: false, heavyWeight: "2.5", lightWeight: "0.0", step: "people" };
     show(`<form id="vibeSetup" class="vibe-form vibe-setup" autocomplete="off">
       <nav class="vibe-setup-nav" aria-label="Vibe Check setup"><button type="button" class="button" data-vibe-setup="people">People</button><button type="button" class="button" data-vibe-setup="tables">Tables</button></nav>
-      <section class="vibe-setup-panel" data-vibe-panel="people"><h3>Who is here? <span data-vibe-selected></span></h3><div class="vibe-add-person"><label><span class="visually-hidden">New person</span><input type="text" data-vibe-new-person maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words"></label><button type="button" class="button" data-vibe="add-person">Add person</button></div><div class="vibe-people" aria-label="People present"></div><div class="vibe-people-pager"><button type="button" class="button" data-vibe="people-prev" aria-label="Previous people page">Previous</button><span data-vibe-people-page></span><button type="button" class="button" data-vibe="people-next" aria-label="Next people page">Next</button></div></section>
+      <section class="vibe-setup-panel" data-vibe-panel="people"><h3>Who is here? <span data-vibe-selected></span></h3><div class="vibe-add-person"><label><span class="visually-hidden">New person</span><input type="text" data-vibe-new-person maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words"></label><button type="button" class="button" data-vibe="add-person">Add person</button></div><details class="vibe-person-colors" open><summary>Person color</summary><div class="vibe-color-options" role="group" aria-label="Default person colors">${App.gameData.STANDARD_COLORS.map((color, index) => `<button type="button" class="color-btn" data-vibe-color="${esc(color.value)}" aria-pressed="${index === 0}" style="--swatch:${esc(color.value)}"><span class="color-dot" aria-hidden="true"></span><span>${esc(color.name)}</span></button>`).join("")}</div><details><summary>More colors</summary><label>Custom color<input type="color" data-vibe-new-color value="${esc(App.gameData.STANDARD_COLORS[0].value)}"></label></details></details><div class="vibe-people" aria-label="People present"></div><div class="vibe-people-pager"><button type="button" class="button" data-vibe="people-prev" aria-label="Previous people page">Previous</button><span data-vibe-people-page></span><button type="button" class="button" data-vibe="people-next" aria-label="Next people page">Next</button></div></section>
       <section class="vibe-setup-panel" data-vibe-panel="tables" hidden><div class="vibe-tables">${["heavy", "light"].map(kind => `<fieldset><legend>${icon(kind)} ${LABELS[kind]}</legend><div class="vibe-game-row"><label>Game (optional)<select name="${kind}Game">${gameOptions(draft[kind + 'Weight'], draft[kind + 'Game'], kind)}</select></label><label>Weight ${kind === 'heavy' ? 'at least' : 'at most'}<span class="vibe-weight-control"><button type="button" data-vibe-weight="${kind}" data-delta="-1" aria-label="Decrease ${kind} weight">−</button><input aria-label="${LABELS[kind]} weight ${kind === 'heavy' ? 'at least' : 'at most'}" name="${kind}Weight" type="number" min="0" max="5" step="any" inputmode="decimal" value="${esc(draft[kind + 'Weight'] || '0.0')}"><button type="button" data-vibe-weight="${kind}" data-delta="1" aria-label="Increase ${kind} weight">+</button></span></label></div><p class="visually-hidden" data-vibe-filter-note="${kind}" aria-live="polite"></p><div class="vibe-limits" data-vibe-limits="${kind}"></div></fieldset>`).join("")}</div></section>
       <p class="vibe-error vibe-setup-error" role="alert" data-vibe-error></p><footer class="vibe-setup-footer"><button type="button" class="button" data-vibe="fixed" aria-pressed="${draft.fixed}" title="Use fixed answer positions for keyboard and accessibility">Fixed answers</button><button class="button primary" type="button" data-vibe-continue>Next: tables</button></footer>
     </form>`, "[data-vibe-setup='people']");
@@ -338,7 +338,13 @@
       requestAnimationFrame(renderPeople);
     });
     dialog.addEventListener("close", () => { round = null; draft = null; pinDigits = ""; firstPin = ""; body.innerHTML = ""; delete dialog.dataset.vibeStage; });
+    body.addEventListener("toggle", event => {
+      if (event.target.closest(".vibe-person-colors")) renderPeople();
+    }, true);
     body.addEventListener("input", event => {
+      if (event.target.matches("[data-vibe-new-color]")) {
+        body.querySelectorAll("[data-vibe-color]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.vibeColor.toLowerCase() === event.target.value.toLowerCase())));
+      }
       if (event.target.matches("[name='heavyWeight'], [name='lightWeight']")) weightChanged(event.target);
     });
     body.addEventListener("change", event => {
@@ -380,6 +386,12 @@
           draft.attendees = draft.attendees.includes(index) ? draft.attendees.filter(i => i !== index) : draft.attendees.concat(index);
           person.setAttribute("aria-pressed", String(draft.attendees.includes(index)));
           body.querySelector("[data-vibe-selected]").textContent = `${draft.attendees.length} selected`;
+          return;
+        }
+        const color = event.target.closest("[data-vibe-color]");
+        if (color) {
+          body.querySelector("[data-vibe-new-color]").value = color.dataset.vibeColor;
+          body.querySelectorAll("[data-vibe-color]").forEach(button => button.setAttribute("aria-pressed", String(button === color)));
           return;
         }
         if (setupAction === "add-person") { addPerson(); return; }

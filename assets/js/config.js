@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.65";
+  const VERSION = "2.1.0.66";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Vibe Check person colors",
+        summary: "Choose a standard or custom color when adding a person in Vibe Check.",
+        features: ["Sixteen default person colors with expandable custom colors"], improvements: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.65",
         date: "2026-11-10",
         title: "Add people during Vibe Check",
         summary: "Add and select people directly from Vibe Check setup.",
