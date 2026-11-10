@@ -114,11 +114,36 @@
     grid.innerHTML = people.slice(peoplePage * capacity, (peoplePage + 1) * capacity).map((person, offset) => {
       const i = peoplePage * capacity + offset;
       return `<button type="button" class="vibe-person-chip" data-vibe-person="${i}" aria-pressed="${draft.attendees.includes(i)}" style="${personStyle(person)}"><span class="vibe-person-dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`;
-    }).join("") || '<p>Add people in Library → People first.</p>';
+    }).join("") || '<p>Add someone below to get started.</p>';
     body.querySelector("[data-vibe-people-page]").textContent = `Page ${peoplePage + 1} of ${pages}`;
     body.querySelector("[data-vibe='people-prev']").disabled = peoplePage === 0;
     body.querySelector("[data-vibe='people-next']").disabled = peoplePage === pages - 1;
     body.querySelector("[data-vibe-selected]").textContent = `${draft.attendees.length} selected`;
+  }
+
+  function addPerson() {
+    if (round || !draft || setupStep !== "people") return;
+    const input = body.querySelector("[data-vibe-new-person]");
+    const name = App.utils.cleanLine(input.value, 60);
+    if (!name) { error("Enter a name to add a person."); input.focus(); return; }
+    const people = App.storage.getState().workspace.people;
+    let index = people.findIndex(person => person.name.trim().toLowerCase() === name.toLowerCase());
+    if (index < 0) {
+      index = people.length;
+      App.storage.mutate(next => {
+        next.workspace.people.push({ id: App.utils.uid("person"), name, color: "#94a3b8" });
+      }, { reason: "people-add" });
+    }
+    if (!draft.attendees.includes(index)) draft.attendees.push(index);
+    // Find the person's page using the same capacity as the attendee grid.
+    const grid = body.querySelector(".vibe-people");
+    const columns = Math.max(1, Math.min(6, Math.floor((grid.clientWidth + 8) / 152)));
+    const rows = Math.max(1, Math.floor((grid.clientHeight + 8) / 76));
+    peoplePage = Math.floor(index / (columns * rows));
+    input.value = "";
+    error("");
+    renderPeople();
+    input.focus({ preventScroll: true });
   }
 
   function setSetupStep(step) {
@@ -142,7 +167,7 @@
     draft = saved || { attendees: defaultAttendees(people), fixed: false, heavyWeight: "2.5", lightWeight: "0.0", step: "people" };
     show(`<form id="vibeSetup" class="vibe-form vibe-setup" autocomplete="off">
       <nav class="vibe-setup-nav" aria-label="Vibe Check setup"><button type="button" class="button" data-vibe-setup="people">People</button><button type="button" class="button" data-vibe-setup="tables">Tables</button></nav>
-      <section class="vibe-setup-panel" data-vibe-panel="people"><h3>Who is here? <span data-vibe-selected></span></h3><div class="vibe-people" aria-label="People present"></div><div class="vibe-people-pager"><button type="button" class="button" data-vibe="people-prev" aria-label="Previous people page">Previous</button><span data-vibe-people-page></span><button type="button" class="button" data-vibe="people-next" aria-label="Next people page">Next</button></div></section>
+      <section class="vibe-setup-panel" data-vibe-panel="people"><h3>Who is here? <span data-vibe-selected></span></h3><div class="vibe-add-person"><label><span class="visually-hidden">New person</span><input type="text" data-vibe-new-person maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words"></label><button type="button" class="button" data-vibe="add-person">Add person</button></div><div class="vibe-people" aria-label="People present"></div><div class="vibe-people-pager"><button type="button" class="button" data-vibe="people-prev" aria-label="Previous people page">Previous</button><span data-vibe-people-page></span><button type="button" class="button" data-vibe="people-next" aria-label="Next people page">Next</button></div></section>
       <section class="vibe-setup-panel" data-vibe-panel="tables" hidden><div class="vibe-tables">${["heavy", "light"].map(kind => `<fieldset><legend>${icon(kind)} ${LABELS[kind]}</legend><div class="vibe-game-row"><label>Game (optional)<select name="${kind}Game">${gameOptions(draft[kind + 'Weight'], draft[kind + 'Game'], kind)}</select></label><label>Weight ${kind === 'heavy' ? 'at least' : 'at most'}<span class="vibe-weight-control"><button type="button" data-vibe-weight="${kind}" data-delta="-1" aria-label="Decrease ${kind} weight">−</button><input aria-label="${LABELS[kind]} weight ${kind === 'heavy' ? 'at least' : 'at most'}" name="${kind}Weight" type="number" min="0" max="5" step="any" inputmode="decimal" value="${esc(draft[kind + 'Weight'] || '0.0')}"><button type="button" data-vibe-weight="${kind}" data-delta="1" aria-label="Increase ${kind} weight">+</button></span></label></div><p class="visually-hidden" data-vibe-filter-note="${kind}" aria-live="polite"></p><div class="vibe-limits" data-vibe-limits="${kind}"></div></fieldset>`).join("")}</div></section>
       <p class="vibe-error vibe-setup-error" role="alert" data-vibe-error></p><footer class="vibe-setup-footer"><button type="button" class="button" data-vibe="fixed" aria-pressed="${draft.fixed}" title="Use fixed answer positions for keyboard and accessibility">Fixed answers</button><button class="button primary" type="button" data-vibe-continue>Next: tables</button></footer>
     </form>`, "[data-vibe-setup='people']");
@@ -326,6 +351,11 @@
       }
     });
     body.addEventListener("keydown", event => {
+      if (!round && event.key === "Enter" && event.target.matches("[data-vibe-new-person]")) {
+        event.preventDefault();
+        addPerson();
+        return;
+      }
       if (!round && ["ArrowUp", "ArrowDown"].includes(event.key) && event.target.matches("[name='heavyWeight'], [name='lightWeight']")) {
         event.preventDefault();
         adjustWeight(event.target.name === "heavyWeight" ? "heavy" : "light", event.key === "ArrowUp" ? 1 : -1);
@@ -352,6 +382,7 @@
           body.querySelector("[data-vibe-selected]").textContent = `${draft.attendees.length} selected`;
           return;
         }
+        if (setupAction === "add-person") { addPerson(); return; }
         if (step) { setSetupStep(step); return; }
         if (weight) {
           adjustWeight(weight.dataset.vibeWeight, Number(weight.dataset.delta)); return;

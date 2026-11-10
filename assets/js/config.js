@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.64";
+  const VERSION = "2.1.0.65";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Add people during Vibe Check",
+        summary: "Add and select people directly from Vibe Check setup.",
+        features: ["Save new people without leaving Vibe Check"], improvements: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.64",
         date: "2026-11-06",
         title: "Foldable phone layouts",
         summary: "Adapt setup, navigation, and Library controls to narrow outer screens and wider unfolded displays.",
