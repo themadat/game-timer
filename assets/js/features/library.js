@@ -1297,7 +1297,6 @@
             <button type="button" class="button" data-person-more-colors aria-expanded="false" aria-controls="libraryCustomColor">More colors</button><label id="libraryCustomColor" hidden>Custom color <input name="color" type="color" value="${esc(defaultColor)}" data-add-person-custom-color></label>
           </div>
         </form>
-        <p class="setting-note">People appear as quick-add players in Setup and as owners in the Library. Records come from saved History; renaming updates history and owners too.</p>
       </section>
       <div class="people-grid">${ranked.map(personCard).join("") || `<div class="empty-state"><strong>No people yet</strong><span>Add the people you play with.</span></div>`}</div>`;
   }
