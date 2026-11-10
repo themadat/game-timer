@@ -105,7 +105,7 @@ test('dynamic matching agrees with exhaustive search on mixed ballots and limits
 function flow({ confirm = true, start = true, host = false } = {}) {
   const listeners = {}, visibility = {}, status = { textContent: '' };
   let markup = '', clock = 1000;
-  const node = { focus() {}, setAttribute() {}, textContent: "", dataset: {}, style: {}, clientWidth: 600, clientHeight: 304 };
+  const node = { focus() {}, setAttribute() {}, textContent: "", dataset: {}, style: {}, clientWidth: 600, clientHeight: 304, querySelectorAll: () => [{ offsetWidth: 120, offsetHeight: 44, style: {} }, { offsetWidth: 120, offsetHeight: 44, style: {} }] };
   const continueButton = { type: 'button', dataset: {}, textContent: '' };
   const body = {
     get innerHTML() { return markup; }, set innerHTML(value) { markup = value; },
@@ -137,7 +137,7 @@ function flow({ confirm = true, start = true, host = false } = {}) {
     id: 'vibeSetup',
     reportValidity: () => true,
     querySelectorAll: () => [0, 1, 2].map(value => ({ value: String(value) })),
-    elements: { fixed: { checked: true }, heavyGame: { value: '' }, lightGame: { value: '' } }
+    elements: { heavyGame: { value: '' }, lightGame: { value: '' } }
   };
   const submit = target => listeners.submit({ preventDefault() {}, target });
   const click = (action, answer, digit) => {
@@ -155,7 +155,6 @@ function flow({ confirm = true, start = true, host = false } = {}) {
     if (['setup-tables', 'setup-start'].includes(action) && continueButton.type === 'submit') submit(form);
   };
   for (let i = host ? 1 : 0; i < 3; i++) listeners.click({ target: { closest: selector => selector === '[data-vibe-person]' ? { dataset: { vibePerson: String(i) }, setAttribute() {} } : null } });
-  click('fixed');
   if (start) { click('setup-tables'); click('setup-start'); }
   const pin = code => { for (const digit of code) click(null, undefined, digit); };
   if (start && confirm) { pin('2468'); pin('2468'); }

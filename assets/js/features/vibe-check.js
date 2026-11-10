@@ -172,12 +172,12 @@
   function setup(saved = null) {
     round = null; pinDigits = ""; firstPin = "";
     const people = App.storage.getState().workspace.people;
-    draft = saved || { attendees: defaultAttendees(people), fixed: false, heavyWeight: "2.5", lightWeight: "0.0", step: "people" };
+    draft = saved || { attendees: defaultAttendees(people), heavyWeight: "2.5", lightWeight: "0.0", step: "people" };
     show(`<form id="vibeSetup" class="vibe-form vibe-setup" autocomplete="off">
       <nav class="vibe-setup-nav" aria-label="Vibe Check setup"><button type="button" class="button" data-vibe-setup="people">People</button><button type="button" class="button" data-vibe-setup="tables">Tables</button></nav>
       <section class="vibe-setup-panel" data-vibe-panel="people"><div class="vibe-add-person"><label><span class="visually-hidden">New person</span><input type="text" data-vibe-new-person maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words"></label><button type="button" class="button person-color-toggle" data-vibe="colors" aria-label="Choose person color" aria-expanded="false" aria-controls="vibePersonColors" style="--swatch:${esc(App.gameData.STANDARD_COLORS[0].value)}"><span class="color-dot" aria-hidden="true"></span></button><button type="button" class="button" data-vibe="add-person">Add person</button><div class="person-color-options" id="vibePersonColors" hidden><div class="vibe-color-options" role="group" aria-label="Default person colors">${App.gameData.STANDARD_COLORS.map((color, index) => `<button type="button" class="color-btn" data-vibe-color="${esc(color.value)}" aria-pressed="${index === 0}" style="--swatch:${esc(color.value)}"><span class="color-dot" aria-hidden="true"></span><span>${esc(color.name)}</span></button>`).join("")}</div><button type="button" class="button" data-vibe="more-colors" aria-expanded="false" aria-controls="vibeCustomColor">More colors</button><label id="vibeCustomColor" hidden>Custom color<input type="color" data-vibe-new-color value="${esc(App.gameData.STANDARD_COLORS[0].value)}"></label></div></div><span data-vibe-selected></span><div class="vibe-people" aria-label="People present"></div></section>
       <section class="vibe-setup-panel" data-vibe-panel="tables" hidden><div class="vibe-tables">${["heavy", "light"].map(kind => `<fieldset><legend>${icon(kind)} ${LABELS[kind]}</legend><div class="vibe-game-row"><label>Game (optional)<select name="${kind}Game">${gameOptions(draft[kind + 'Weight'], draft[kind + 'Game'], kind)}</select></label><label>Weight ${kind === 'heavy' ? 'at least' : 'at most'}<span class="vibe-weight-control"><button type="button" data-vibe-weight="${kind}" data-delta="-1" aria-label="Decrease ${kind} weight">−</button><input aria-label="${LABELS[kind]} weight ${kind === 'heavy' ? 'at least' : 'at most'}" name="${kind}Weight" type="number" min="0" max="5" step="any" inputmode="decimal" value="${esc(draft[kind + 'Weight'] || '0.0')}"><button type="button" data-vibe-weight="${kind}" data-delta="1" aria-label="Increase ${kind} weight">+</button></span></label></div><p class="visually-hidden" data-vibe-filter-note="${kind}" aria-live="polite"></p><div class="vibe-limits" data-vibe-limits="${kind}"></div></fieldset>`).join("")}</div></section>
-      <p class="vibe-error vibe-setup-error" role="alert" data-vibe-error></p><footer class="vibe-setup-footer"><button type="button" class="button" data-vibe="fixed" aria-pressed="${draft.fixed}" title="Use fixed answer positions for keyboard and accessibility">Fixed answers</button><button class="button primary" type="button" data-vibe-continue>Next: tables</button></footer>
+      <p class="vibe-error vibe-setup-error" role="alert" data-vibe-error></p><footer class="vibe-setup-footer"><button class="button primary" type="button" data-vibe-continue>Next: tables</button></footer>
     </form>`, "[data-vibe-setup='people']");
     if (saved) {
       for (const kind of ["heavy", "light"]) {
@@ -231,9 +231,9 @@
       if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min) { error("Check the game player limits: maximum must be at least minimum."); return; }
       tables[kind] = { name: game ? gameName(game) : "Game undecided", min, max };
     }
-    draft = { attendees, fixed: draft.fixed, step: "tables" };
+    draft = { attendees, step: "tables" };
     for (const kind of ["heavy", "light"]) for (const suffix of ["Game", "Weight", "Min", "Max"]) draft[kind + suffix] = form.elements[kind + suffix]?.value || "";
-    round = { people: attendees.map(i => ({ name: people[i].name, color: people[i].color })), tables, passcode: "", fixed: draft.fixed, ballots: [], ballot: [], question: 0, stage: "pin-create", result: null, failures: 0, retryAt: 0 };
+    round = { people: attendees.map(i => ({ name: people[i].name, color: people[i].color })), tables, passcode: "", ballots: [], ballot: [], question: 0, stage: "pin-create", result: null, failures: 0, retryAt: 0 };
     firstPin = "";
     pinScreen("pin-create");
   }
@@ -269,7 +269,7 @@
   }
 
   function placeAnswers() {
-    if (round?.stage !== "question" || round.fixed) return;
+    if (round?.stage !== "question") return;
     const canvas = body.querySelector(".vibe-targets");
     const buttons = Array.from(canvas.querySelectorAll("[data-vibe-answer]"));
     const points = answerPositions(canvas.clientWidth, canvas.clientHeight, buttons[0].offsetWidth, buttons[0].offsetHeight);
@@ -278,7 +278,7 @@
   function question() {
     round.stage = "question";
     const kind = OPTIONS[round.question];
-    show(`<div class="vibe-private vibe-question">${currentPerson()}<p>Question ${round.question + 1} of 3</p><h3 data-vibe-focus tabindex="-1">${icon(kind)} ${kind === "out" ? "Would you be happy sitting out?" : "Would you enjoy the " + LABELS[kind] + " table?"}</h3><p>${kind === "out" ? "Choose Yes only if sitting out is an acceptable outcome for you." : esc(round.tables[kind].name)}</p><div class="vibe-targets ${round.fixed ? 'vibe-fixed' : ''}">${[true, false].map(answer => `<button class="button vibe-answer-${answer ? 'yes' : 'no'}" type="button" data-vibe-answer="${answer}">${answer ? 'Yes, happy to' : 'No, thanks'}</button>`).join("")}</div><p class="panel-note">Each answer stays private. Select all acceptable options across the three questions.</p></div>`);
+    show(`<div class="vibe-private vibe-question">${currentPerson()}<p>Question ${round.question + 1} of 3</p><h3 data-vibe-focus tabindex="-1">${icon(kind)} ${kind === "out" ? "Would you be happy sitting out?" : "Would you enjoy the " + LABELS[kind] + " table?"}</h3><p>${kind === "out" ? "Choose Yes only if sitting out is an acceptable outcome for you." : esc(round.tables[kind].name)}</p><div class="vibe-targets">${[true, false].map(answer => `<button class="button vibe-answer-${answer ? 'yes' : 'no'}" type="button" data-vibe-answer="${answer}">${answer ? 'Yes, happy to' : 'No, thanks'}</button>`).join("")}</div><p class="panel-note">Each answer stays private. Select all acceptable options across the three questions.</p></div>`);
     placeAnswers();
   }
 
@@ -414,7 +414,6 @@
         if (weight) {
           adjustWeight(weight.dataset.vibeWeight, Number(weight.dataset.delta)); return;
         }
-        if (setupAction === "fixed") { draft.fixed = !draft.fixed; event.target.closest("[data-vibe]").setAttribute("aria-pressed", String(draft.fixed)); return; }
         if (setupAction === "setup-tables") { setSetupStep("tables"); return; }
         if (setupAction === "setup-start") { begin(event.target.closest("form")); return; }
       }

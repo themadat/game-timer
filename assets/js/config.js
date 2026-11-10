@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.70";
+  const VERSION = "2.1.0.72";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,20 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Simpler Vibe Check setup",
+        summary: "Remove the Fixed answers button from setup.",
+        features: [], improvements: ["Use random answer positions without an extra setup control"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.71",
+        date: "2026-11-10",
+        title: "Simpler People screen",
+        summary: "Remove the explanatory text below Add person.",
+        features: [], improvements: ["Less helper text in People"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.70",
         date: "2026-11-10",
         title: "Explain impossible Vibe Check results",
         summary: "Tell the host whether an impossible arrangement needs more Complex or Fun flexibility, or different limits.",
