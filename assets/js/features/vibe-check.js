@@ -52,13 +52,28 @@
     return assignments.reverse();
   }
 
+  function matchTables(ballots, tables, random = Math.random) {
+    const unanimous = ["heavy", "light"].find(kind => ballots.length && ballots.every(ballot => ballot.includes(kind) && !ballot.includes(kind === "heavy" ? "light" : "heavy")));
+    if (unanimous) {
+      const shared = tables[unanimous];
+      const flexible = ballots.map(ballot => ["heavy", "light", ...(ballot.includes("out") ? ["out"] : [])]);
+      const assignments = solve(flexible, { heavy: shared, light: shared }, random);
+      if (assignments) return { assignments, tableKinds: { heavy: unanimous, light: unanimous } };
+    }
+    return { assignments: solve(ballots, tables, random), tableKinds: { heavy: "heavy", light: "light" } };
+  }
+
+  function votePercentages(ballots) {
+    return ["heavy", "light"].map(kind => `${LABELS[kind]}: ${ballots.length ? Math.round(100 * ballots.filter(ballot => ballot.includes(kind)).length / ballots.length) : 0}%`).join(" · ");
+  }
+
   function hostAlternatives(people, ballots, tables) {
     const host = people.findIndex(person => person.name.trim().toLowerCase() === "adam");
     if (host < 0 || !ballots[host]) return [];
     return OPTIONS.filter(option => !ballots[host].includes(option)).flatMap(option => {
       const revised = ballots.map((ballot, index) => index === host ? ballot.concat(option) : ballot);
-      const assignments = solve(revised, tables);
-      return assignments ? [{ option, assignments }] : [];
+      const result = matchTables(revised, tables);
+      return result.assignments ? [{ option, ...result }] : [];
     });
   }
 
@@ -297,8 +312,9 @@
       return;
     }
     if (!round.result) {
-      const assignments = solve(round.ballots, round.tables);
-      round.result = { assignments, reason: assignments ? "" : impossibleReason(round.ballots, round.tables), alternatives: assignments ? [] : hostAlternatives(round.people, round.ballots, round.tables) };
+      const matched = matchTables(round.ballots, round.tables);
+      const assignments = matched.assignments;
+      round.result = { ...matched, percentages: votePercentages(round.ballots), reason: assignments ? "" : impossibleReason(round.ballots, round.tables), alternatives: assignments ? [] : hostAlternatives(round.people, round.ballots, round.tables) };
       round.ballots = [];
     }
     reveal();
@@ -309,8 +325,11 @@
     const assignments = round.result.assignments;
     show(`<div class="vibe-result-page"><h3 data-vibe-focus tabindex="-1">${assignments ? 'Tonight’s tables' : 'No valid arrangement'}</h3>${assignments ? `<div class="vibe-results">${OPTIONS.map(kind => {
       const members = round.people.filter((person, i) => assignments[i] === kind);
-      return `<section class="vibe-result-${kind}"><h4>${icon(kind)} ${kind === "out" ? 'Out' : LABELS[kind]} <span>${members.length}</span></h4>${kind !== "out" ? `<p>${esc(round.tables[kind].name)}</p>` : '<p>Sitting out</p>'}<ul>${members.map(person => `<li>${personMarkup(person)}</li>`).join('')}</ul>${!members.length ? '<p class="vibe-empty">Nobody here</p>' : ''}</section>`;
-    }).join('')}</div>` : '<p>No split respects everyone’s choices and the game player limits while keeping at least three people at each active table. Start a fresh round with different games or attendees; no one has been assigned against their choices.</p>'}${!assignments ? `<p class="vibe-diagnosis">${esc(round.result.reason)}</p>` : ''}${!assignments && round.result.alternatives.length ? `<section aria-label="Adam’s vote change"><p>Adam, accepting one of these additional options makes a valid arrangement possible. Everyone else’s choices stay the same.</p><div class="vibe-actions">${round.result.alternatives.map(alternative => `<button type="button" class="button" data-vibe="host-${alternative.option}">Adam: accept ${LABELS[alternative.option]}</button>`).join('')}</div></section>` : ''}<p class="panel-note">Every assignment respects accepted choices. Ballots have been cleared; assignments may imply a preference.</p><div class="vibe-actions"><button class="button" type="button" data-vibe="lock">Lock results</button><button class="button" type="button" data-vibe="new">New round</button><button class="button primary" type="button" data-close-dialog="vibeCheckDialog">End and clear</button></div></div>`);
+      const tableKind = kind === "out" ? "out" : round.result.tableKinds[kind];
+      const sameKind = round.result.tableKinds.heavy === round.result.tableKinds.light && assignments.includes("heavy") && assignments.includes("light");
+      const label = kind === "out" ? "Out" : LABELS[tableKind] + (sameKind ? (kind === "heavy" ? " 1" : " 2") : "");
+      return `<section class="vibe-result-${kind}"><h4>${icon(tableKind)} ${label} <span>${members.length}</span></h4>${kind !== "out" ? `<p>${esc(round.tables[tableKind].name)}</p>` : '<p>Sitting out</p>'}<ul>${members.map(person => `<li>${personMarkup(person)}</li>`).join('')}</ul>${!members.length ? '<p class="vibe-empty">Nobody here</p>' : ''}</section>`;
+    }).join('')}</div>` : '<p>No split respects everyone’s choices and the game player limits while keeping at least three people at each active table. Start a fresh round with different games or attendees; no one has been assigned against their choices.</p>'}${!assignments ? `<p class="vibe-diagnosis">${esc(round.result.reason)}</p><p>${esc(round.result.percentages)} of voters accepted each type. Both choices count toward both percentages; sit-out-only votes count toward neither.</p>` : ''}${!assignments && round.result.alternatives.length ? `<section aria-label="Adam’s vote change"><p>Adam, accepting one of these additional options makes a valid arrangement possible. Everyone else’s choices stay the same.</p><div class="vibe-actions">${round.result.alternatives.map(alternative => `<button type="button" class="button" data-vibe="host-${alternative.option}">Adam: accept ${LABELS[alternative.option]}</button>`).join('')}</div></section>` : ''}<p class="panel-note">Every assignment respects accepted choices. Ballots have been cleared; assignments may imply a preference.</p><div class="vibe-actions"><button class="button" type="button" data-vibe="lock">Lock results</button><button class="button" type="button" data-vibe="new">New round</button><button class="button primary" type="button" data-close-dialog="vibeCheckDialog">End and clear</button></div></div>`);
     fitResults();
   }
 
@@ -438,7 +457,7 @@
       if (round.stage === "revealed" && !round.result.assignments && action?.startsWith("host-")) {
         const alternative = round.result.alternatives.find(item => action === "host-" + item.option);
         if (alternative) {
-          round.result = { assignments: alternative.assignments, alternatives: [] };
+          round.result = { assignments: alternative.assignments, tableKinds: alternative.tableKinds, alternatives: [] };
           reveal();
         }
         return;
@@ -460,5 +479,5 @@
       else if (["question", "submit"].includes(round.stage)) handoff("The screen was hidden. Please answer again.");
     });
   }
-  App.vibeCheck = { init, solve, hostAlternatives, impossibleReason, filterGames, answerPositions, defaultAttendees };
+  App.vibeCheck = { init, solve, matchTables, votePercentages, hostAlternatives, impossibleReason, filterGames, answerPositions, defaultAttendees };
 })();

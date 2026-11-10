@@ -375,3 +375,25 @@ test('impossible-result diagnosis distinguishes complex, fun, mixed and limit fa
   assert.match(reason([['heavy'], ['heavy'], ['light']], defaults), /Too split/);
   assert.match(reason([['heavy'], ['light']], limits), /Neither a shift/);
 });
+
+
+test('unanimous preferences form two balanced tables of the same type using that type’s limits', () => {
+  const api = context.window.LocalApp.vibeCheck;
+  for (const kind of ['heavy', 'light']) {
+    const limits = { heavy: { min: 3, max: 4 }, light: { min: 3, max: 4 } };
+    limits[kind === 'heavy' ? 'light' : 'heavy'] = { min: 9, max: 9 };
+    const result = api.matchTables(Array.from({ length: 7 }, () => [kind]), limits, () => 0);
+    assert.deepEqual(counts(Array.from(result.assignments)).slice(0, 2).sort(), [3, 4]);
+    assert.equal(result.tableKinds.heavy, kind);
+    assert.equal(result.tableKinds.light, kind);
+    assert.equal(api.matchTables(Array.from({ length: 9 }, () => [kind]), limits).assignments, null);
+  }
+  assert.equal(api.matchTables([['heavy'], ['heavy'], ['light']], defaults).assignments, null);
+});
+
+test('percentage summary counts each accepted type and includes sit-out voters in the denominator', () => {
+  const summary = context.window.LocalApp.vibeCheck.votePercentages;
+  assert.equal(summary([['heavy'], ['light'], ['heavy', 'light'], ['out']]), 'Heavy: 50% · Light: 50%');
+  assert.equal(summary([['heavy'], ['heavy']]), 'Heavy: 100% · Light: 0%');
+  assert.equal(summary([['heavy', 'light']]), 'Heavy: 100% · Light: 100%');
+});

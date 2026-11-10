@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.73";
+  const VERSION = "2.1.0.74";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Same-type Vibe Check tables",
+        summary: "Split unanimous Heavy or Light groups into two matching tables and explain impossible results with vote percentages.",
+        features: ["Two Heavy or two Light tables for unanimous groups"], improvements: ["Show Heavy and Light acceptance percentages on impossible results"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.73",
         date: "2026-11-10",
         title: "Right-aligned Vibe Check navigation",
         summary: "Keep Next buttons on the right throughout People and Tables setup.",
