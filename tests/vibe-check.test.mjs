@@ -226,6 +226,7 @@ test('an impossible split is hidden until the host unlocks', () => {
   assert.doesNotMatch(f.html(), /No valid arrangement/);
   f.unlock('2468');
   assert.match(f.html(), /No valid arrangement/);
+  assert.match(f.html(), /Too split between Complex/);
 });
 
 test('empty ballots retry the same voter and backgrounding discards only the current ballot', () => {
@@ -364,4 +365,14 @@ test('host rescue is offered only after PIN reveal and requires explicit accepta
   f.click('host-heavy');
   assert.match(f.html(), /Tonight’s tables/);
   assert.doesNotMatch(f.html(), /Adam: accept/);
+});
+
+
+test('impossible-result diagnosis distinguishes complex, fun, mixed and limit failures', () => {
+  const reason = context.window.LocalApp.vibeCheck.impossibleReason;
+  const limits = { heavy: { min: 3, max: 3 }, light: { min: 3, max: 3 } };
+  assert.match(reason(Array.from({ length: 6 }, () => ['heavy']), limits), /Too heavy on Complex/);
+  assert.match(reason(Array.from({ length: 6 }, () => ['light']), limits), /Too heavy on Fun/);
+  assert.match(reason([['heavy'], ['heavy'], ['light']], defaults), /Too split/);
+  assert.match(reason([['heavy'], ['light']], limits), /Neither a shift/);
 });

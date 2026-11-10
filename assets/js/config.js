@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.69";
+  const VERSION = "2.1.0.70";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Explain impossible Vibe Check results",
+        summary: "Tell the host whether an impossible arrangement needs more Complex or Fun flexibility, or different limits.",
+        features: [], improvements: ["Explain Heavy/Complex, Light/Fun, mixed, and player-limit failures after host unlock"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.69",
         date: "2026-11-10",
         title: "Host vote adjustment",
         summary: "Let Adam accept an additional option when it rescues an impossible Vibe Check arrangement.",

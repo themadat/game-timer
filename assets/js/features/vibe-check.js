@@ -62,6 +62,16 @@
     });
   }
 
+  function impossibleReason(ballots, tables) {
+    // Diagnose by adding consent in each direction, while keeping game limits intact.
+    const canShiftTo = option => solve(ballots.map(ballot => ballot.includes(option) ? ballot : ballot.concat(option)), tables) !== null;
+    const heavy = canShiftTo("heavy"), light = canShiftTo("light");
+    if (light && !heavy) return "Too heavy on Complex (Heavy): a valid arrangement would need more people willing to play Fun (Light).";
+    if (heavy && !light) return "Too heavy on Fun (Light): a valid arrangement would need more people willing to play Complex (Heavy).";
+    if (heavy && light) return "Too split between Complex (Heavy) and Fun (Light): more flexibility toward either table could make an arrangement possible.";
+    return "Neither a shift toward Complex (Heavy) nor Fun (Light) alone fixes this. Review game player limits, attendance, and sit-out choices.";
+  }
+
   function filterGames(games, minimum, direction = "minimum") {
     const threshold = Number(minimum) || 0;
     return games.filter(game => game.id !== "custom" && (!threshold || (Number.isFinite(game.complexityWeight) && (direction === "maximum" ? game.complexityWeight <= threshold : game.complexityWeight >= threshold))));
@@ -288,7 +298,7 @@
     }
     if (!round.result) {
       const assignments = solve(round.ballots, round.tables);
-      round.result = { assignments, alternatives: assignments ? [] : hostAlternatives(round.people, round.ballots, round.tables) };
+      round.result = { assignments, reason: assignments ? "" : impossibleReason(round.ballots, round.tables), alternatives: assignments ? [] : hostAlternatives(round.people, round.ballots, round.tables) };
       round.ballots = [];
     }
     reveal();
@@ -300,7 +310,7 @@
     show(`<div class="vibe-result-page"><h3 data-vibe-focus tabindex="-1">${assignments ? 'Tonight’s tables' : 'No valid arrangement'}</h3>${assignments ? `<div class="vibe-results">${OPTIONS.map(kind => {
       const members = round.people.filter((person, i) => assignments[i] === kind);
       return `<section class="vibe-result-${kind}"><h4>${icon(kind)} ${kind === "out" ? 'Out' : LABELS[kind]} <span>${members.length}</span></h4>${kind !== "out" ? `<p>${esc(round.tables[kind].name)}</p>` : '<p>Sitting out</p>'}<ul>${members.map(person => `<li>${personMarkup(person)}</li>`).join('')}</ul>${!members.length ? '<p class="vibe-empty">Nobody here</p>' : ''}</section>`;
-    }).join('')}</div>` : '<p>No split respects everyone’s choices and the game player limits while keeping at least three people at each active table. Start a fresh round with different games or attendees; no one has been assigned against their choices.</p>'}${!assignments && round.result.alternatives.length ? `<section aria-label="Adam’s vote change"><p>Adam, accepting one of these additional options makes a valid arrangement possible. Everyone else’s choices stay the same.</p><div class="vibe-actions">${round.result.alternatives.map(alternative => `<button type="button" class="button" data-vibe="host-${alternative.option}">Adam: accept ${LABELS[alternative.option]}</button>`).join('')}</div></section>` : ''}<p class="panel-note">Every assignment respects accepted choices. Ballots have been cleared; assignments may imply a preference.</p><div class="vibe-actions"><button class="button" type="button" data-vibe="lock">Lock results</button><button class="button" type="button" data-vibe="new">New round</button><button class="button primary" type="button" data-close-dialog="vibeCheckDialog">End and clear</button></div></div>`);
+    }).join('')}</div>` : '<p>No split respects everyone’s choices and the game player limits while keeping at least three people at each active table. Start a fresh round with different games or attendees; no one has been assigned against their choices.</p>'}${!assignments ? `<p class="vibe-diagnosis">${esc(round.result.reason)}</p>` : ''}${!assignments && round.result.alternatives.length ? `<section aria-label="Adam’s vote change"><p>Adam, accepting one of these additional options makes a valid arrangement possible. Everyone else’s choices stay the same.</p><div class="vibe-actions">${round.result.alternatives.map(alternative => `<button type="button" class="button" data-vibe="host-${alternative.option}">Adam: accept ${LABELS[alternative.option]}</button>`).join('')}</div></section>` : ''}<p class="panel-note">Every assignment respects accepted choices. Ballots have been cleared; assignments may imply a preference.</p><div class="vibe-actions"><button class="button" type="button" data-vibe="lock">Lock results</button><button class="button" type="button" data-vibe="new">New round</button><button class="button primary" type="button" data-close-dialog="vibeCheckDialog">End and clear</button></div></div>`);
     fitResults();
   }
 
@@ -451,5 +461,5 @@
       else if (["question", "submit"].includes(round.stage)) handoff("The screen was hidden. Please answer again.");
     });
   }
-  App.vibeCheck = { init, solve, hostAlternatives, filterGames, answerPositions, defaultAttendees };
+  App.vibeCheck = { init, solve, hostAlternatives, impossibleReason, filterGames, answerPositions, defaultAttendees };
 })();
