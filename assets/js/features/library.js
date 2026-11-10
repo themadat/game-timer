@@ -1290,11 +1290,12 @@
       <section class="panel add-person">
         <form class="custom-add person-add-form" data-add-person>
           <label class="grow-control"><span class="visually-hidden">New person</span><input name="name" type="text" maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words" required></label>
+          <button type="button" class="button person-color-toggle" data-person-color-toggle aria-label="Choose person color" aria-expanded="false" aria-controls="libraryPersonColors" style="--swatch:${esc(defaultColor)}"><span class="color-dot" aria-hidden="true"></span></button>
           <button class="button primary" type="submit">${symbol("personAdd")}<span>Add person</span></button>
-          <fieldset class="person-add-colors"><legend>Person color</legend>
+          <div class="person-color-options" id="libraryPersonColors" hidden>
             <div class="color-grid is-compact" role="group" aria-label="Default person colors">${STANDARD_COLORS.map(color => `<button type="button" class="color-btn" data-add-person-color="${esc(color.value)}" aria-pressed="${color.value === defaultColor}" style="--swatch:${esc(color.value)}"><span class="color-dot" aria-hidden="true"></span><span>${esc(color.name)}</span></button>`).join("")}</div>
-            <details><summary>More colors</summary><label>Custom color <input name="color" type="color" value="${esc(defaultColor)}" data-add-person-custom-color></label></details>
-          </fieldset>
+            <button type="button" class="button" data-person-more-colors aria-expanded="false" aria-controls="libraryCustomColor">More colors</button><label id="libraryCustomColor" hidden>Custom color <input name="color" type="color" value="${esc(defaultColor)}" data-add-person-custom-color></label>
+          </div>
         </form>
         <p class="setting-note">People appear as quick-add players in Setup and as owners in the Library. Records come from saved History; renaming updates history and owners too.</p>
       </section>
@@ -2087,10 +2088,18 @@
   /* ---------- Events ---------- */
 
   function handleLibraryClick(event) {
+    const colorToggle = event.target.closest("[data-person-color-toggle], [data-person-more-colors]");
+    if (colorToggle) {
+      const panel = libraryRoot.querySelector("#" + colorToggle.getAttribute("aria-controls"));
+      panel.hidden = !panel.hidden;
+      colorToggle.setAttribute("aria-expanded", String(!panel.hidden));
+      return;
+    }
     const personColor = event.target.closest("[data-add-person-color]");
     if (personColor) {
       const form = personColor.closest("form");
       form.elements.color.value = personColor.dataset.addPersonColor;
+      form.querySelector("[data-person-color-toggle]").style.setProperty("--swatch", personColor.dataset.addPersonColor);
       form.querySelectorAll("[data-add-person-color]").forEach(button => button.setAttribute("aria-pressed", String(button === personColor)));
       return;
     }
@@ -2165,6 +2174,7 @@
 
   function handleLibraryInput(event) {
     if (event.target.matches("[data-add-person-custom-color]")) {
+      event.target.closest("form").querySelector("[data-person-color-toggle]").style.setProperty("--swatch", event.target.value);
       event.target.closest("form").querySelectorAll("[data-add-person-color]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.addPersonColor.toLowerCase() === event.target.value.toLowerCase())));
       return;
     }

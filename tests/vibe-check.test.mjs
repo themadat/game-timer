@@ -118,6 +118,7 @@ function flow({ confirm = true, start = true } = {}) {
   const state = { preferences: { game: { vibeWeightStep: .25 } }, workspace: { people: ['A', 'B', 'C'].map((name, i) => ({ name, color: ['#ff0000', '#00ff00', '#0000ff'][i] })) } };
   const App = {
     utils: { normalizeColor: (value, fallback) => /^#[0-9a-f]{6}$/.test(value || '') ? value : fallback, escapeHtml: value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;') },
+    gameData: { STANDARD_COLORS: [{ name: "Red", value: "#ff0000" }] },
     icons: { markup: () => '' }, config: { controls: { maxPeople: 200 } },
     storage: { getState: () => state, mutate() { throw Error('Vibe Check must not persist private data'); } },
     components: { openDialog() {} },

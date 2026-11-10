@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.67";
+  const VERSION = "2.1.0.68";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Compact person color selection",
+        summary: "Open person color options from a swatch button in Vibe Check and People.",
+        features: [], improvements: ["Expandable palette and custom color picker", "Single-line Vibe Check add controls and scrollable people"], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.67",
         date: "2026-11-10",
         title: "Library person colors",
         summary: "Choose from sixteen standard colors or expand custom colors when adding people in the Library.",

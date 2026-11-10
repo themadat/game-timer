@@ -6,7 +6,7 @@
   const LABELS = { heavy: "Heavy", light: "Light", out: "Sit out" };
   const esc = value => App.utils.escapeHtml(String(value));
   let dialog, body, round = null, draft = null;
-  let pinDigits = "", firstPin = "", setupStep = "people", peoplePage = 0;
+  let pinDigits = "", firstPin = "", setupStep = "people";
   const DEFAULT_ATTENDEES = new Set(["adam", "austin", "bryson", "johanna", "tristen", "kathleen", "jake", "kacie"]);
 
   // Counts form a small dynamic program instead of enumerating all 3^n ballots.
@@ -106,18 +106,10 @@
     const people = App.storage.getState().workspace.people;
     const grid = body.querySelector(".vibe-people");
     const columns = Math.max(1, Math.min(6, Math.floor((grid.clientWidth + 8) / 152)));
-    const rows = Math.max(1, Math.floor((grid.clientHeight + 8) / 76));
-    const capacity = columns * rows;
-    const pages = Math.max(1, Math.ceil(people.length / capacity));
-    peoplePage = Math.min(peoplePage, pages - 1);
     grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
-    grid.innerHTML = people.slice(peoplePage * capacity, (peoplePage + 1) * capacity).map((person, offset) => {
-      const i = peoplePage * capacity + offset;
+    grid.innerHTML = people.map((person, i) => {
       return `<button type="button" class="vibe-person-chip" data-vibe-person="${i}" aria-pressed="${draft.attendees.includes(i)}" style="${personStyle(person)}"><span class="vibe-person-dot" aria-hidden="true"></span><span>${esc(person.name)}</span></button>`;
-    }).join("") || '<p>Add someone below to get started.</p>';
-    body.querySelector("[data-vibe-people-page]").textContent = `Page ${peoplePage + 1} of ${pages}`;
-    body.querySelector("[data-vibe='people-prev']").disabled = peoplePage === 0;
-    body.querySelector("[data-vibe='people-next']").disabled = peoplePage === pages - 1;
+    }).join("") || '<p>Add someone above to get started.</p>';
     body.querySelector("[data-vibe-selected]").textContent = `${draft.attendees.length} selected`;
   }
 
@@ -135,14 +127,10 @@
       }, { reason: "people-add" });
     }
     if (!draft.attendees.includes(index)) draft.attendees.push(index);
-    // Find the person's page using the same capacity as the attendee grid.
-    const grid = body.querySelector(".vibe-people");
-    const columns = Math.max(1, Math.min(6, Math.floor((grid.clientWidth + 8) / 152)));
-    const rows = Math.max(1, Math.floor((grid.clientHeight + 8) / 76));
-    peoplePage = Math.floor(index / (columns * rows));
     input.value = "";
     error("");
     renderPeople();
+    body.querySelector(`[data-vibe-person="${index}"]`)?.scrollIntoView({ block: "nearest" });
     input.focus({ preventScroll: true });
   }
 
@@ -162,12 +150,12 @@
   }
 
   function setup(saved = null) {
-    round = null; pinDigits = ""; firstPin = ""; peoplePage = 0;
+    round = null; pinDigits = ""; firstPin = "";
     const people = App.storage.getState().workspace.people;
     draft = saved || { attendees: defaultAttendees(people), fixed: false, heavyWeight: "2.5", lightWeight: "0.0", step: "people" };
     show(`<form id="vibeSetup" class="vibe-form vibe-setup" autocomplete="off">
       <nav class="vibe-setup-nav" aria-label="Vibe Check setup"><button type="button" class="button" data-vibe-setup="people">People</button><button type="button" class="button" data-vibe-setup="tables">Tables</button></nav>
-      <section class="vibe-setup-panel" data-vibe-panel="people"><h3>Who is here? <span data-vibe-selected></span></h3><div class="vibe-add-person"><label><span class="visually-hidden">New person</span><input type="text" data-vibe-new-person maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words"></label><button type="button" class="button" data-vibe="add-person">Add person</button></div><details class="vibe-person-colors" open><summary>Person color</summary><div class="vibe-color-options" role="group" aria-label="Default person colors">${App.gameData.STANDARD_COLORS.map((color, index) => `<button type="button" class="color-btn" data-vibe-color="${esc(color.value)}" aria-pressed="${index === 0}" style="--swatch:${esc(color.value)}"><span class="color-dot" aria-hidden="true"></span><span>${esc(color.name)}</span></button>`).join("")}</div><details><summary>More colors</summary><label>Custom color<input type="color" data-vibe-new-color value="${esc(App.gameData.STANDARD_COLORS[0].value)}"></label></details></details><div class="vibe-people" aria-label="People present"></div><div class="vibe-people-pager"><button type="button" class="button" data-vibe="people-prev" aria-label="Previous people page">Previous</button><span data-vibe-people-page></span><button type="button" class="button" data-vibe="people-next" aria-label="Next people page">Next</button></div></section>
+      <section class="vibe-setup-panel" data-vibe-panel="people"><div class="vibe-add-person"><label><span class="visually-hidden">New person</span><input type="text" data-vibe-new-person maxlength="60" placeholder="Add a person" autocomplete="off" autocapitalize="words"></label><button type="button" class="button person-color-toggle" data-vibe="colors" aria-label="Choose person color" aria-expanded="false" aria-controls="vibePersonColors" style="--swatch:${esc(App.gameData.STANDARD_COLORS[0].value)}"><span class="color-dot" aria-hidden="true"></span></button><button type="button" class="button" data-vibe="add-person">Add person</button><div class="person-color-options" id="vibePersonColors" hidden><div class="vibe-color-options" role="group" aria-label="Default person colors">${App.gameData.STANDARD_COLORS.map((color, index) => `<button type="button" class="color-btn" data-vibe-color="${esc(color.value)}" aria-pressed="${index === 0}" style="--swatch:${esc(color.value)}"><span class="color-dot" aria-hidden="true"></span><span>${esc(color.name)}</span></button>`).join("")}</div><button type="button" class="button" data-vibe="more-colors" aria-expanded="false" aria-controls="vibeCustomColor">More colors</button><label id="vibeCustomColor" hidden>Custom color<input type="color" data-vibe-new-color value="${esc(App.gameData.STANDARD_COLORS[0].value)}"></label></div></div><span data-vibe-selected></span><div class="vibe-people" aria-label="People present"></div></section>
       <section class="vibe-setup-panel" data-vibe-panel="tables" hidden><div class="vibe-tables">${["heavy", "light"].map(kind => `<fieldset><legend>${icon(kind)} ${LABELS[kind]}</legend><div class="vibe-game-row"><label>Game (optional)<select name="${kind}Game">${gameOptions(draft[kind + 'Weight'], draft[kind + 'Game'], kind)}</select></label><label>Weight ${kind === 'heavy' ? 'at least' : 'at most'}<span class="vibe-weight-control"><button type="button" data-vibe-weight="${kind}" data-delta="-1" aria-label="Decrease ${kind} weight">−</button><input aria-label="${LABELS[kind]} weight ${kind === 'heavy' ? 'at least' : 'at most'}" name="${kind}Weight" type="number" min="0" max="5" step="any" inputmode="decimal" value="${esc(draft[kind + 'Weight'] || '0.0')}"><button type="button" data-vibe-weight="${kind}" data-delta="1" aria-label="Increase ${kind} weight">+</button></span></label></div><p class="visually-hidden" data-vibe-filter-note="${kind}" aria-live="polite"></p><div class="vibe-limits" data-vibe-limits="${kind}"></div></fieldset>`).join("")}</div></section>
       <p class="vibe-error vibe-setup-error" role="alert" data-vibe-error></p><footer class="vibe-setup-footer"><button type="button" class="button" data-vibe="fixed" aria-pressed="${draft.fixed}" title="Use fixed answer positions for keyboard and accessibility">Fixed answers</button><button class="button primary" type="button" data-vibe-continue>Next: tables</button></footer>
     </form>`, "[data-vibe-setup='people']");
@@ -338,11 +326,9 @@
       requestAnimationFrame(renderPeople);
     });
     dialog.addEventListener("close", () => { round = null; draft = null; pinDigits = ""; firstPin = ""; body.innerHTML = ""; delete dialog.dataset.vibeStage; });
-    body.addEventListener("toggle", event => {
-      if (event.target.closest(".vibe-person-colors")) renderPeople();
-    }, true);
     body.addEventListener("input", event => {
       if (event.target.matches("[data-vibe-new-color]")) {
+        body.querySelector("[data-vibe=colors]").style.setProperty("--swatch", event.target.value);
         body.querySelectorAll("[data-vibe-color]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.vibeColor.toLowerCase() === event.target.value.toLowerCase())));
       }
       if (event.target.matches("[name='heavyWeight'], [name='lightWeight']")) weightChanged(event.target);
@@ -391,7 +377,15 @@
         const color = event.target.closest("[data-vibe-color]");
         if (color) {
           body.querySelector("[data-vibe-new-color]").value = color.dataset.vibeColor;
+          body.querySelector("[data-vibe=colors]").style.setProperty("--swatch", color.dataset.vibeColor);
           body.querySelectorAll("[data-vibe-color]").forEach(button => button.setAttribute("aria-pressed", String(button === color)));
+          return;
+        }
+        if (setupAction === "colors" || setupAction === "more-colors") {
+          const control = event.target.closest("[data-vibe]");
+          const panel = body.querySelector(setupAction === "colors" ? "#vibePersonColors" : "#vibeCustomColor");
+          panel.hidden = !panel.hidden;
+          control.setAttribute("aria-expanded", String(!panel.hidden));
           return;
         }
         if (setupAction === "add-person") { addPerson(); return; }
@@ -402,7 +396,6 @@
         if (setupAction === "fixed") { draft.fixed = !draft.fixed; event.target.closest("[data-vibe]").setAttribute("aria-pressed", String(draft.fixed)); return; }
         if (setupAction === "setup-tables") { setSetupStep("tables"); return; }
         if (setupAction === "setup-start") { begin(event.target.closest("form")); return; }
-        if (setupAction === "people-prev" || setupAction === "people-next") { peoplePage += setupAction === "people-next" ? 1 : -1; renderPeople(); return; }
       }
       const digit = event.target.closest("[data-vibe-digit]")?.dataset.vibeDigit;
       if (digit !== undefined) { enterDigit(digit); return; }
