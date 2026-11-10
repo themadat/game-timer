@@ -3,7 +3,7 @@
 
   window.LocalApp = window.LocalApp || {};
 
-  const VERSION = "2.1.0.68";
+  const VERSION = "2.1.0.69";
 
   const CONFIG = {
     identity: {
@@ -87,6 +87,13 @@
     releases: [
       {
         version: VERSION,
+        date: "2026-11-10",
+        title: "Host vote adjustment",
+        summary: "Let Adam accept an additional option when it rescues an impossible Vibe Check arrangement.",
+        features: ["PIN-protected host vote adjustment with viable choices only"], improvements: [], fixes: [], knownIssues: []
+      },
+      {
+        version: "2.1.0.68",
         date: "2026-11-10",
         title: "Compact person color selection",
         summary: "Open person color options from a swatch button in Vibe Check and People.",

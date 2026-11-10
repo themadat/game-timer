@@ -102,7 +102,7 @@ test('dynamic matching agrees with exhaustive search on mixed ballots and limits
 });
 
 // Exercise the registered DOM handlers without exporting ballots or auth internals.
-function flow({ confirm = true, start = true } = {}) {
+function flow({ confirm = true, start = true, host = false } = {}) {
   const listeners = {}, visibility = {}, status = { textContent: '' };
   let markup = '', clock = 1000;
   const node = { focus() {}, setAttribute() {}, textContent: "", dataset: {}, style: {}, clientWidth: 600, clientHeight: 304 };
@@ -115,7 +115,7 @@ function flow({ confirm = true, start = true } = {}) {
   };
   const dialog = { dataset: {}, addEventListener(name, handler) { visibility[name] = handler; } };
   const button = { addEventListener(name, handler) { listeners.open = handler; } };
-  const state = { preferences: { game: { vibeWeightStep: .25 } }, workspace: { people: ['A', 'B', 'C'].map((name, i) => ({ name, color: ['#ff0000', '#00ff00', '#0000ff'][i] })) } };
+  const state = { preferences: { game: { vibeWeightStep: .25 } }, workspace: { people: [host ? 'Adam' : 'A', 'B', 'C'].map((name, i) => ({ name, color: ['#ff0000', '#00ff00', '#0000ff'][i] })) } };
   const App = {
     utils: { normalizeColor: (value, fallback) => /^#[0-9a-f]{6}$/.test(value || '') ? value : fallback, escapeHtml: value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;') },
     gameData: { STANDARD_COLORS: [{ name: "Red", value: "#ff0000" }] },
@@ -154,7 +154,7 @@ function flow({ confirm = true, start = true } = {}) {
     // Browsers run the default submit action after click handlers, using the new type.
     if (['setup-tables', 'setup-start'].includes(action) && continueButton.type === 'submit') submit(form);
   };
-  for (let i = 0; i < 3; i++) listeners.click({ target: { closest: selector => selector === '[data-vibe-person]' ? { dataset: { vibePerson: String(i) }, setAttribute() {} } : null } });
+  for (let i = host ? 1 : 0; i < 3; i++) listeners.click({ target: { closest: selector => selector === '[data-vibe-person]' ? { dataset: { vibePerson: String(i) }, setAttribute() {} } : null } });
   click('fixed');
   if (start) { click('setup-tables'); click('setup-start'); }
   const pin = code => { for (const digit of code) click(null, undefined, digit); };
@@ -333,4 +333,35 @@ test('Light uses an inclusive maximum and zero disables either weight filter', (
   assert.deepEqual(filter('2.5', 'maximum'), ['a', 'b']);
   assert.deepEqual(filter('0.0', 'maximum'), ['a', 'b', 'c', 'unknown']);
   assert.deepEqual(filter('0.0', 'minimum'), ['a', 'b', 'c', 'unknown']);
+});
+
+
+test('Adam can rescue an impossible split by accepting a table without changing other votes', () => {
+  const api = context.window.LocalApp.vibeCheck;
+  const people = [{ name: ' Adam ' }, { name: 'B' }, { name: 'C' }];
+  const ballots = [['light'], ['heavy'], ['heavy']];
+  const choices = api.hostAlternatives(people, ballots, defaults);
+  assert.deepEqual(Array.from(choices, item => item.option), ['heavy']);
+  assert.deepEqual(Array.from(choices[0].assignments), ['heavy', 'heavy', 'heavy']);
+  assert.deepEqual(ballots, [['light'], ['heavy'], ['heavy']]);
+  assert.equal(api.hostAlternatives([{ name: 'A' }, ...people.slice(1)], ballots, defaults).length, 0);
+  assert.equal(api.hostAlternatives(people, [['light'], ['heavy'], ['light']], defaults).length, 0);
+  assert.equal(api.hostAlternatives(people, ballots, { heavy: { min: 3, max: 2 }, light: { min: 3, max: 2 } }).length, 0);
+});
+
+test('host rescue is offered only after PIN reveal and requires explicit acceptance', () => {
+  const f = flow({ host: true });
+  f.vote([false, true, false]);
+  f.vote([true, false, false]);
+  f.vote([true, false, false]);
+  f.click('host-heavy');
+  assert.doesNotMatch(f.html(), /Adam: accept/);
+  f.unlock('2468');
+  assert.match(f.html(), /Adam: accept Heavy/);
+  f.hide();
+  assert.doesNotMatch(f.html(), /Adam: accept/);
+  f.unlock('2468');
+  f.click('host-heavy');
+  assert.match(f.html(), /Tonight’s tables/);
+  assert.doesNotMatch(f.html(), /Adam: accept/);
 });
